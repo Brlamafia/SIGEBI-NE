@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SIGEBI.API/SIGEBI.API.csproj" />
+  <Project Path="SIGEBI.Application/SIGEBI.Application.csproj" />
+  <Project Path="SIGEBI.Domain/SIGEBI.Domain.csproj" />
+  <Project Path="SIGEBI.Infrastructure/SIGEBI.Infrastructure.csproj" />
+</Solution>
