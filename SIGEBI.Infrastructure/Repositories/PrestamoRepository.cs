@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SIGEBI.Domain.Entities.Prestamos
+namespace SIGEBI.Infrastructure.Repositories
 {
-    public class Multa
+    internal class PrestamoRepository
     {
     }
 }

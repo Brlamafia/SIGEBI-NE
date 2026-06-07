@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SIGEBI.Domain.Entities.Catalogo
 {
-    internal class Libro
+    public class Libro
     {
     }
 }
