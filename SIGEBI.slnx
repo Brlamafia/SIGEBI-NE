@@ -1,6 +1,24 @@
 <Solution>
-  <Project Path="SIGEBI.API/SIGEBI.API.csproj" />
-  <Project Path="SIGEBI.Application/SIGEBI.Application.csproj" />
-  <Project Path="SIGEBI.Domain/SIGEBI.Domain.csproj" />
-  <Project Path="SIGEBI.Infrastructure/SIGEBI.Infrastructure.csproj" />
+  <Folder Name="/Api/">
+    <Project Path="SIGEBI.API/SIGEBI.API.csproj" />
+  </Folder>
+  <Folder Name="/Application/">
+    <Project Path="SIGEBI.Application/SIGEBI.Application.csproj" />
+  </Folder>
+  <Folder Name="/Core/">
+    <Project Path="SIGEBI.Domain/SIGEBI.Domain.csproj" />
+  </Folder>
+  <Folder Name="/Desktop/">
+    <Project Path="WinFormsApp1/SIGEBI.Desktop.csproj" Id="576e0eda-878a-413b-bbde-6a2e10021074" />
+  </Folder>
+  <Folder Name="/Infraestructure/">
+    <Project Path="SIGEBI.Infrastructure/SIGEBI.Infrastructure.csproj" />
+    <Project Path="SIGEBI.Persistence/SIGEBI.Persistence.csproj" Id="6681d305-2ebc-4acc-bfeb-f81f5aa0d113" />
+  </Folder>
+  <Folder Name="/IOC/">
+    <Project Path="SIGEBI.IOC/SIGEBI.IOC.csproj" Id="8a184631-4664-4836-9c2a-2189cc4d8406" />
+  </Folder>
+  <Folder Name="/Web/">
+    <Project Path="SIGEBI.Web/SIGEBI.Web.fsproj" Id="14648302-3f8f-428c-85d7-302d1f189ffa" />
+  </Folder>
 </Solution>
