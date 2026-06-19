@@ -19,6 +19,6 @@
     <Project Path="SIGEBI.IOC/SIGEBI.IOC.csproj" Id="8a184631-4664-4836-9c2a-2189cc4d8406" />
   </Folder>
   <Folder Name="/Web/">
-    <Project Path="SIGEBI.Web/SIGEBI.Web.fsproj" Id="14648302-3f8f-428c-85d7-302d1f189ffa" />
+    <Project Path="SIGEBI.Web/SIGEBI.Web.csproj" Id="7303a901-911e-4d70-8b8f-78e769cd2921" />
   </Folder>
 </Solution>
