@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SIGEBI.Infrastructure.Repositories
+namespace SIGEBI.Persistence.Repositories.PrestamosRepository
 {
     internal class PrestamoRepository
     {
