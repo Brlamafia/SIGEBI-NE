@@ -7,7 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Interfaces\" />
+    <Folder Include="Interfaces\Repositories\Catalogo\" />
+    <Folder Include="Interfaces\Repositories\Usuarios\" />
+    <Folder Include="Interfaces\Repositories\Prestamos\" />
+    <Folder Include="Interfaces\Services\" />
   </ItemGroup>
 
 </Project>
