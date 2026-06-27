@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SIGEBI.Persistence.Context
+namespace SIGEBI.Application.Dtos.Catalogo
 {
-    internal class SIGEBIDbContext
+    internal class UpdateLibroDto
     {
     }
 }

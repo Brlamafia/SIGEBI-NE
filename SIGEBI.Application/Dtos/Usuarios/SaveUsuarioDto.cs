@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SIGEBI.Domain.Base
+namespace SIGEBI.Application.Dtos.Usuarios
 {
-    public class EntidadAuditable
+    internal class SaveUsuarioDto
     {
     }
 }

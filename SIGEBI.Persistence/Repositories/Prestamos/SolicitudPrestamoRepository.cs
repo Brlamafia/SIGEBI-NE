@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SIGEBI.Persistence.Repositories.Prestamos
 {
-    internal class SolicitudPrestamoRepository
+    public class SolicitudPrestamoRepository
     {
     }
 }

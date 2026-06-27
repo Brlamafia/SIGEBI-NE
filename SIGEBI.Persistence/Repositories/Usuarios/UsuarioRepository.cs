@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SIGEBI.Persistence.Interfaces.Usuarios;
 
 namespace SIGEBI.Persistence.Repositories.UsuariosRepository
 {
-    internal class UsuarioRepository
+    public class UsuarioRepository : IUsuarioRepository
     {
+
     }
 }

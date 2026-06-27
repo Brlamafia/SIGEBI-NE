@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using SIGEBI.Infrastructure.Persistence;
+using SIGEBI.Persistence.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 

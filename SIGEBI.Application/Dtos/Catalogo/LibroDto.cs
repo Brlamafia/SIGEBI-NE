@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SIGEBI.Domain.Base
+namespace SIGEBI.Application.Dtos.Catalogo
 {
-    public class EntidadAuditable
+    internal class LibroDto
     {
     }
 }

@@ -1,14 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using SIGEBI.Domain.Base;
 
 namespace SIGEBI.Domain.Entities.Usuarios
 {
-<<<<<<<< HEAD:SIGEBI.Domain/Entities/Usuarios/Cargo.cs
-    internal class Cargo
-========
-    internal class Administrador
->>>>>>>> 7bf8f6b8feff8c542603f769465e5c839b295097:SIGEBI.Domain/Entities/Usuarios/Administrador.cs
+    public class Administrador : EntidadAuditable
     {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Apellido { get; set; }
+        public string Correo { get; set; }
+
+        // Si el administrador tiene una relación con la entidad Cargo:
+        public int CargoId { get; set; }
+        public Cargo Cargo { get; set; }
+
+        // Puedes agregar más propiedades específicas del Administrador aquí
     }
 }

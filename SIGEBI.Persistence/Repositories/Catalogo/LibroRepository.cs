@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SIGEBI.Persistence.Interfaces.Catalogo;
 
 namespace SIGEBI.Persistence.Repositories.CatalogoRepository
 {
-    internal class LibroRepository
+    public class LibroRepository : ILibroRepository
     {
+  
     }
 }

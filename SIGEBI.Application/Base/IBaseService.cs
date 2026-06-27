@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SIGEBI.Domain.Base
+namespace SIGEBI.Application.Base
 {
-    public class EntidadAuditable
+    internal interface IBaseService
     {
     }
 }
