@@ -1,4 +1,4 @@
-namespace SIGEBI.Desktop
+namespace WinFormsApp1
 {
     internal static class Program
     {

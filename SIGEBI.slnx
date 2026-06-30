@@ -9,7 +9,7 @@
     <Project Path="SIGEBI.Domain/SIGEBI.Domain.csproj" />
   </Folder>
   <Folder Name="/Desktop/">
-    <Project Path="SIGEBI.Desktop/SIGEBI.Desktop.csproj" Id="39328eb4-828a-4b75-9df8-3dff3d38f19a" />
+    <Project Path="WinFormsApp1/SIGEBI.Desktop.csproj" Id="576e0eda-878a-413b-bbde-6a2e10021074" />
   </Folder>
   <Folder Name="/Infraestructure/">
     <Project Path="SIGEBI.Infrastructure/SIGEBI.Infrastructure.csproj" />
@@ -18,7 +18,5 @@
   <Folder Name="/IOC/">
     <Project Path="SIGEBI.IOC/SIGEBI.IOC.csproj" Id="8a184631-4664-4836-9c2a-2189cc4d8406" />
   </Folder>
-  <Folder Name="/Web/">
-    <Project Path="SIGEBI.Web/SIGEBI.Web.csproj" Id="c6ba8d90-b356-4858-9f77-6e343ef9399d" />
-  </Folder>
+  <Folder Name="/Web/" />
 </Solution>
