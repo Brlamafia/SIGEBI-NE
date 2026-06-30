@@ -1,4 +1,4 @@
-﻿namespace WinFormsApp1
+﻿namespace SIGEBI.Desktop
 {
     partial class Form1
     {
