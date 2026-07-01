@@ -1,10 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
+﻿// B.R
 namespace SIGEBI.Domain.Enums
 {
-    internal class EstadoEjemplar
+    // Controla el estado físico y disponibilidad del ejemplar en inventario.
+    public enum EstadoEjemplar
     {
+        Disponible = 1,
+        Prestado = 2,
+        EnReparacion = 3,
+        Perdido = 4
     }
 }

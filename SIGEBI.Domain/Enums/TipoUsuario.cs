@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SIGEBI.Domain.Enums
+﻿namespace SIGEBI.Domain.Enums
 {
-    internal class TipoUsuario
+    // B.R Clasifica a los usuarios según las reglas de la institución
+    public enum TipoUsuario
     {
+        Estudiante = 1,
+        Docente = 2,
+        Administrativo = 3,
+        Externo = 4
     }
 }

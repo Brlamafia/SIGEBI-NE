@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using SIGEBI.Application.Interfaces;
 using SIGEBI.Application.Services;
-using SIGEBI.Persistence.Interfaces.Catalogo;
-using SIGEBI.Persistence.Repositories.CatalogoRepository;
+using SIGEBI.Domain.Interfaces.Repositories;
+using SIGEBI.Persistence.Repositories.Catalogo;
 
 namespace SIGEBI.IOC.Dependencies
 {

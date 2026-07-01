@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SIGEBI.Domain.Enums
+﻿namespace SIGEBI.Domain.Enums
 {
-    internal class EstadoUsuario
+    // B.R Controla la situación actual del usuario en la biblioteca
+    public enum EstadoUsuario
     {
+        Activo = 1,
+        Inactivo = 2,
+        Suspendido = 3 // Por ejemplo, si tiene faltas graves
     }
 }
