@@ -109,6 +109,46 @@ namespace SIGEBI.Domain.Entities.Prestamos
             MarcarComoModificada();
         }
 
+        public void RegistrarPerdida(int empleadoResponsableId, DateTime fechaReporte)
+        {
+            CerrarPrestamo(empleadoResponsableId, fechaReporte, SIGEBI.Domain.Enums.EstadoPrestamo.Perdido);
+        }
+
+        public void RegistrarDevolucionConDanio(int empleadoResponsableId, DateTime fechaDevolucion)
+        {
+            CerrarPrestamo(
+                empleadoResponsableId,
+                fechaDevolucion,
+                SIGEBI.Domain.Enums.EstadoPrestamo.DevueltoConDanio);
+        }
+
+        private void CerrarPrestamo(
+            int empleadoResponsableId,
+            DateTime fechaCierre,
+            SIGEBI.Domain.Enums.EstadoPrestamo estadoFinal)
+        {
+            ValidarIdentificador(empleadoResponsableId, nameof(empleadoResponsableId));
+
+            if (Estado is not SIGEBI.Domain.Enums.EstadoPrestamo.Activo
+                and not SIGEBI.Domain.Enums.EstadoPrestamo.Vencido)
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "Solo puede cerrarse un préstamo activo o vencido.");
+            }
+
+            if (fechaCierre < FechaPrestamo)
+            {
+                throw new ArgumentException(
+                    "La fecha de cierre no puede ser anterior a la fecha del préstamo.",
+                    nameof(fechaCierre));
+            }
+
+            EmpleadoDevolucionId = empleadoResponsableId;
+            FechaRealDevolucion = fechaCierre;
+            Estado = estadoFinal;
+            MarcarComoModificada();
+        }
+
         // DRY: centraliza una validación utilizada por el constructor y la devolución.
         private static void ValidarIdentificador(int identificador, string nombreParametro)
         {

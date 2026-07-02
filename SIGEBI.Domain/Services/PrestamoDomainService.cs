@@ -14,13 +14,13 @@ namespace SIGEBI.Domain.Services
             bool tienePrestamosVencidos,
             int cantidadPrestamosActivos,
             int limitePrestamos,
-            int libroId,
-            int solicitudPrestamoId,
+            SIGEBI.Domain.Entities.Prestamos.SolicitudPrestamo solicitud,
             int empleadoPrestamoId,
             DateTime fechaPrestamo,
             DateTime fechaEsperadaDevolucion,
             SIGEBI.Domain.Entities.Catalogo.Inventario inventario)
         {
+            ArgumentNullException.ThrowIfNull(solicitud);
             ArgumentNullException.ThrowIfNull(inventario);
 
             // Fail Fast: todas las restricciones se validan antes de modificar el inventario.
@@ -32,18 +32,42 @@ namespace SIGEBI.Domain.Services
                 cantidadPrestamosActivos,
                 limitePrestamos);
 
-            ValidarInventarioDelLibro(inventario, libroId);
+            ValidarSolicitudAprobada(solicitud, usuarioId);
+            ValidarInventarioDelLibro(inventario, solicitud.LibroId);
 
             var prestamo = new SIGEBI.Domain.Entities.Prestamos.Prestamo(
                 usuarioId,
-                libroId,
-                solicitudPrestamoId,
+                solicitud.LibroId,
+                solicitud.Id,
                 empleadoPrestamoId,
                 fechaPrestamo,
                 fechaEsperadaDevolucion);
 
             inventario.RegistrarPrestamo();
             return prestamo;
+        }
+
+        private static void ValidarSolicitudAprobada(
+            SIGEBI.Domain.Entities.Prestamos.SolicitudPrestamo solicitud,
+            int usuarioId)
+        {
+            if (solicitud.Id <= 0)
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "La solicitud debe estar registrada antes de crear el préstamo.");
+            }
+
+            if (solicitud.Estado != SIGEBI.Domain.Enums.EstadoSolicitud.Aprobada)
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "Solo una solicitud aprobada puede convertirse en préstamo.");
+            }
+
+            if (solicitud.UsuarioId != usuarioId)
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "La solicitud no corresponde al usuario del préstamo.");
+            }
         }
 
         public bool RegistrarDevolucion(
@@ -68,6 +92,49 @@ namespace SIGEBI.Domain.Services
             inventario.RegistrarDevolucion();
 
             return fueTardia;
+        }
+
+        public void CancelarPrestamo(
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
+            SIGEBI.Domain.Entities.Catalogo.Inventario inventario)
+        {
+            ArgumentNullException.ThrowIfNull(prestamo);
+            ArgumentNullException.ThrowIfNull(inventario);
+            ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarExistenciaPrestada(inventario);
+
+            prestamo.Cancelar();
+            inventario.CancelarPrestamo();
+        }
+
+        public void RegistrarPerdida(
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
+            SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            int empleadoResponsableId,
+            DateTime fechaReporte)
+        {
+            ArgumentNullException.ThrowIfNull(prestamo);
+            ArgumentNullException.ThrowIfNull(inventario);
+            ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarExistenciaPrestada(inventario);
+
+            prestamo.RegistrarPerdida(empleadoResponsableId, fechaReporte);
+            inventario.RegistrarPerdida();
+        }
+
+        public void RegistrarDevolucionConDanio(
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
+            SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            int empleadoResponsableId,
+            DateTime fechaDevolucion)
+        {
+            ArgumentNullException.ThrowIfNull(prestamo);
+            ArgumentNullException.ThrowIfNull(inventario);
+            ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarExistenciaPrestada(inventario);
+
+            prestamo.RegistrarDevolucionConDanio(empleadoResponsableId, fechaDevolucion);
+            inventario.RegistrarDanio();
         }
 
         private static void ValidarElegibilidad(
@@ -126,6 +193,16 @@ namespace SIGEBI.Domain.Services
             {
                 throw new SIGEBI.Domain.Exceptions.DomainException(
                     "El inventario proporcionado no corresponde al libro del préstamo.");
+            }
+        }
+
+        private static void ValidarExistenciaPrestada(
+            SIGEBI.Domain.Entities.Catalogo.Inventario inventario)
+        {
+            if (inventario.CantidadPrestada <= 0)
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El inventario no registra ejemplares prestados para este libro.");
             }
         }
     }

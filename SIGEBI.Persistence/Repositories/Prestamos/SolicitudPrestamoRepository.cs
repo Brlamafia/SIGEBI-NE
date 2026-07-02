@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace SIGEBI.Persistence.Repositories.Prestamos
 {
     // B.R Implementación completa del repositorio para asegurar que cumpla la interfaz
-    public class SolicitudPrestamoRepository : BaseRepository<SolicitudPrestamo>, ISolicitudPrestamoRepository
+    public class SolicitudPrestamoRepository : MutableRepository<SolicitudPrestamo>, ISolicitudPrestamoRepository
     {
         public SolicitudPrestamoRepository(SigebiContext context) : base(context) { }
 

@@ -7,6 +7,8 @@ namespace SIGEBI.Domain.Entities.Usuarios
     // Administra la información personal y el estado de acceso de un cliente.
     public class Usuario : EntidadAuditable
     {
+        private readonly List<Rol> _roles = [];
+
         public string Nombre { get; private set; } = string.Empty;
         public string Apellido { get; private set; } = string.Empty;
         public string Cedula { get; private set; } = string.Empty;
@@ -14,6 +16,7 @@ namespace SIGEBI.Domain.Entities.Usuarios
         public string Email { get; private set; } = string.Empty;
         public TipoUsuario TipoUsuario { get; private set; }
         public EstadoUsuario Estado { get; private set; }
+        public IReadOnlyCollection<Rol> Roles => _roles;
 
         private Usuario() { }
 
@@ -38,6 +41,25 @@ namespace SIGEBI.Domain.Entities.Usuarios
         {
             Estado = nuevoEstado;
             MarcarComoModificada();
+        }
+
+        public void AsignarRol(Rol rol)
+        {
+            ArgumentNullException.ThrowIfNull(rol);
+
+            if (!_roles.Contains(rol))
+            {
+                _roles.Add(rol);
+                MarcarComoModificada();
+            }
+        }
+
+        public void RemoverRol(Rol rol)
+        {
+            ArgumentNullException.ThrowIfNull(rol);
+
+            if (_roles.Remove(rol))
+                MarcarComoModificada();
         }
 
         private static string ValidarTextoObligatorio(string valor, string nombreParametro)

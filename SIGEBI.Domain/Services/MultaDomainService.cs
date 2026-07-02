@@ -15,9 +15,11 @@ namespace SIGEBI.Domain.Services
 
         public SIGEBI.Domain.Entities.Prestamos.Multa GenerarMultaPorRetraso(
             SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
-            decimal montoPorDia)
+            decimal montoPorDia,
+            IEnumerable<SIGEBI.Domain.Entities.Prestamos.Multa> multasExistentes)
         {
             ArgumentNullException.ThrowIfNull(prestamo);
+            ArgumentNullException.ThrowIfNull(multasExistentes);
 
             // Fail Fast: el cálculo solo es válido para un préstamo persistido y devuelto.
             if (prestamo.Id <= 0)
@@ -29,6 +31,14 @@ namespace SIGEBI.Domain.Services
             if (montoPorDia <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(montoPorDia), "El monto por día debe ser mayor que cero.");
+            }
+
+            if (multasExistentes.Any(multa =>
+                multa.PrestamoId == prestamo.Id
+                && multa.Tipo == SIGEBI.Domain.Enums.TipoMulta.Retraso))
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El préstamo ya posee una multa por retraso.");
             }
 
             if (prestamo.Estado != SIGEBI.Domain.Enums.EstadoPrestamo.Devuelto
@@ -56,6 +66,61 @@ namespace SIGEBI.Domain.Services
                 prestamo.Id,
                 SIGEBI.Domain.Enums.TipoMulta.Retraso,
                 montoTotal,
+                motivo);
+        }
+
+        public SIGEBI.Domain.Entities.Prestamos.Multa GenerarMultaPorPerdida(
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
+            decimal monto,
+            string motivo,
+            IEnumerable<SIGEBI.Domain.Entities.Prestamos.Multa> multasExistentes)
+            => GenerarMultaPorIncidencia(
+                prestamo,
+                monto,
+                motivo,
+                SIGEBI.Domain.Enums.TipoMulta.Perdida,
+                SIGEBI.Domain.Enums.EstadoPrestamo.Perdido,
+                multasExistentes);
+
+        public SIGEBI.Domain.Entities.Prestamos.Multa GenerarMultaPorDanio(
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
+            decimal monto,
+            string motivo,
+            IEnumerable<SIGEBI.Domain.Entities.Prestamos.Multa> multasExistentes)
+            => GenerarMultaPorIncidencia(
+                prestamo,
+                monto,
+                motivo,
+                SIGEBI.Domain.Enums.TipoMulta.Danio,
+                SIGEBI.Domain.Enums.EstadoPrestamo.DevueltoConDanio,
+                multasExistentes);
+
+        private static SIGEBI.Domain.Entities.Prestamos.Multa GenerarMultaPorIncidencia(
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
+            decimal monto,
+            string motivo,
+            SIGEBI.Domain.Enums.TipoMulta tipo,
+            SIGEBI.Domain.Enums.EstadoPrestamo estadoRequerido,
+            IEnumerable<SIGEBI.Domain.Entities.Prestamos.Multa> multasExistentes)
+        {
+            ArgumentNullException.ThrowIfNull(prestamo);
+            ArgumentNullException.ThrowIfNull(multasExistentes);
+
+            if (prestamo.Id <= 0)
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El préstamo debe estar registrado antes de generar una multa.");
+            if (prestamo.Estado != estadoRequerido)
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El estado del préstamo no corresponde al tipo de multa solicitado.");
+            if (multasExistentes.Any(multa => multa.PrestamoId == prestamo.Id && multa.Tipo == tipo))
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El préstamo ya posee una multa de este tipo.");
+
+            return new SIGEBI.Domain.Entities.Prestamos.Multa(
+                prestamo.UsuarioId,
+                prestamo.Id,
+                tipo,
+                monto,
                 motivo);
         }
     }

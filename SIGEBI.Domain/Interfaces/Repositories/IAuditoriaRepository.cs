@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using SIGEBI.Domain.Entities.Auditoria;
+using SIGEBI.Domain.Enums;
 
 namespace SIGEBI.Domain.Interfaces.Repositories
 {
@@ -13,7 +14,7 @@ namespace SIGEBI.Domain.Interfaces.Repositories
             int usuarioResponsableId,
             CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Auditoria>> ObtenerPorModuloAsync(
-            string modulo,
+            ModuloAuditoria modulo,
             CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Auditoria>> ObtenerPorRangoAsync(
             DateTime fechaDesde,

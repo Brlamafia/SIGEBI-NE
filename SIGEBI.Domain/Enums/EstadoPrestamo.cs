@@ -11,6 +11,8 @@ namespace SIGEBI.Domain.Enums
         Activo = 1,
         Devuelto = 2,
         Vencido = 3,
-        Cancelado = 4
+        Cancelado = 4,
+        Perdido = 5,
+        DevueltoConDanio = 6
     }
 }

@@ -9,10 +9,10 @@ namespace SIGEBI.Domain.Entities.Auditoria
     {
         // Encapsulación: ninguna capa externa puede modificar los datos registrados.
         public int UsuarioResponsableId { get; private set; }
-        public string Modulo { get; private set; } = string.Empty;
-        public string Accion { get; private set; } = string.Empty;
+        public SIGEBI.Domain.Enums.ModuloAuditoria Modulo { get; private set; }
+        public SIGEBI.Domain.Enums.AccionAuditoria Accion { get; private set; }
         public string Descripcion { get; private set; } = string.Empty;
-        public string Resultado { get; private set; } = string.Empty;
+        public SIGEBI.Domain.Enums.ResultadoAuditoria Resultado { get; private set; }
         public DateTime Fecha { get; private set; }
 
         private Auditoria()
@@ -21,10 +21,10 @@ namespace SIGEBI.Domain.Entities.Auditoria
 
         public Auditoria(
             int usuarioResponsableId,
-            string modulo,
-            string accion,
+            SIGEBI.Domain.Enums.ModuloAuditoria modulo,
+            SIGEBI.Domain.Enums.AccionAuditoria accion,
             string descripcion,
-            string resultado)
+            SIGEBI.Domain.Enums.ResultadoAuditoria resultado)
         {
             // Fail Fast: evita almacenar registros incompletos o sin responsable.
             if (usuarioResponsableId <= 0)
@@ -35,10 +35,10 @@ namespace SIGEBI.Domain.Entities.Auditoria
             }
 
             UsuarioResponsableId = usuarioResponsableId;
-            Modulo = ValidarTextoObligatorio(modulo, nameof(modulo));
-            Accion = ValidarTextoObligatorio(accion, nameof(accion));
+            Modulo = ValidarEnum(modulo, nameof(modulo));
+            Accion = ValidarEnum(accion, nameof(accion));
             Descripcion = ValidarTextoObligatorio(descripcion, nameof(descripcion));
-            Resultado = ValidarTextoObligatorio(resultado, nameof(resultado));
+            Resultado = ValidarEnum(resultado, nameof(resultado));
             Fecha = DateTime.UtcNow;
         }
 
@@ -51,6 +51,15 @@ namespace SIGEBI.Domain.Entities.Auditoria
             }
 
             return valor.Trim();
+        }
+
+        private static TEnum ValidarEnum<TEnum>(TEnum valor, string nombreParametro)
+            where TEnum : struct, Enum
+        {
+            if (!Enum.IsDefined(valor))
+                throw new ArgumentOutOfRangeException(nombreParametro, "El valor indicado no es válido.");
+
+            return valor;
         }
     }
 }

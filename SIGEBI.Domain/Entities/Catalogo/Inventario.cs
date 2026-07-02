@@ -12,6 +12,8 @@ namespace SIGEBI.Domain.Entities.Catalogo
         public int CantidadTotal { get; private set; }
         public int CantidadDisponible { get; private set; }
         public int CantidadPrestada { get; private set; }
+        public int CantidadPerdida { get; private set; }
+        public int CantidadDanada { get; private set; }
 
         // DRY: la regla de disponibilidad se expresa una sola vez.
         public bool TieneDisponibilidad => CantidadDisponible > 0;
@@ -66,7 +68,28 @@ namespace SIGEBI.Domain.Entities.Catalogo
             MarcarComoModificada();
         }
 
-        // Invariante: total siempre debe ser igual a disponible más prestada.
+        public void CancelarPrestamo()
+        {
+            MoverEjemplarPrestado();
+            CantidadDisponible++;
+            MarcarComoModificada();
+        }
+
+        public void RegistrarPerdida()
+        {
+            MoverEjemplarPrestado();
+            CantidadPerdida++;
+            MarcarComoModificada();
+        }
+
+        public void RegistrarDanio()
+        {
+            MoverEjemplarPrestado();
+            CantidadDanada++;
+            MarcarComoModificada();
+        }
+
+        // Invariante: el total incluye ejemplares disponibles, prestados, perdidos y dañados.
         public void AjustarCantidadTotal(int nuevaCantidadTotal)
         {
             if (nuevaCantidadTotal < 0)
@@ -74,15 +97,27 @@ namespace SIGEBI.Domain.Entities.Catalogo
                 throw new ArgumentOutOfRangeException(nameof(nuevaCantidadTotal), "La cantidad total no puede ser negativa.");
             }
 
-            if (nuevaCantidadTotal < CantidadPrestada)
+            var cantidadNoDisponible = CantidadPrestada + CantidadPerdida + CantidadDanada;
+            if (nuevaCantidadTotal < cantidadNoDisponible)
             {
                 throw new SIGEBI.Domain.Exceptions.DomainException(
-                    "La cantidad total no puede ser menor que la cantidad prestada.");
+                    "La cantidad total no puede ser menor que los ejemplares no disponibles.");
             }
 
             CantidadTotal = nuevaCantidadTotal;
-            CantidadDisponible = CantidadTotal - CantidadPrestada;
+            CantidadDisponible = CantidadTotal - cantidadNoDisponible;
             MarcarComoModificada();
+        }
+
+        private void MoverEjemplarPrestado()
+        {
+            if (CantidadPrestada <= 0)
+            {
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "No existen ejemplares prestados para completar la operación.");
+            }
+
+            CantidadPrestada--;
         }
     }
 }

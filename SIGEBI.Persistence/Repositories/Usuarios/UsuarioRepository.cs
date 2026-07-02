@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.Persistence.Repositories.Usuarios
 {
-    public class UsuarioRepository : BaseRepository<Usuario>, IUsuarioRepository
+    public class UsuarioRepository : MutableRepository<Usuario>, IUsuarioRepository
     {
         public UsuarioRepository(SigebiContext context) : base(context) { }
 

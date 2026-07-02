@@ -9,7 +9,7 @@
     <Project Path="SIGEBI.Domain/SIGEBI.Domain.csproj" />
   </Folder>
   <Folder Name="/Desktop/">
-    <Project Path="WinFormsApp1/SIGEBI.Desktop.csproj" Id="576e0eda-878a-413b-bbde-6a2e10021074" />
+    <Project Path="SIGEBI.Desktop/SIGEBI.Desktop.csproj" Id="5fcba53b-5e54-4960-b0ec-da9934601a7a" />
   </Folder>
   <Folder Name="/Infraestructure/">
     <Project Path="SIGEBI.Infrastructure/SIGEBI.Infrastructure.csproj" />

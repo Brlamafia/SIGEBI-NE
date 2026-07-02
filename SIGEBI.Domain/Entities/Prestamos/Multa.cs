@@ -35,6 +35,11 @@ namespace SIGEBI.Domain.Entities.Prestamos
             // Fail Fast: una multa nunca debe crearse con datos inválidos.
             ValidarIdentificador(usuarioId, nameof(usuarioId));
 
+            if (!Enum.IsDefined(tipo))
+            {
+                throw new ArgumentOutOfRangeException(nameof(tipo), "El tipo de multa no es válido.");
+            }
+
             if (prestamoId.HasValue)
             {
                 ValidarIdentificador(prestamoId.Value, nameof(prestamoId));

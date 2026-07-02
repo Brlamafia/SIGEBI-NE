@@ -13,8 +13,13 @@ namespace SIGEBI.Domain.Entities.Usuarios
 
         public Permiso(string nombre, string codigo)
         {
-            Nombre = nombre?.Trim() ?? string.Empty;
-            Codigo = codigo?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(nombre))
+                throw new ArgumentException("El nombre del permiso es obligatorio.", nameof(nombre));
+            if (string.IsNullOrWhiteSpace(codigo))
+                throw new ArgumentException("El código del permiso es obligatorio.", nameof(codigo));
+
+            Nombre = nombre.Trim();
+            Codigo = codigo.Trim();
         }
     }
 }

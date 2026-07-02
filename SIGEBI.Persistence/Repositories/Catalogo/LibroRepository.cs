@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.Persistence.Repositories.Catalogo
 {
-    public class LibroRepository : BaseRepository<Libro>, ILibroRepository
+    public class LibroRepository : MutableRepository<Libro>, ILibroRepository
     {
         public LibroRepository(SigebiContext context) : base(context) { }
 

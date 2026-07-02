@@ -29,7 +29,8 @@ namespace SIGEBI.Domain.Entities.Prestamos
         public void Aprobar()
         {
             if (Estado != EstadoSolicitud.Pendiente)
-                throw new Exception("Solo se pueden aprobar solicitudes pendientes.");
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "Solo se pueden aprobar solicitudes pendientes.");
 
             Estado = EstadoSolicitud.Aprobada;
             MarcarComoModificada();
@@ -39,12 +40,13 @@ namespace SIGEBI.Domain.Entities.Prestamos
         public void Rechazar(string motivo)
         {
             if (Estado != EstadoSolicitud.Pendiente)
-                throw new Exception("Solo se pueden rechazar solicitudes pendientes.");
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "Solo se pueden rechazar solicitudes pendientes.");
             if (string.IsNullOrWhiteSpace(motivo))
                 throw new ArgumentException("Debe especificar un motivo de rechazo.");
 
             Estado = EstadoSolicitud.Rechazada;
-            MotivoRechazo = motivo;
+            MotivoRechazo = motivo.Trim();
             MarcarComoModificada();
         }
     }

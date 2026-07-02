@@ -1,7 +1,17 @@
-﻿namespace SIGEBI.Application.Interfaces.Prestamos
+namespace SIGEBI.Application.Interfaces.Prestamos
 {
     public interface IMultaService
     {
-        // Stanley agregará aquí sus métodos (ej. CalcularMulta, PagarMulta)
+        Task MarcarComoPagadaAsync(
+            int multaId,
+            int usuarioResponsableId,
+            CancellationToken cancellationToken = default);
+
+        Task ResolverAsync(
+            int multaId,
+            int empleadoResolucionId,
+            DateTime fechaResolucion,
+            string observacion,
+            CancellationToken cancellationToken = default);
     }
 }

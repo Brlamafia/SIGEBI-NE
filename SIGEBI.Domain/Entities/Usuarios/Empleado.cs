@@ -1,4 +1,5 @@
 ﻿// B.R
+// Herencia y SRP: representa la extensión laboral de un usuario del sistema.
 using SIGEBI.Domain.Base;
 
 namespace SIGEBI.Domain.Entities.Usuarios
@@ -7,15 +8,19 @@ namespace SIGEBI.Domain.Entities.Usuarios
     public class Empleado : EntidadAuditable
     {
         public int UsuarioId { get; private set; }
-        public string Cargo { get; private set; } = string.Empty;
+        public int CargoId { get; private set; }
+        public Usuario? Usuario { get; private set; }
+        public Cargo? Cargo { get; private set; }
 
         private Empleado() { }
 
-        public Empleado(int usuarioId, string cargo)
+        public Empleado(int usuarioId, int cargoId)
         {
             if (usuarioId <= 0) throw new ArgumentOutOfRangeException(nameof(usuarioId));
+            if (cargoId <= 0) throw new ArgumentOutOfRangeException(nameof(cargoId));
+
             UsuarioId = usuarioId;
-            Cargo = cargo?.Trim() ?? string.Empty;
+            CargoId = cargoId;
         }
     }
 }

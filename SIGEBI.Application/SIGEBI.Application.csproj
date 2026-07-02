@@ -12,4 +12,8 @@
     <None Remove="Contracts\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SIGEBI.Domain\SIGEBI.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

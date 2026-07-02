@@ -1,6 +1,6 @@
 ﻿// B.R
+// Patrón Repository: base común para implementaciones de persistencia.
 using Microsoft.EntityFrameworkCore;
-using SIGEBI.Domain.Base;
 using System.Threading;
 using System.Threading.Tasks;
 using SIGEBI.Persistence.Context;
@@ -8,6 +8,7 @@ using SIGEBI.Persistence.Context;
 namespace SIGEBI.Persistence.Base
 {
     // B.R: Clase base para centralizar el acceso al Contexto y DbSet
+    // DRY: centraliza el acceso compartido al contexto y al DbSet.
     public abstract class BaseRepository<T> where T : class
     {
         protected readonly SigebiContext _context;
@@ -22,7 +23,5 @@ namespace SIGEBI.Persistence.Base
         public async Task AgregarAsync(T entidad, CancellationToken ct = default)
             => await _dbSet.AddAsync(entidad, ct);
 
-        public void Actualizar(T entidad)
-            => _dbSet.Update(entidad);
     }
 }
