@@ -7,12 +7,17 @@ using SIGEBI.Domain.Enums;
 
 namespace SIGEBI.Domain.Interfaces.Repositories
 {
-    public interface ISolicitudPrestamoRepository
+    // B.R: Ahora hereda de IRepository para estandarizar el patrón
+    public interface ISolicitudPrestamoRepository : IRepository<SolicitudPrestamo>
     {
         Task<SolicitudPrestamo?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
-        Task<IReadOnlyCollection<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId, CancellationToken cancellationToken = default);
-        Task<IReadOnlyCollection<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado, CancellationToken cancellationToken = default);
-        Task AgregarAsync(SolicitudPrestamo solicitud, CancellationToken cancellationToken = default);
+
+        // Ajustado a IEnumerable para coincidir con el Servicio de Aplicación
+        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId);
+
+        // Ajustado a IEnumerable para coincidir con el Servicio de Aplicación
+        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado);
+
         void Actualizar(SolicitudPrestamo solicitud);
     }
 }

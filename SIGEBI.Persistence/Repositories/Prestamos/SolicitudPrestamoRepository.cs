@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.Persistence.Repositories.Prestamos
 {
-    // B.R Implementación completa del repositorio para asegurar que cumpla la interfaz
     public class SolicitudPrestamoRepository : MutableRepository<SolicitudPrestamo>, ISolicitudPrestamoRepository
     {
         public SolicitudPrestamoRepository(SigebiContext context) : base(context) { }
@@ -23,17 +22,16 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             return await _dbSet.FindAsync(new object[] { id }, ct);
         }
 
-        // SECCIÓN 2: Consultas por Usuario
-        public async Task<IReadOnlyCollection<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
+        // SECCIÓN 2: Consultas por Usuario (Ajustado a IEnumerable y sin CancellationToken)
+        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId)
         {
-            return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(ct);
+            return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync();
         }
 
-        // SECCIÓN 3: Consultas por Estado
-        public async Task<IReadOnlyCollection<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado, CancellationToken ct = default)
+        // SECCIÓN 3: Consultas por Estado (Ajustado a IEnumerable y sin CancellationToken)
+        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado)
         {
-            return await _dbSet.Where(s => s.Estado == estado).ToListAsync(ct);
+            return await _dbSet.Where(s => s.Estado == estado).ToListAsync();
         }
-
     }
 }

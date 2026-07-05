@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SIGEBI.Application.Base
 {
-    internal interface IBaseService
+    public interface IBaseService<TDto> where TDto : class
     {
+        Task<IEnumerable<TDto>> GetAllAsync();
+        Task<TDto> GetByIdAsync(int id);
     }
 }

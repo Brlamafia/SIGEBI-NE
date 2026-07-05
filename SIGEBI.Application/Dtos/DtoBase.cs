@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SIGEBI.Application.Dtos
 {
-    internal class DtoBase
+    public class DtoBase
     {
     }
 }
