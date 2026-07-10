@@ -1,5 +1,4 @@
-﻿// B.R
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +8,8 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     {
         Task<IEnumerable<T>> GetAllAsync();
         Task<T> GetByIdAsync(int id);
-        Task AgregarAsync(T entidad, CancellationToken ct = default);
+        Task AgregarAsync(T entity, CancellationToken ct = default);
+        Task ActualizarAsync(T entity);
+        Task EliminarAsync(T entity);
     }
 }

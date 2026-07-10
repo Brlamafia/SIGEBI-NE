@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SIGEBI.Application.Dtos.Roles;
 using SIGEBI.Application.Interfaces.Roles;
 using System.Threading.Tasks;
 
@@ -16,17 +17,30 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var result = await _rolService.GetAllAsync();
-            return Ok(result);
-        }
+        public async Task<IActionResult> GetAll() => Ok(await _rolService.GetAllAsync());
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(int id) => Ok(await _rolService.GetByIdAsync(id));
+
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] SaveRolDto dto)
         {
-            var result = await _rolService.GetByIdAsync(id);
-            return Ok(result);
+            await _rolService.AddAsync(dto);
+            return StatusCode(201);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, [FromBody] UpdateRolDto dto)
+        {
+            await _rolService.UpdateAsync(id, dto);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await _rolService.DeleteAsync(id);
+            return NoContent();
         }
     }
 }

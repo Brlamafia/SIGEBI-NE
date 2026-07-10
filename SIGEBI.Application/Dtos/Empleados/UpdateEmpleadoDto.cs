@@ -2,11 +2,11 @@
 {
     public class UpdateEmpleadoDto
     {
-        public int Id { get; set; }
-        public string Nombre { get; set; }
-        public string Apellido { get; set; }
-        public string Cedula { get; set; }
-        public int CargoId { get; set; }
-        public bool Activo { get; set; }
+        public required int Id { get; set; }
+        public required string Nombre { get; set; }
+        public required string Apellido { get; set; }
+        public required string Cedula { get; set; }
+        public required int CargoId { get; set; }
+        public required bool Activo { get; set; }
     }
 }

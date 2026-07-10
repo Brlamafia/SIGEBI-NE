@@ -7,5 +7,8 @@ namespace SIGEBI.Application.Base
     {
         Task<IEnumerable<TDto>> GetAllAsync();
         Task<TDto> GetByIdAsync(int id);
+        Task<TDto> AddAsync<TSaveDto>(TSaveDto dto) where TSaveDto : class;
+        Task UpdateAsync<TUpdateDto>(int id, TUpdateDto dto) where TUpdateDto : class;
+        Task DeleteAsync(int id);
     }
 }

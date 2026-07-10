@@ -8,9 +8,6 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.Persistence.Base
 {
-    // B.R: Clase base para centralizar el acceso al Contexto y DbSet
-    // DRY: centraliza el acceso compartido al contexto y al DbSet.
-    // Ahora implementa IRepository<T>
     public abstract class BaseRepository<T> : IRepository<T> where T : class
     {
         protected readonly SigebiContext _context;
@@ -22,10 +19,6 @@ namespace SIGEBI.Persistence.Base
             _dbSet = _context.Set<T>();
         }
 
-        public async Task AgregarAsync(T entidad, CancellationToken ct = default)
-            => await _dbSet.AddAsync(entidad, ct);
-
-        // Implementación de los métodos requeridos por IRepository
         public virtual async Task<IEnumerable<T>> GetAllAsync()
         {
             return await _dbSet.ToListAsync();
@@ -33,8 +26,25 @@ namespace SIGEBI.Persistence.Base
 
         public virtual async Task<T> GetByIdAsync(int id)
         {
-            // FindAsync es la forma óptima de buscar por llave primaria en EF Core
             return await _dbSet.FindAsync(id);
+        }
+
+        public virtual async Task AgregarAsync(T entity, CancellationToken ct = default)
+        {
+            await _dbSet.AddAsync(entity, ct);
+            await _context.SaveChangesAsync(ct);
+        }
+
+        public virtual async Task ActualizarAsync(T entity)
+        {
+            _dbSet.Update(entity);
+            await _context.SaveChangesAsync();
+        }
+
+        public virtual async Task EliminarAsync(T entity)
+        {
+            _dbSet.Remove(entity);
+            await _context.SaveChangesAsync();
         }
     }
 }

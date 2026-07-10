@@ -2,7 +2,7 @@
 {
     public class SaveAdministradorDto
     {
-        public int EmpleadoId { get; set; }
-        public string NivelAcceso { get; set; }
+        public required int EmpleadoId { get; set; }
+        public required string NivelAcceso { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SIGEBI.Application.Dtos.Notificaciones;
 using SIGEBI.Application.Interfaces.Notificaciones;
 using System.Threading.Tasks;
 
@@ -16,15 +17,23 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            return Ok(await _notificacionService.GetAllAsync());
-        }
+        public async Task<IActionResult> GetAll() => Ok(await _notificacionService.GetAllAsync());
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(int id) => Ok(await _notificacionService.GetByIdAsync(id));
+
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] SaveNotificacionDto dto)
         {
-            return Ok(await _notificacionService.GetByIdAsync(id));
+            await _notificacionService.AddAsync(dto);
+            return StatusCode(201);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await _notificacionService.DeleteAsync(id);
+            return NoContent();
         }
     }
 }

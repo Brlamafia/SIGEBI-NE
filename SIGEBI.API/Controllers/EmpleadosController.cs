@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SIGEBI.Application.Dtos.Empleados;
 using SIGEBI.Application.Interfaces.Empleados;
 using System.Threading.Tasks;
 
@@ -16,15 +17,30 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            return Ok(await _empleadoService.GetAllAsync());
-        }
+        public async Task<IActionResult> GetAll() => Ok(await _empleadoService.GetAllAsync());
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(int id) => Ok(await _empleadoService.GetByIdAsync(id));
+
+        [HttpPost]
+        public async Task<IActionResult> Post([FromBody] SaveEmpleadoDto dto)
         {
-            return Ok(await _empleadoService.GetByIdAsync(id));
+            await _empleadoService.AddAsync(dto);
+            return StatusCode(201);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, [FromBody] UpdateEmpleadoDto dto)
+        {
+            await _empleadoService.UpdateAsync(id, dto);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            await _empleadoService.DeleteAsync(id);
+            return NoContent();
         }
     }
 }

@@ -2,8 +2,8 @@
 {
     public class SaveCargoDto
     {
-        public string Nombre { get; set; }
-        public string Descripcion { get; set; }
-        public decimal SalarioBase { get; set; }
+        public required string Nombre { get; set; }
+        public required string Descripcion { get; set; }
+        public required decimal SalarioBase { get; set; }
     }
 }

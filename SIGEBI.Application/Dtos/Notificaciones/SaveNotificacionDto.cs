@@ -2,7 +2,7 @@
 {
     public class SaveNotificacionDto
     {
-        public int UsuarioId { get; set; }
-        public string Mensaje { get; set; }
+        public required int UsuarioId { get; set; }
+        public required string Mensaje { get; set; }
     }
 }
