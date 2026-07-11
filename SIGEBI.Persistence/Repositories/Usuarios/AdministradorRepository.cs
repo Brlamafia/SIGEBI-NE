@@ -26,5 +26,13 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
                 .Include(a => a.Usuario)
                 .Include(a => a.Cargo)
                 .SingleOrDefaultAsync(a => a.UsuarioId == usuarioId, cancellationToken);
+
+        public async Task<IReadOnlyCollection<Administrador>> ObtenerTodosAsync(
+            CancellationToken cancellationToken = default)
+            => await _dbSet
+                .Include(a => a.Usuario)
+                .Include(a => a.Cargo)
+                .OrderBy(a => a.Id)
+                .ToListAsync(cancellationToken);
     }
 }

@@ -16,6 +16,9 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<IReadOnlyCollection<Prestamo>> ObtenerPorEstadoAsync(
             EstadoPrestamo estado,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(
+            DateTime fechaReferencia,
+            CancellationToken cancellationToken = default);
         Task<int> ContarActivosPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);

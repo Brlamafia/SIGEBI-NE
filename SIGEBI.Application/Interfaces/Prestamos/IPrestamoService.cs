@@ -23,6 +23,10 @@ namespace SIGEBI.Application.Interfaces.Prestamos
         Task<IReadOnlyCollection<PrestamoDto>> ObtenerVencidosAsync(
             CancellationToken cancellationToken = default);
 
+        Task<int> ActualizarPrestamosVencidosAsync(
+            ActualizarPrestamosVencidosDto dto,
+            CancellationToken cancellationToken = default);
+
         Task<PrestamoDto> RegistrarPrestamoAsync(
             RegistrarPrestamoDto dto,
             CancellationToken cancellationToken = default);

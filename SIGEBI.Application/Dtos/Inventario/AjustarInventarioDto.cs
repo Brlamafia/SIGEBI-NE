@@ -6,5 +6,6 @@ namespace SIGEBI.Application.Dtos.Inventario
         public int InventarioId { get; set; }
         public int NuevaCantidadTotal { get; set; }
         public int UsuarioResponsableId { get; set; }
+        public string Motivo { get; set; } = string.Empty;
     }
 }

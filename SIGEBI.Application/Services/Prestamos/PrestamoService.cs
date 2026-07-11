@@ -10,6 +10,7 @@ using SIGEBI.Domain.Exceptions;
 using SIGEBI.Domain.Interfaces;
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Domain.Services;
+using SIGEBI.Domain.Policies;
 using AuditoriaEntidad = SIGEBI.Domain.Entities.Auditoria.Auditoria;
 
 namespace SIGEBI.Application.Services.Prestamos
@@ -28,6 +29,7 @@ namespace SIGEBI.Application.Services.Prestamos
         private readonly PrestamoDomainService _prestamoDomainService;
         private readonly MultaDomainService _multaDomainService;
         private readonly IMapper _mapper;
+        private readonly PoliticaPrestamos _politicaPrestamos;
 
         public PrestamoService(
             ISolicitudPrestamoRepository solicitudes,
@@ -40,7 +42,8 @@ namespace SIGEBI.Application.Services.Prestamos
             IUnitOfWork unitOfWork,
             PrestamoDomainService prestamoDomainService,
             MultaDomainService multaDomainService,
-            IMapper mapper)
+            IMapper mapper,
+            PoliticaPrestamos politicaPrestamos)
         {
             _solicitudes = solicitudes;
             _usuarios = usuarios;
@@ -53,6 +56,7 @@ namespace SIGEBI.Application.Services.Prestamos
             _prestamoDomainService = prestamoDomainService;
             _multaDomainService = multaDomainService;
             _mapper = mapper;
+            _politicaPrestamos = politicaPrestamos;
         }
 
         public async Task<PrestamoDto> ObtenerPorIdAsync(
@@ -90,6 +94,43 @@ namespace SIGEBI.Application.Services.Prestamos
             CancellationToken cancellationToken = default)
             => ObtenerPorEstadoAsync(nameof(EstadoPrestamo.Vencido), cancellationToken);
 
+        public async Task<int> ActualizarPrestamosVencidosAsync(
+            ActualizarPrestamosVencidosDto dto,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+            if (dto.UsuarioResponsableId <= 0)
+                throw new BusinessRuleException("Debe indicar el usuario responsable.");
+
+            var fechaReferencia = dto.FechaReferencia == default
+                ? DateTime.UtcNow
+                : dto.FechaReferencia;
+            var cantidadActualizada = 0;
+
+            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            {
+                var prestamos = await _prestamos.ObtenerActivosVencidosAsync(fechaReferencia, ct);
+                foreach (var prestamo in prestamos)
+                {
+                    prestamo.MarcarComoVencido(fechaReferencia);
+                    _prestamos.Actualizar(prestamo);
+                    cantidadActualizada++;
+                }
+
+                if (cantidadActualizada > 0)
+                {
+                    await _auditorias.AgregarAsync(new AuditoriaEntidad(
+                        dto.UsuarioResponsableId,
+                        ModuloAuditoria.Prestamos,
+                        AccionAuditoria.ActualizarEstado,
+                        $"Se marcaron {cantidadActualizada} préstamos como vencidos.",
+                        ResultadoAuditoria.Exitoso), ct);
+                }
+            }, cancellationToken);
+
+            return cantidadActualizada;
+        }
+
         public async Task<PrestamoDto> RegistrarPrestamoAsync(
             RegistrarPrestamoDto dto,
             CancellationToken cancellationToken = default)
@@ -118,7 +159,7 @@ namespace SIGEBI.Application.Services.Prestamos
                     _multaDomainService.TieneMultasPendientes(multasUsuario),
                     tieneVencidos,
                     cantidadActivos,
-                    dto.LimitePrestamos,
+                    _politicaPrestamos.LimitePrestamosPorUsuario,
                     solicitud,
                     empleado.Id,
                     dto.FechaPrestamo,

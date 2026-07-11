@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using SIGEBI.Persistence.Context;
-using FluentValidation;
-using SIGEBI.Application.Validations;
+using SIGEBI.IOC.Injection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,10 +9,8 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-// Add connect SIGEBI 
-builder.Services.AddDbContext<SigebiContext>(options =>
+builder.Services.AddSigebiDependencies(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddValidatorsFromAssemblyContaining<SaveRolValidator>();
 
 var app = builder.Build();
 

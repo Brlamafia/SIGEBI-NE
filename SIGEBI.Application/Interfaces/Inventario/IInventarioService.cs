@@ -4,6 +4,10 @@ namespace SIGEBI.Application.Interfaces.Inventario
 {
     public interface IInventarioService
     {
+        Task<InventarioDto> CrearAsync(
+            CrearInventarioDto dto,
+            CancellationToken cancellationToken = default);
+
         Task<InventarioDto> ObtenerPorIdAsync(
             int inventarioId,
             CancellationToken cancellationToken = default);

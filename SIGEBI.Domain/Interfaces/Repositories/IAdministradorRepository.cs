@@ -7,6 +7,7 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     {
         Task<Administrador?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Administrador?> ObtenerPorUsuarioIdAsync(int usuarioId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Administrador>> ObtenerTodosAsync(CancellationToken cancellationToken = default);
         Task AgregarAsync(Administrador administrador, CancellationToken cancellationToken = default);
         void Actualizar(Administrador administrador);
     }

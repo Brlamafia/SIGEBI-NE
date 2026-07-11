@@ -13,6 +13,9 @@ namespace SIGEBI.Application.Validations.Inventario
                 .GreaterThanOrEqualTo(0).WithMessage("La cantidad total no puede ser negativa.");
             RuleFor(x => x.UsuarioResponsableId)
                 .GreaterThan(0).WithMessage("Se requiere un usuario responsable válido.");
+            RuleFor(x => x.Motivo)
+                .NotEmpty()
+                .MaximumLength(500);
         }
     }
 }

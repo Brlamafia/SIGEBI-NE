@@ -33,6 +33,15 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
                 .OrderByDescending(p => p.FechaPrestamo)
                 .ToListAsync(cancellationToken);
 
+        public async Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(
+            DateTime fechaReferencia,
+            CancellationToken cancellationToken = default)
+            => await _dbSet
+                .Where(p => p.Estado == EstadoPrestamo.Activo
+                    && p.FechaEsperadaDevolucion < fechaReferencia)
+                .OrderBy(p => p.FechaEsperadaDevolucion)
+                .ToListAsync(cancellationToken);
+
         public Task<int> ContarActivosPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default)

@@ -17,30 +17,22 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _administradorService.GetAllAsync());
+        public async Task<IActionResult> GetAll() => Ok(await _administradorService.ObtenerTodosAsync());
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id) => Ok(await _administradorService.GetByIdAsync(id));
+        public async Task<IActionResult> GetById(int id) => Ok(await _administradorService.ObtenerPorIdAsync(id));
 
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] SaveAdministradorDto dto)
         {
-            await _administradorService.AddAsync(dto);
-            return StatusCode(201);
+            var administrador = await _administradorService.CrearAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = administrador.Id }, administrador);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] UpdateAdministradorDto dto)
         {
-            await _administradorService.UpdateAsync(id, dto);
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            await _administradorService.DeleteAsync(id);
-            return NoContent();
+            return Ok(await _administradorService.ActualizarAsync(id, dto));
         }
     }
 }

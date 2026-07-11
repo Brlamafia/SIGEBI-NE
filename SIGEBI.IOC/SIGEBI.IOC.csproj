@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SIGEBI.Application\SIGEBI.Application.csproj" />
+    <ProjectReference Include="..\SIGEBI.Infrastructure\SIGEBI.Infrastructure.csproj" />
     <ProjectReference Include="..\SIGEBI.Persistence\SIGEBI.Persistence.csproj" />
   </ItemGroup>
 

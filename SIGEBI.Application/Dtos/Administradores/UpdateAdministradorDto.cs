@@ -2,9 +2,7 @@
 {
     public class UpdateAdministradorDto
     {
-        public required int Id { get; set; }
-        public required int EmpleadoId { get; set; }
-        public required string NivelAcceso { get; set; }
-        public required bool Activo { get; set; }
+        public int CargoId { get; set; }
+        public int UsuarioResponsableId { get; set; }
     }
 }

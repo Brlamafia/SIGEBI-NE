@@ -41,6 +41,32 @@ namespace SIGEBI.Application.Services.Inventario
             return _mapper.Map<InventarioDto>(inventario);
         }
 
+        public async Task<InventarioDto> CrearAsync(
+            CrearInventarioDto dto,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+            ValidarResponsableYMotivo(dto.UsuarioResponsableId, dto.Motivo);
+            InventarioEntidad? inventarioCreado = null;
+
+            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            {
+                if (await _inventarios.ObtenerPorLibroIdAsync(dto.LibroId, ct) is not null)
+                    throw new BusinessRuleException("El libro ya posee un inventario registrado.");
+
+                inventarioCreado = new InventarioEntidad(dto.LibroId, dto.CantidadTotal);
+                await _inventarios.AgregarAsync(inventarioCreado, ct);
+                await _auditorias.AgregarAsync(new AuditoriaEntidad(
+                    dto.UsuarioResponsableId,
+                    ModuloAuditoria.Inventario,
+                    AccionAuditoria.Registrar,
+                    $"Inventario inicial del libro {dto.LibroId}: {dto.CantidadTotal}. Motivo: {dto.Motivo.Trim()}",
+                    ResultadoAuditoria.Exitoso), ct);
+            }, IsolationLevel.Serializable, cancellationToken);
+
+            return _mapper.Map<InventarioDto>(inventarioCreado!);
+        }
+
         public async Task<InventarioDto> ObtenerPorLibroIdAsync(
             int libroId,
             CancellationToken cancellationToken = default)
@@ -56,6 +82,7 @@ namespace SIGEBI.Application.Services.Inventario
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(dto);
+            ValidarResponsableYMotivo(dto.UsuarioResponsableId, dto.Motivo);
             InventarioEntidad? inventarioActualizado = null;
 
             await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
@@ -70,7 +97,7 @@ namespace SIGEBI.Application.Services.Inventario
                     dto.UsuarioResponsableId,
                     ModuloAuditoria.Inventario,
                     AccionAuditoria.Ajustar,
-                    $"Ajuste de inventario {inventario.Id} a cantidad total {dto.NuevaCantidadTotal}.",
+                    $"Ajuste de inventario {inventario.Id} a cantidad total {dto.NuevaCantidadTotal}. Motivo: {dto.Motivo.Trim()}",
                     ResultadoAuditoria.Exitoso);
 
                 _inventarios.Actualizar(inventario);
@@ -79,6 +106,14 @@ namespace SIGEBI.Application.Services.Inventario
 
             return _mapper.Map<InventarioDto>(
                 inventarioActualizado ?? throw new InvalidOperationException("No fue posible ajustar el inventario."));
+        }
+
+        private static void ValidarResponsableYMotivo(int usuarioResponsableId, string motivo)
+        {
+            if (usuarioResponsableId <= 0)
+                throw new BusinessRuleException("Debe indicar el usuario responsable.");
+            if (string.IsNullOrWhiteSpace(motivo))
+                throw new BusinessRuleException("Debe indicar el motivo del movimiento de inventario.");
         }
     }
 }

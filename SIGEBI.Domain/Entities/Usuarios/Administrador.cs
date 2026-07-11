@@ -25,5 +25,13 @@ namespace SIGEBI.Domain.Entities.Usuarios
             UsuarioId = usuarioId;
             CargoId = cargoId;
         }
+
+        public void ActualizarCargo(int cargoId)
+        {
+            if (cargoId <= 0) throw new ArgumentOutOfRangeException(nameof(cargoId));
+
+            CargoId = cargoId;
+            MarcarComoModificada();
+        }
     }
 }
