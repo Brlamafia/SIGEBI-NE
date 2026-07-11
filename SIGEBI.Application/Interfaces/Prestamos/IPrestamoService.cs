@@ -1,43 +1,46 @@
-using SIGEBI.Domain.Entities.Prestamos;
+using SIGEBI.Application.Dtos.Multas;
+using SIGEBI.Application.Dtos.Prestamos;
 
 namespace SIGEBI.Application.Interfaces.Prestamos
 {
     public interface IPrestamoService
     {
-        Task<Prestamo> RegistrarPrestamoAsync(
-            int solicitudPrestamoId,
-            int empleadoPrestamoId,
-            int limitePrestamos,
-            DateTime fechaPrestamo,
-            DateTime fechaEsperadaDevolucion,
+        Task<PrestamoDto> ObtenerPorIdAsync(
+            int prestamoId,
             CancellationToken cancellationToken = default);
 
-        Task<Multa?> RegistrarDevolucionAsync(
-            int prestamoId,
-            int empleadoDevolucionId,
-            DateTime fechaRealDevolucion,
-            decimal montoMultaPorDia,
+        Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorEstadoAsync(
+            string estado,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<PrestamoDto>> ObtenerActivosAsync(
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<PrestamoDto>> ObtenerVencidosAsync(
+            CancellationToken cancellationToken = default);
+
+        Task<PrestamoDto> RegistrarPrestamoAsync(
+            RegistrarPrestamoDto dto,
+            CancellationToken cancellationToken = default);
+
+        Task<MultaDto?> RegistrarDevolucionAsync(
+            RegistrarDevolucionDto dto,
             CancellationToken cancellationToken = default);
 
         Task CancelarPrestamoAsync(
-            int prestamoId,
-            int empleadoResponsableId,
+            CancelarPrestamoDto dto,
             CancellationToken cancellationToken = default);
 
-        Task<Multa> RegistrarPerdidaAsync(
-            int prestamoId,
-            int empleadoResponsableId,
-            DateTime fechaReporte,
-            decimal montoMulta,
-            string motivo,
+        Task<MultaDto> RegistrarPerdidaAsync(
+            RegistrarPerdidaDto dto,
             CancellationToken cancellationToken = default);
 
-        Task<Multa> RegistrarDevolucionConDanioAsync(
-            int prestamoId,
-            int empleadoResponsableId,
-            DateTime fechaDevolucion,
-            decimal montoMulta,
-            string motivo,
+        Task<MultaDto> RegistrarDevolucionConDanioAsync(
+            RegistrarDanioDto dto,
             CancellationToken cancellationToken = default);
     }
 }

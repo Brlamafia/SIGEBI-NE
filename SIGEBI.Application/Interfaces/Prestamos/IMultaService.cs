@@ -1,17 +1,31 @@
+using SIGEBI.Application.Dtos.Multas;
+
 namespace SIGEBI.Application.Interfaces.Prestamos
 {
     public interface IMultaService
     {
-        Task MarcarComoPagadaAsync(
+        Task<MultaDto> ObtenerPorIdAsync(
             int multaId,
-            int usuarioResponsableId,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<MultaDto>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<MultaDto>> ObtenerPorEstadoAsync(
+            string estado,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> TienePendientesPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
+
+        Task MarcarComoPagadaAsync(
+            PagarMultaDto dto,
             CancellationToken cancellationToken = default);
 
         Task ResolverAsync(
-            int multaId,
-            int empleadoResolucionId,
-            DateTime fechaResolucion,
-            string observacion,
+            ResolverMultaDto dto,
             CancellationToken cancellationToken = default);
     }
 }
