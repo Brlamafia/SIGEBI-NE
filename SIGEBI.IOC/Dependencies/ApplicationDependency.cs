@@ -22,7 +22,8 @@ using SIGEBI.Application.Services.Roles;
 using SIGEBI.Application.Validations;
 using SIGEBI.Domain.Services;
 using SIGEBI.Domain.Policies;
-
+using SIGEBI.Application.Interfaces.Usuarios;
+using SIGEBI.Application.Services.Usuarios;
 namespace SIGEBI.IOC.Dependencies;
 
 public static class ApplicationDependency

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace SIGEBI.Application.Dtos.Catalogo
 {
-    internal class UpdateLibroDto
+    public class UpdateLibroDto
     {
     }
 }
