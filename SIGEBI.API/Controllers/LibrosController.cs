@@ -1,12 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Catalogo;
 using SIGEBI.Application.Interfaces.Catalogo;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
+    [Route("api/[controller]")]
     public class LibrosController : ControllerBase
     {
         private readonly ILibroService _libroService;

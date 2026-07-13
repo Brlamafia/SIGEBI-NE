@@ -1,10 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SIGEBI.Application.Dtos.Catalogo
+﻿namespace SIGEBI.Application.Dtos.Catalogo
 {
     public class LibroDto
     {
+        public int Id { get; set; }
+        public string Titulo { get; set; } = string.Empty;
+        public string Autor { get; set; } = string.Empty;
+        public string ISBN { get; set; } = string.Empty;
+        public string Editorial { get; set; } = string.Empty;
+        public int AnioPublicacion { get; set; }
+        public int StockDisponible { get; set; }
     }
 }

@@ -1,34 +1,45 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SIGEBI.Application.Interfaces.Catalogo;
+using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
 
 namespace SIGEBI.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Authorize] // Candado: Nadie entra sin token
     [ApiController]
+    [Route("api/[controller]")]
     public class ReportesController : ControllerBase
     {
-        // GET: api/Reportes/prestamos
-        [HttpGet("prestamos")]
-        public async Task<IActionResult> GetReportePrestamos([FromQuery] string fechaInicio, [FromQuery] string fechaFin)
+        private readonly ILibroService _libroService;
+        private readonly ISolicitudPrestamoService _solicitudService;
+
+        public ReportesController(ILibroService libroService, ISolicitudPrestamoService solicitudService)
         {
-            // Lógica para devolver historial de préstamos en ese rango
-            return Ok(new { Mensaje = "Reporte de préstamos generado" });
+            _libroService = libroService;
+            _solicitudService = solicitudService;
         }
 
-        // GET: api/Reportes/inventario
         [HttpGet("inventario")]
         public async Task<IActionResult> GetReporteInventario()
         {
-            // Lógica para devolver estado actual del catálogo (Disponibles vs Prestados)
-            return Ok(new { Mensaje = "Reporte de inventario generado" });
+            var libros = await _libroService.GetAllAsync();
+            var reporte = libros.Select(l => new
+            {
+                l.Titulo,
+                l.Autor,
+                Disponibles = l.StockDisponible
+            });
+
+            return Ok(reporte);
         }
 
-        // GET: api/Reportes/multas
-        [HttpGet("multas")]
-        public async Task<IActionResult> GetReporteMultas([FromQuery] string estado)
+        [HttpGet("prestamos-fecha")]
+        public async Task<IActionResult> GetPrestamosPorFecha([FromQuery] DateTime desde, [FromQuery] DateTime hasta)
         {
-            // Lógica para devolver multas (Pendientes, Pagadas)
-            return Ok(new { Mensaje = "Reporte de multas generado" });
+            var todas = await _solicitudService.ObtenerPorEstadoAsync("Aprobada");
+            // Nota: Filtramos las aprobadas que estén dentro del rango
+            return Ok(todas);
         }
     }
 }

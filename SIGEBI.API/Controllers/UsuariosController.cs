@@ -1,12 +1,14 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Usuarios;
 using SIGEBI.Application.Interfaces.Usuarios;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
+    [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
     {
         private readonly IUsuarioService _usuarioService;
