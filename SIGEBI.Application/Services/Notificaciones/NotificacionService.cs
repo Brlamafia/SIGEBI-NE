@@ -42,18 +42,11 @@ namespace SIGEBI.Application.Services.Notificaciones
 
         public async Task<bool> MarcarComoLeidaAsync(int notificacionId)
         {
-            // Solución CS0272: Obtenemos el DTO en lugar de la Entidad de dominio.
-            // Los DTOs sí permiten modificar sus propiedades públicamente.
-            var dto = await base.GetByIdAsync(notificacionId);
+            var notificacion = await _notificacionRepository.ObtenerPorIdAsync(notificacionId)
+                ?? throw new BusinessRuleException("La notificación solicitada no existe.");
 
-            if (dto == null)
-                throw new BusinessRuleException("La notificación solicitada no existe.");
-
-            // Modificamos el estado en el DTO
-            dto.Leida = true;
-
-            // Solución CS1061: Enviamos el DTO actualizado al motor base para que lo persista.
-            await base.UpdateAsync(notificacionId, dto);
+            notificacion.MarcarComoLeida();
+            await _notificacionRepository.ActualizarAsync(notificacion);
 
             return true;
         }

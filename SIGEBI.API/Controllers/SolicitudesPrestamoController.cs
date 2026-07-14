@@ -26,14 +26,15 @@ namespace SIGEBI.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] SaveSolicitudPrestamoDto dto)
         {
-            await _solicitudService.AddAsync(dto);
-            return StatusCode(201);
+            await _solicitudService.RegistrarSolicitudAsync(dto);
+            return StatusCode(StatusCodes.Status201Created);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] UpdateSolicitudPrestamoDto dto)
         {
-            await _solicitudService.UpdateAsync(id, dto);
+            dto.Id = id;
+            await _solicitudService.EvaluarSolicitudAsync(dto);
             return NoContent();
         }
 

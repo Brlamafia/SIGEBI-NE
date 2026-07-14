@@ -1,12 +1,11 @@
-﻿// B.R
-namespace SIGEBI.Domain.Enums
+namespace SIGEBI.Domain.Enums;
+
+public enum EstadoEjemplar
 {
-    // Controla el estado físico y disponibilidad del ejemplar en inventario.
-    public enum EstadoEjemplar
-    {
-        Disponible = 1,
-        Prestado = 2,
-        EnReparacion = 3,
-        Perdido = 4
-    }
+    Disponible = 1,
+    Prestado = 2,
+    Reservado = 3,
+    FueraDeServicio = 4,
+    Perdido = 5,
+    Danado = 6
 }

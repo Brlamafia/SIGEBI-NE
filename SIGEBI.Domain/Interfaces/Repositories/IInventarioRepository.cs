@@ -8,6 +8,8 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     // Inversión de dependencias: Domain define el contrato y Persistence lo implementa.
     public interface IInventarioRepository
     {
+        Task<IReadOnlyCollection<Inventario>> ObtenerTodosAsync(
+            CancellationToken cancellationToken = default);
         Task<Inventario?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Inventario?> ObtenerPorLibroIdAsync(int libroId, CancellationToken cancellationToken = default);
         Task AgregarAsync(Inventario inventario, CancellationToken cancellationToken = default);

@@ -8,6 +8,8 @@ namespace SIGEBI.Application.Dtos.Inventario
         public int CantidadTotal { get; set; }
         public int CantidadDisponible { get; set; }
         public int CantidadPrestada { get; set; }
+        public int CantidadReservada { get; set; }
+        public int CantidadFueraServicio { get; set; }
         public int CantidadPerdida { get; set; }
         public int CantidadDanada { get; set; }
         public bool TieneDisponibilidad { get; set; }

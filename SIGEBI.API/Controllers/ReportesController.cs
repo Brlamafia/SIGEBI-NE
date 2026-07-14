@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Interfaces.Catalogo;
+using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Application.Interfaces.Prestamos;
-using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
 
 namespace SIGEBI.API.Controllers
 {
@@ -11,35 +10,30 @@ namespace SIGEBI.API.Controllers
     [Route("api/[controller]")]
     public class ReportesController : ControllerBase
     {
-        private readonly ILibroService _libroService;
-        private readonly ISolicitudPrestamoService _solicitudService;
+        private readonly IInventarioService _inventarioService;
+        private readonly IPrestamoService _prestamoService;
 
-        public ReportesController(ILibroService libroService, ISolicitudPrestamoService solicitudService)
+        public ReportesController(
+            IInventarioService inventarioService,
+            IPrestamoService prestamoService)
         {
-            _libroService = libroService;
-            _solicitudService = solicitudService;
+            _inventarioService = inventarioService;
+            _prestamoService = prestamoService;
         }
 
         [HttpGet("inventario")]
         public async Task<IActionResult> GetReporteInventario()
         {
-            var libros = await _libroService.GetAllAsync();
-            var reporte = libros.Select(l => new
-            {
-                l.Titulo,
-                l.Autor,
-                Disponibles = l.StockDisponible
-            });
-
-            return Ok(reporte);
+            return Ok(await _inventarioService.ObtenerTodosAsync(HttpContext.RequestAborted));
         }
 
         [HttpGet("prestamos-fecha")]
         public async Task<IActionResult> GetPrestamosPorFecha([FromQuery] DateTime desde, [FromQuery] DateTime hasta)
         {
-            var todas = await _solicitudService.ObtenerPorEstadoAsync("Aprobada");
-            // Nota: Filtramos las aprobadas que estén dentro del rango
-            return Ok(todas);
+            return Ok(await _prestamoService.ObtenerPorRangoAsync(
+                desde,
+                hasta,
+                HttpContext.RequestAborted));
         }
     }
 }

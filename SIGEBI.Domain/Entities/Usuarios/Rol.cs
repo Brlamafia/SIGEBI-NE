@@ -34,6 +34,16 @@ namespace SIGEBI.Domain.Entities.Usuarios
             }
         }
 
+        public void ActualizarDetalles(string nombre, string descripcion)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                throw new ArgumentException("El nombre del rol es obligatorio.", nameof(nombre));
+
+            Nombre = nombre.Trim();
+            Descripcion = descripcion?.Trim() ?? string.Empty;
+            MarcarComoModificada();
+        }
+
         public void RemoverPermiso(Permiso permiso)
         {
             ArgumentNullException.ThrowIfNull(permiso);

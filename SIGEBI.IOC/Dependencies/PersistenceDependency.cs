@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SIGEBI.Domain.Entities.Catalogo;
 using SIGEBI.Domain.Entities.Notificaciones;
+using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Interfaces;
 using SIGEBI.Domain.Interfaces.Repositories;
@@ -25,10 +27,25 @@ public static class PersistenceDependency
         services.AddDbContext<SigebiContext>(configureDbContext);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-        services.AddScoped<ILibroRepository, LibroRepository>();
+        services.AddScoped<UsuarioRepository>();
+        services.AddScoped<IUsuarioRepository>(provider =>
+            provider.GetRequiredService<UsuarioRepository>());
+        services.AddScoped<IRepository<Usuario>>(provider =>
+            provider.GetRequiredService<UsuarioRepository>());
+
+        services.AddScoped<LibroRepository>();
+        services.AddScoped<ILibroRepository>(provider =>
+            provider.GetRequiredService<LibroRepository>());
+        services.AddScoped<IRepository<Libro>>(provider =>
+            provider.GetRequiredService<LibroRepository>());
+
         services.AddScoped<IInventarioRepository, InventarioRepository>();
-        services.AddScoped<ISolicitudPrestamoRepository, SolicitudPrestamoRepository>();
+        services.AddScoped<IEjemplarRepository, EjemplarRepository>();
+        services.AddScoped<SolicitudPrestamoRepository>();
+        services.AddScoped<ISolicitudPrestamoRepository>(provider =>
+            provider.GetRequiredService<SolicitudPrestamoRepository>());
+        services.AddScoped<IRepository<SolicitudPrestamo>>(provider =>
+            provider.GetRequiredService<SolicitudPrestamoRepository>());
         services.AddScoped<IPrestamoRepository, PrestamoRepository>();
         services.AddScoped<IMultaRepository, MultaRepository>();
         services.AddScoped<IAuditoriaRepository, AuditoriaRepository>();

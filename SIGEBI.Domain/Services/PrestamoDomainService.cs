@@ -18,10 +18,12 @@ namespace SIGEBI.Domain.Services
             int empleadoPrestamoId,
             DateTime fechaPrestamo,
             DateTime fechaEsperadaDevolucion,
-            SIGEBI.Domain.Entities.Catalogo.Inventario inventario)
+            SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar)
         {
             ArgumentNullException.ThrowIfNull(solicitud);
             ArgumentNullException.ThrowIfNull(inventario);
+            ArgumentNullException.ThrowIfNull(ejemplar);
 
             // Fail Fast: todas las restricciones se validan antes de modificar el inventario.
             ValidarElegibilidad(
@@ -34,16 +36,19 @@ namespace SIGEBI.Domain.Services
 
             ValidarSolicitudAprobada(solicitud, usuarioId);
             ValidarInventarioDelLibro(inventario, solicitud.LibroId);
+            ValidarEjemplarDelLibro(ejemplar, solicitud.LibroId);
 
             var prestamo = new SIGEBI.Domain.Entities.Prestamos.Prestamo(
                 usuarioId,
                 solicitud.LibroId,
+                ejemplar.Id,
                 solicitud.Id,
                 empleadoPrestamoId,
                 fechaPrestamo,
                 fechaEsperadaDevolucion);
 
             inventario.RegistrarPrestamo();
+            ejemplar.Prestar();
             return prestamo;
         }
 
@@ -73,13 +78,16 @@ namespace SIGEBI.Domain.Services
         public bool RegistrarDevolucion(
             SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
             SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar,
             int empleadoDevolucionId,
             DateTime fechaRealDevolucion)
         {
             ArgumentNullException.ThrowIfNull(prestamo);
             ArgumentNullException.ThrowIfNull(inventario);
+            ArgumentNullException.ThrowIfNull(ejemplar);
 
             ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarEjemplarDelPrestamo(ejemplar, prestamo);
 
             if (inventario.CantidadPrestada <= 0)
             {
@@ -90,51 +98,64 @@ namespace SIGEBI.Domain.Services
             // Consistencia: préstamo e inventario cambian juntos dentro de la misma operación.
             var fueTardia = prestamo.RegistrarDevolucion(empleadoDevolucionId, fechaRealDevolucion);
             inventario.RegistrarDevolucion();
+            ejemplar.Devolver();
 
             return fueTardia;
         }
 
         public void CancelarPrestamo(
             SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
-            SIGEBI.Domain.Entities.Catalogo.Inventario inventario)
+            SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar)
         {
             ArgumentNullException.ThrowIfNull(prestamo);
             ArgumentNullException.ThrowIfNull(inventario);
+            ArgumentNullException.ThrowIfNull(ejemplar);
             ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarEjemplarDelPrestamo(ejemplar, prestamo);
             ValidarExistenciaPrestada(inventario);
 
             prestamo.Cancelar();
             inventario.CancelarPrestamo();
+            ejemplar.Devolver();
         }
 
         public void RegistrarPerdida(
             SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
             SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar,
             int empleadoResponsableId,
             DateTime fechaReporte)
         {
             ArgumentNullException.ThrowIfNull(prestamo);
             ArgumentNullException.ThrowIfNull(inventario);
+            ArgumentNullException.ThrowIfNull(ejemplar);
             ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarEjemplarDelPrestamo(ejemplar, prestamo);
             ValidarExistenciaPrestada(inventario);
 
             prestamo.RegistrarPerdida(empleadoResponsableId, fechaReporte);
             inventario.RegistrarPerdida();
+            ejemplar.RegistrarPerdida();
         }
 
         public void RegistrarDevolucionConDanio(
             SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo,
             SIGEBI.Domain.Entities.Catalogo.Inventario inventario,
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar,
             int empleadoResponsableId,
             DateTime fechaDevolucion)
         {
             ArgumentNullException.ThrowIfNull(prestamo);
             ArgumentNullException.ThrowIfNull(inventario);
+            ArgumentNullException.ThrowIfNull(ejemplar);
             ValidarInventarioDelLibro(inventario, prestamo.LibroId);
+            ValidarEjemplarDelPrestamo(ejemplar, prestamo);
             ValidarExistenciaPrestada(inventario);
 
             prestamo.RegistrarDevolucionConDanio(empleadoResponsableId, fechaDevolucion);
             inventario.RegistrarDanio();
+            ejemplar.RegistrarDanio();
         }
 
         private static void ValidarElegibilidad(
@@ -204,6 +225,25 @@ namespace SIGEBI.Domain.Services
                 throw new SIGEBI.Domain.Exceptions.DomainException(
                     "El inventario no registra ejemplares prestados para este libro.");
             }
+        }
+
+        private static void ValidarEjemplarDelLibro(
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar,
+            int libroId)
+        {
+            if (ejemplar.LibroId != libroId)
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El ejemplar proporcionado no corresponde al libro del préstamo.");
+        }
+
+        private static void ValidarEjemplarDelPrestamo(
+            SIGEBI.Domain.Entities.Catalogo.Ejemplar ejemplar,
+            SIGEBI.Domain.Entities.Prestamos.Prestamo prestamo)
+        {
+            ValidarEjemplarDelLibro(ejemplar, prestamo.LibroId);
+            if (ejemplar.Id != prestamo.EjemplarId)
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "El ejemplar no corresponde al préstamo indicado.");
         }
     }
 }

@@ -47,14 +47,17 @@ namespace SIGEBI.Application.Services.Usuarios
 
         public override async Task UpdateAsync<TUpdateDto>(int id, TUpdateDto dto)
         {
-            var entity = _mapper.Map<Usuario>(dto);
+            if (dto is not UpdateUsuarioDto datos)
+                throw new ArgumentException("El contrato de actualización de usuario no es válido.", nameof(dto));
 
             // Regla de Negocio 2: Validar duplicados ignorando al usuario que estamos editando
             var usuariosExistentes = await _usuarioRepository.GetAllAsync();
 
-            if (usuariosExistentes.Any(u => (u.Email == entity.Email || u.Cedula == entity.Cedula) && u.Id != id))
+            if (usuariosExistentes.Any(u =>
+                string.Equals(u.Email, datos.Email, StringComparison.OrdinalIgnoreCase)
+                && u.Id != id))
             {
-                throw new BusinessRuleException("La cédula o correo electrónico ya está en uso por otro usuario.");
+                throw new BusinessRuleException("El correo electrónico ya está en uso por otro usuario.");
             }
 
             await base.UpdateAsync(id, dto);

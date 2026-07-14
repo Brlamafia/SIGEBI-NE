@@ -7,7 +7,7 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     public interface IRepository<T> where T : class
     {
         Task<IEnumerable<T>> GetAllAsync();
-        Task<T> GetByIdAsync(int id);
+        Task<T?> GetByIdAsync(int id);
         Task AgregarAsync(T entity, CancellationToken ct = default);
         Task ActualizarAsync(T entity);
         Task EliminarAsync(T entity);

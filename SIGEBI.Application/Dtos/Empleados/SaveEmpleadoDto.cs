@@ -2,9 +2,7 @@
 {
     public class SaveEmpleadoDto
     {
-        public required string Nombre { get; set; }
-        public required string Apellido { get; set; }
-        public required string Cedula { get; set; }
+        public required int UsuarioId { get; set; }
         public required int CargoId { get; set; }
     }
 }

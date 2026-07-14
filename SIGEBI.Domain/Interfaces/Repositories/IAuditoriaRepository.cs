@@ -9,6 +9,8 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     // Inmutabilidad: el contrato permite crear y consultar, pero nunca actualizar o eliminar.
     public interface IAuditoriaRepository
     {
+        Task<IReadOnlyCollection<Auditoria>> ObtenerTodasAsync(
+            CancellationToken cancellationToken = default);
         Task<Auditoria?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Auditoria>> ObtenerPorUsuarioAsync(
             int usuarioResponsableId,

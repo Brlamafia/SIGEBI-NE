@@ -21,14 +21,18 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpPost("login")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            // Nota académica: En producción usarías hashing de contraseñas (ej. BCrypt)
-            // Aquí validamos usando el servicio de usuarios
             var usuarios = await _usuarioService.GetAllAsync();
-            var usuarioValido = usuarios.FirstOrDefault(u => u.Email == request.Email);
+            var usuarioValido = usuarios.FirstOrDefault(u =>
+                string.Equals(u.Email, request.Email, StringComparison.OrdinalIgnoreCase));
+            var demoPassword = _config["SwaggerDemo:Password"];
 
-            if (usuarioValido == null || request.Password != "Admin123") // Clave de acceso simulada
+            if (usuarioValido == null
+                || string.IsNullOrWhiteSpace(demoPassword)
+                || request.Password != demoPassword)
             {
                 return Unauthorized("Credenciales inválidas.");
             }
@@ -59,7 +63,7 @@ namespace SIGEBI.API.Controllers
 
     public class LoginRequest
     {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        public string Email { get; set; } = "admin@sigebi.local";
+        public string Password { get; set; } = "Admin123";
     }
 }

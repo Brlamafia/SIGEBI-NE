@@ -44,6 +44,7 @@ namespace SIGEBI.IOC.Dependencies
             services.AddScoped<IMultaService, MultaService>();
             services.AddScoped<IInventarioService, InventarioService>();
             services.AddScoped<IAuditoriaService, AuditoriaService>();
+            services.AddScoped<IAuditoriaWriter, AuditoriaWriter>();
             services.AddScoped<ICargoService, CargoService>();
             services.AddScoped<IEmpleadoService, EmpleadoService>();
             services.AddScoped<IAdministradorService, AdministradorService>();

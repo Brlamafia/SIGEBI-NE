@@ -16,6 +16,12 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             CancellationToken cancellationToken = default)
             => await _dbSet.FindAsync([id], cancellationToken);
 
+        public async Task<IReadOnlyCollection<Inventario>> ObtenerTodosAsync(
+            CancellationToken cancellationToken = default)
+            => await _dbSet
+                .OrderBy(i => i.LibroId)
+                .ToListAsync(cancellationToken);
+
         public Task<Inventario?> ObtenerPorLibroIdAsync(
             int libroId,
             CancellationToken cancellationToken = default)

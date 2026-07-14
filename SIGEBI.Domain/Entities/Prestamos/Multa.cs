@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using SIGEBI.Domain.Common;
 
 namespace SIGEBI.Domain.Entities.Prestamos
 {
@@ -33,7 +34,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
             string motivo)
         {
             // Fail Fast: una multa nunca debe crearse con datos inválidos.
-            ValidarIdentificador(usuarioId, nameof(usuarioId));
+            Guard.AgainstNonPositive(usuarioId, nameof(usuarioId));
 
             if (!Enum.IsDefined(tipo))
             {
@@ -42,7 +43,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
 
             if (prestamoId.HasValue)
             {
-                ValidarIdentificador(prestamoId.Value, nameof(prestamoId));
+                Guard.AgainstNonPositive(prestamoId.Value, nameof(prestamoId));
             }
 
             if (tipo == SIGEBI.Domain.Enums.TipoMulta.Retraso && !prestamoId.HasValue)
@@ -57,16 +58,11 @@ namespace SIGEBI.Domain.Entities.Prestamos
                 throw new ArgumentOutOfRangeException(nameof(monto), "El monto debe ser mayor que cero.");
             }
 
-            if (string.IsNullOrWhiteSpace(motivo))
-            {
-                throw new ArgumentException("El motivo de la multa es obligatorio.", nameof(motivo));
-            }
-
             UsuarioId = usuarioId;
             PrestamoId = prestamoId;
             Tipo = tipo;
             Monto = monto;
-            Motivo = motivo.Trim();
+            Motivo = Guard.AgainstNullOrWhiteSpace(motivo, nameof(motivo));
             Estado = SIGEBI.Domain.Enums.EstadoMulta.Pendiente;
             FechaGeneracion = DateTime.UtcNow;
         }
@@ -86,7 +82,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
             string observacion)
         {
             ValidarPendiente();
-            ValidarIdentificador(empleadoResolucionId, nameof(empleadoResolucionId));
+            Guard.AgainstNonPositive(empleadoResolucionId, nameof(empleadoResolucionId));
 
             if (fechaResolucion < FechaGeneracion)
             {
@@ -95,14 +91,9 @@ namespace SIGEBI.Domain.Entities.Prestamos
                     nameof(fechaResolucion));
             }
 
-            if (string.IsNullOrWhiteSpace(observacion))
-            {
-                throw new ArgumentException("La observación de resolución es obligatoria.", nameof(observacion));
-            }
-
             EmpleadoResolucionId = empleadoResolucionId;
             FechaResolucion = fechaResolucion;
-            ObservacionResolucion = observacion.Trim();
+            ObservacionResolucion = Guard.AgainstNullOrWhiteSpace(observacion, nameof(observacion));
             Estado = SIGEBI.Domain.Enums.EstadoMulta.Resuelta;
             MarcarComoModificada();
         }
@@ -117,14 +108,5 @@ namespace SIGEBI.Domain.Entities.Prestamos
             }
         }
 
-        private static void ValidarIdentificador(int identificador, string nombreParametro)
-        {
-            if (identificador <= 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nombreParametro,
-                    "El identificador debe ser mayor que cero.");
-            }
-        }
     }
 }

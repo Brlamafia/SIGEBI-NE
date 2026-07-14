@@ -22,6 +22,7 @@ namespace SIGEBI.Persistence.Context
         public DbSet<Prestamo> Prestamos { get; set; }
         public DbSet<Multa> Multas { get; set; }
         public DbSet<Inventario> Inventario { get; set; }
+        public DbSet<Ejemplar> Ejemplares { get; set; }
         public DbSet<Auditoria> Auditoria { get; set; }
         public DbSet<Administrador> Administradores { get; set; }
         public DbSet<Cargo> Cargos { get; set; }
@@ -41,6 +42,7 @@ namespace SIGEBI.Persistence.Context
             modelBuilder.Entity<Prestamo>().ToTable("Prestamo");
             modelBuilder.Entity<Multa>().ToTable("Multa");
             modelBuilder.Entity<Inventario>().ToTable("Inventario");
+            modelBuilder.Entity<Ejemplar>().ToTable("Ejemplar");
             modelBuilder.Entity<Auditoria>().ToTable("Auditoria");
             modelBuilder.Entity<Administrador>().ToTable("Administrador");
             modelBuilder.Entity<Cargo>().ToTable("Cargo");
@@ -59,6 +61,7 @@ namespace SIGEBI.Persistence.Context
             ConfigurarPrestamo(modelBuilder);
             ConfigurarMulta(modelBuilder);
             ConfigurarInventario(modelBuilder);
+            ConfigurarEjemplar(modelBuilder);
             ConfigurarAuditoria(modelBuilder);
         }
 
@@ -228,6 +231,10 @@ namespace SIGEBI.Persistence.Context
                 .WithMany()
                 .HasForeignKey(p => p.LibroId)
                 .OnDelete(DeleteBehavior.Restrict);
+            prestamo.HasOne<Ejemplar>()
+                .WithMany()
+                .HasForeignKey(p => p.EjemplarId)
+                .OnDelete(DeleteBehavior.Restrict);
             prestamo.HasOne<SolicitudPrestamo>()
                 .WithOne()
                 .HasForeignKey<Prestamo>(p => p.SolicitudPrestamoId)
@@ -276,11 +283,13 @@ namespace SIGEBI.Persistence.Context
                 tabla.HasCheckConstraint("CK_Inventario_CantidadTotal", "[CantidadTotal] >= 0");
                 tabla.HasCheckConstraint("CK_Inventario_CantidadDisponible", "[CantidadDisponible] >= 0");
                 tabla.HasCheckConstraint("CK_Inventario_CantidadPrestada", "[CantidadPrestada] >= 0");
+                tabla.HasCheckConstraint("CK_Inventario_CantidadReservada", "[CantidadReservada] >= 0");
+                tabla.HasCheckConstraint("CK_Inventario_CantidadFueraServicio", "[CantidadFueraServicio] >= 0");
                 tabla.HasCheckConstraint("CK_Inventario_CantidadPerdida", "[CantidadPerdida] >= 0");
                 tabla.HasCheckConstraint("CK_Inventario_CantidadDanada", "[CantidadDanada] >= 0");
                 tabla.HasCheckConstraint(
                     "CK_Inventario_CantidadesConsistentes",
-                    "[CantidadTotal] = [CantidadDisponible] + [CantidadPrestada] + [CantidadPerdida] + [CantidadDanada]");
+                    "[CantidadTotal] = [CantidadDisponible] + [CantidadPrestada] + [CantidadReservada] + [CantidadFueraServicio] + [CantidadPerdida] + [CantidadDanada]");
             });
 
             // Integridad de datos: cada libro posee un único registro de inventario.
@@ -288,11 +297,27 @@ namespace SIGEBI.Persistence.Context
             // Concurrencia optimista: evita sobrescribir cantidades modificadas por otra operación.
             inventario.Property(i => i.CantidadDisponible).IsConcurrencyToken();
             inventario.Property(i => i.CantidadPrestada).IsConcurrencyToken();
+            inventario.Property(i => i.CantidadReservada).IsConcurrencyToken();
+            inventario.Property(i => i.CantidadFueraServicio).IsConcurrencyToken();
             inventario.Property(i => i.CantidadPerdida).IsConcurrencyToken();
             inventario.Property(i => i.CantidadDanada).IsConcurrencyToken();
             inventario.HasOne<Libro>()
                 .WithOne()
                 .HasForeignKey<Inventario>(i => i.LibroId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
+
+        private static void ConfigurarEjemplar(ModelBuilder modelBuilder)
+        {
+            var ejemplar = modelBuilder.Entity<Ejemplar>();
+
+            ejemplar.Property(e => e.Codigo).HasMaxLength(80).IsRequired();
+            ejemplar.Property(e => e.Estado).HasConversion<string>().HasMaxLength(30).IsRequired();
+            ejemplar.HasIndex(e => e.Codigo).IsUnique();
+            ejemplar.HasIndex(e => new { e.LibroId, e.Estado });
+            ejemplar.HasOne<Libro>()
+                .WithMany()
+                .HasForeignKey(e => e.LibroId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
 

@@ -16,6 +16,10 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<IReadOnlyCollection<Prestamo>> ObtenerPorEstadoAsync(
             EstadoPrestamo estado,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerPorRangoAsync(
+            DateTime fechaDesde,
+            DateTime fechaHasta,
+            CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(
             DateTime fechaReferencia,
             CancellationToken cancellationToken = default);

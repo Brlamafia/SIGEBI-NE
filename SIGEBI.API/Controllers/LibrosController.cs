@@ -35,7 +35,7 @@ namespace SIGEBI.API.Controllers
         [HttpGet("buscar")]
         public async Task<IActionResult> BuscarLibros([FromQuery] string termino)
         {
-            return Ok(new { Mensaje = $"Buscando libros con el término: {termino}" });
+            return Ok(await _libroService.BuscarLibrosAsync(termino));
         }
 
         [HttpPost]

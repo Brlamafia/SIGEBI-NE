@@ -1,60 +1,90 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Prestamos;
-using SIGEBI.Application.Dtos.SolicitudesPrestamo;
 using SIGEBI.Application.Interfaces.Prestamos;
-using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
-using System.Threading.Tasks;
 
-namespace SIGEBI.API.Controllers
+namespace SIGEBI.API.Controllers;
+
+[Authorize(Roles = "Administrador,Bibliotecario")]
+[ApiController]
+[Route("api/[controller]")]
+public class PrestamosController : ControllerBase
 {
-    [Authorize] // Candado: Nadie entra sin el token JWT
-    [ApiController]
-    [Route("api/[controller]")]
-    public class PrestamosController : ControllerBase
+    private readonly IPrestamoService _prestamos;
+
+    public PrestamosController(IPrestamoService prestamos)
     {
-        private readonly ISolicitudPrestamoService _solicitudService;
-        private readonly IPrestamoService _prestamoService;
-
-        // Inyectamos las interfaces que conectamos en el ApplicationDependency
-        public PrestamosController(
-            ISolicitudPrestamoService solicitudService,
-            IPrestamoService prestamoService)
-        {
-            _solicitudService = solicitudService;
-            _prestamoService = prestamoService;
-        }
-
-        // 1. Obtener el historial de préstamos de un usuario específico
-        [HttpGet("usuario/{usuarioId}")]
-        public async Task<IActionResult> GetHistorialUsuario(int usuarioId)
-        {
-            var solicitudes = await _solicitudService.ObtenerPorUsuarioAsync(usuarioId);
-            return Ok(solicitudes);
-        }
-
-        // 2. Registrar una nueva solicitud (El usuario pide un libro)
-        [HttpPost("solicitar")]
-        public async Task<IActionResult> SolicitarLibro([FromBody] SaveSolicitudPrestamoDto dto)
-        {
-            if (dto == null) return BadRequest("La solicitud no puede estar vacía.");
-
-            // Llama a la lógica real que inyectamos hoy (que valida multas y stock)
-            await _solicitudService.RegistrarSolicitudAsync(dto);
-
-            return Ok(new { Mensaje = "Solicitud registrada con éxito. Pendiente de evaluación." });
-        }
-
-        // 3. Evaluar la solicitud (El bibliotecario aprueba o rechaza)
-        [HttpPut("evaluar")]
-        public async Task<IActionResult> EvaluarSolicitud([FromBody] UpdateSolicitudPrestamoDto dto)
-        {
-            if (dto == null) return BadRequest("Los datos de evaluación no pueden estar vacíos.");
-
-            // Llama a la lógica que descuenta el inventario y manda la notificación
-            await _solicitudService.EvaluarSolicitudAsync(dto);
-
-            return Ok(new { Mensaje = "La solicitud ha sido evaluada correctamente." });
-        }
+        _prestamos = prestamos;
     }
+
+    [HttpGet("{prestamoId:int}")]
+    public async Task<ActionResult<PrestamoDto>> ObtenerPorId(
+        int prestamoId,
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerPorIdAsync(prestamoId, cancellationToken));
+
+    [HttpGet("usuario/{usuarioId:int}")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorUsuario(
+        int usuarioId,
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerPorUsuarioAsync(usuarioId, cancellationToken));
+
+    [HttpGet("estado/{estado}")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorEstado(
+        string estado,
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerPorEstadoAsync(estado, cancellationToken));
+
+    [HttpGet("activos")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerActivos(
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerActivosAsync(cancellationToken));
+
+    [HttpGet("vencidos")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerVencidos(
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerVencidosAsync(cancellationToken));
+
+    [HttpPost]
+    public async Task<ActionResult<PrestamoDto>> Registrar(
+        [FromBody] RegistrarPrestamoDto dto,
+        CancellationToken cancellationToken)
+    {
+        var prestamo = await _prestamos.RegistrarPrestamoAsync(dto, cancellationToken);
+        return CreatedAtAction(nameof(ObtenerPorId), new { prestamoId = prestamo.Id }, prestamo);
+    }
+
+    [HttpPost("cancelar")]
+    public async Task<IActionResult> Cancelar(
+        [FromBody] CancelarPrestamoDto dto,
+        CancellationToken cancellationToken)
+    {
+        await _prestamos.CancelarPrestamoAsync(dto, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("solicitudes/rechazar")]
+    public async Task<IActionResult> RechazarSolicitud(
+        [FromBody] RechazarSolicitudPrestamoDto dto,
+        CancellationToken cancellationToken)
+    {
+        await _prestamos.RechazarSolicitudAsync(dto, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("perdidas")]
+    public async Task<IActionResult> RegistrarPerdida(
+        [FromBody] RegistrarPerdidaDto dto,
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.RegistrarPerdidaAsync(dto, cancellationToken));
+
+    [HttpPut("vencidos/actualizar")]
+    public async Task<IActionResult> ActualizarVencidos(
+        [FromBody] ActualizarPrestamosVencidosDto dto,
+        CancellationToken cancellationToken)
+    {
+        var cantidad = await _prestamos.ActualizarPrestamosVencidosAsync(dto, cancellationToken);
+        return Ok(new { cantidadActualizada = cantidad });
+    }
+
 }

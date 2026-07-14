@@ -2,9 +2,7 @@
 {
     public class RolDto : DtoBase
     {
-        public required int Id { get; set; }
-        public required string Nombre { get; set; }
-        public required string Descripcion { get; set; }
-        public required bool Activo { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get; set; } = string.Empty;
     }
 }

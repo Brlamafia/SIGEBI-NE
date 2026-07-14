@@ -23,6 +23,12 @@ namespace SIGEBI.Persistence.Repositories.Auditoria
             CancellationToken cancellationToken = default)
             => await _auditorias.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, cancellationToken);
 
+        public async Task<IReadOnlyCollection<AuditoriaEntidad>> ObtenerTodasAsync(
+            CancellationToken cancellationToken = default)
+            => await _auditorias.AsNoTracking()
+                .OrderByDescending(a => a.Fecha)
+                .ToListAsync(cancellationToken);
+
         public async Task<IReadOnlyCollection<AuditoriaEntidad>> ObtenerPorUsuarioAsync(
             int usuarioResponsableId,
             CancellationToken cancellationToken = default)

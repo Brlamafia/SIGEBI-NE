@@ -33,6 +33,20 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
                 .OrderByDescending(p => p.FechaPrestamo)
                 .ToListAsync(cancellationToken);
 
+        public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorRangoAsync(
+            DateTime fechaDesde,
+            DateTime fechaHasta,
+            CancellationToken cancellationToken = default)
+        {
+            if (fechaHasta < fechaDesde)
+                throw new ArgumentException("La fecha final no puede ser anterior a la fecha inicial.");
+
+            return await _dbSet
+                .Where(p => p.FechaPrestamo >= fechaDesde && p.FechaPrestamo <= fechaHasta)
+                .OrderByDescending(p => p.FechaPrestamo)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(
             DateTime fechaReferencia,
             CancellationToken cancellationToken = default)

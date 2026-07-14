@@ -9,6 +9,6 @@ public sealed class RegistrarPrestamoValidator : AbstractValidator<RegistrarPres
     {
         RuleFor(x => x.SolicitudPrestamoId).GreaterThan(0);
         RuleFor(x => x.EmpleadoPrestamoId).GreaterThan(0);
-        RuleFor(x => x.FechaEsperadaDevolucion).GreaterThan(x => x.FechaPrestamo);
+        RuleFor(x => x.FechaPrestamo).NotEqual(default(DateTime));
     }
 }

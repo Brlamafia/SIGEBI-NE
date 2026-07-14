@@ -1,17 +1,21 @@
 using System.Data;
 using AutoMapper;
+using SIGEBI.Application.Common;
 using SIGEBI.Application.Dtos.Multas;
 using SIGEBI.Application.Dtos.Prestamos;
 using SIGEBI.Application.Exceptions;
+using SIGEBI.Application.Interfaces.Auditoria;
 using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Domain.Entities.Catalogo;
 using SIGEBI.Domain.Entities.Prestamos;
+using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Exceptions;
 using SIGEBI.Domain.Interfaces;
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Domain.Services;
 using SIGEBI.Domain.Policies;
-using AuditoriaEntidad = SIGEBI.Domain.Entities.Auditoria.Auditoria;
+using InventarioCatalogo = SIGEBI.Domain.Entities.Catalogo.Inventario;
 
 namespace SIGEBI.Application.Services.Prestamos
 {
@@ -24,7 +28,8 @@ namespace SIGEBI.Application.Services.Prestamos
         private readonly IPrestamoRepository _prestamos;
         private readonly IMultaRepository _multas;
         private readonly IInventarioRepository _inventarios;
-        private readonly IAuditoriaRepository _auditorias;
+        private readonly IEjemplarRepository _ejemplares;
+        private readonly IAuditoriaWriter _auditoria;
         private readonly IUnitOfWork _unitOfWork;
         private readonly PrestamoDomainService _prestamoDomainService;
         private readonly MultaDomainService _multaDomainService;
@@ -38,7 +43,8 @@ namespace SIGEBI.Application.Services.Prestamos
             IPrestamoRepository prestamos,
             IMultaRepository multas,
             IInventarioRepository inventarios,
-            IAuditoriaRepository auditorias,
+            IEjemplarRepository ejemplares,
+            IAuditoriaWriter auditoria,
             IUnitOfWork unitOfWork,
             PrestamoDomainService prestamoDomainService,
             MultaDomainService multaDomainService,
@@ -51,7 +57,8 @@ namespace SIGEBI.Application.Services.Prestamos
             _prestamos = prestamos;
             _multas = multas;
             _inventarios = inventarios;
-            _auditorias = auditorias;
+            _ejemplares = ejemplares;
+            _auditoria = auditoria;
             _unitOfWork = unitOfWork;
             _prestamoDomainService = prestamoDomainService;
             _multaDomainService = multaDomainService;
@@ -86,6 +93,13 @@ namespace SIGEBI.Application.Services.Prestamos
             return _mapper.Map<IReadOnlyCollection<PrestamoDto>>(prestamos);
         }
 
+        public async Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorRangoAsync(
+            DateTime fechaDesde,
+            DateTime fechaHasta,
+            CancellationToken cancellationToken = default)
+            => _mapper.Map<IReadOnlyCollection<PrestamoDto>>(
+                await _prestamos.ObtenerPorRangoAsync(fechaDesde, fechaHasta, cancellationToken));
+
         public Task<IReadOnlyCollection<PrestamoDto>> ObtenerActivosAsync(
             CancellationToken cancellationToken = default)
             => ObtenerPorEstadoAsync(nameof(EstadoPrestamo.Activo), cancellationToken);
@@ -119,12 +133,12 @@ namespace SIGEBI.Application.Services.Prestamos
 
                 if (cantidadActualizada > 0)
                 {
-                    await _auditorias.AgregarAsync(new AuditoriaEntidad(
+                    await _auditoria.RegistrarAsync(
                         dto.UsuarioResponsableId,
                         ModuloAuditoria.Prestamos,
                         AccionAuditoria.ActualizarEstado,
                         $"Se marcaron {cantidadActualizada} préstamos como vencidos.",
-                        ResultadoAuditoria.Exitoso), ct);
+                        cancellationToken: ct);
                 }
             }, cancellationToken);
 
@@ -149,9 +163,25 @@ namespace SIGEBI.Application.Services.Prestamos
                     ?? throw new NotFoundException("Empleado", dto.EmpleadoPrestamoId);
                 var inventario = await _inventarios.ObtenerPorLibroIdAsync(solicitud.LibroId, ct)
                     ?? throw new BusinessRuleException("El libro no posee un inventario registrado.");
+                var ejemplar = await _ejemplares.ObtenerDisponiblePorLibroAsync(solicitud.LibroId, ct)
+                    ?? throw new BusinessRuleException("No existe un ejemplar disponible para el libro solicitado.");
                 var multasUsuario = await _multas.ObtenerPorUsuarioAsync(usuario.Id, ct);
                 var cantidadActivos = await _prestamos.ContarActivosPorUsuarioAsync(usuario.Id, ct);
                 var tieneVencidos = await _prestamos.TieneVencidosPorUsuarioAsync(usuario.Id, ct);
+                var condiciones = _politicaPrestamos.ObtenerCondiciones(usuario.TipoUsuario);
+                var fechaLimite = _politicaPrestamos.CalcularFechaLimite(usuario.TipoUsuario, dto.FechaPrestamo);
+
+                if (solicitud.Estado == EstadoSolicitud.Pendiente)
+                {
+                    solicitud.Aprobar();
+                    _solicitudes.Actualizar(solicitud);
+                    await _auditoria.RegistrarAsync(
+                        empleado.UsuarioId,
+                        ModuloAuditoria.Solicitudes,
+                        AccionAuditoria.Aprobar,
+                        $"Aprobación de la solicitud {solicitud.Id}.",
+                        cancellationToken: ct);
+                }
 
                 prestamoRegistrado = _prestamoDomainService.RegistrarPrestamo(
                     usuario.Id,
@@ -159,27 +189,51 @@ namespace SIGEBI.Application.Services.Prestamos
                     _multaDomainService.TieneMultasPendientes(multasUsuario),
                     tieneVencidos,
                     cantidadActivos,
-                    _politicaPrestamos.LimitePrestamosPorUsuario,
+                    condiciones.LimitePrestamos,
                     solicitud,
                     empleado.Id,
                     dto.FechaPrestamo,
-                    dto.FechaEsperadaDevolucion,
-                    inventario);
+                    fechaLimite,
+                    inventario,
+                    ejemplar);
 
-                var auditoria = new AuditoriaEntidad(
+                await _prestamos.AgregarAsync(prestamoRegistrado, ct);
+                _inventarios.Actualizar(inventario);
+                _ejemplares.Actualizar(ejemplar);
+                await _auditoria.RegistrarAsync(
                     empleado.UsuarioId,
                     ModuloAuditoria.Prestamos,
                     AccionAuditoria.Registrar,
                     $"Registro del préstamo asociado a la solicitud {solicitud.Id}.",
-                    ResultadoAuditoria.Exitoso);
-
-                await _prestamos.AgregarAsync(prestamoRegistrado, ct);
-                _inventarios.Actualizar(inventario);
-                await _auditorias.AgregarAsync(auditoria, ct);
+                    cancellationToken: ct);
             }, IsolationLevel.Serializable, cancellationToken);
 
             return _mapper.Map<PrestamoDto>(
                 prestamoRegistrado ?? throw new InvalidOperationException("No fue posible completar el registro del préstamo."));
+        }
+
+        public async Task RechazarSolicitudAsync(
+            RechazarSolicitudPrestamoDto dto,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            {
+                var solicitud = await _solicitudes.ObtenerPorIdAsync(dto.SolicitudPrestamoId, ct)
+                    ?? throw new NotFoundException("SolicitudPrestamo", dto.SolicitudPrestamoId);
+                var empleado = await _empleados.ObtenerPorIdAsync(dto.EmpleadoResponsableId, ct)
+                    ?? throw new NotFoundException("Empleado", dto.EmpleadoResponsableId);
+
+                solicitud.Rechazar(dto.Motivo);
+                _solicitudes.Actualizar(solicitud);
+                await _auditoria.RegistrarAsync(
+                    empleado.UsuarioId,
+                    ModuloAuditoria.Solicitudes,
+                    AccionAuditoria.Rechazar,
+                    $"Rechazo de la solicitud {solicitud.Id}. Motivo: {dto.Motivo.Trim()}",
+                    cancellationToken: ct);
+            }, IsolationLevel.Serializable, cancellationToken);
         }
 
         public async Task<MultaDto?> RegistrarDevolucionAsync(
@@ -191,17 +245,14 @@ namespace SIGEBI.Application.Services.Prestamos
 
             await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
             {
-                var prestamo = await _prestamos.ObtenerPorIdAsync(dto.PrestamoId, ct)
-                    ?? throw new NotFoundException(nameof(Prestamo), dto.PrestamoId);
-                var empleado = await _empleados.ObtenerPorIdAsync(dto.EmpleadoDevolucionId, ct)
-                    ?? throw new NotFoundException("Empleado", dto.EmpleadoDevolucionId);
-                var inventario = await _inventarios.ObtenerPorLibroIdAsync(prestamo.LibroId, ct)
-                    ?? throw new BusinessRuleException("El libro no posee un inventario registrado.");
+                var contexto = await CargarContextoAsync(dto.PrestamoId, dto.EmpleadoDevolucionId, ct);
+                var (prestamo, empleado, inventario, ejemplar) = contexto;
                 var multasUsuario = await _multas.ObtenerPorUsuarioAsync(prestamo.UsuarioId, ct);
 
                 var fueTardia = _prestamoDomainService.RegistrarDevolucion(
                     prestamo,
                     inventario,
+                    ejemplar,
                     empleado.Id,
                     dto.FechaRealDevolucion);
 
@@ -213,18 +264,15 @@ namespace SIGEBI.Application.Services.Prestamos
                         multasUsuario);
                 }
 
-                var auditoria = new AuditoriaEntidad(
+                ActualizarContexto(contexto);
+                if (multaGenerada is not null)
+                    await _multas.AgregarAsync(multaGenerada, ct);
+                await _auditoria.RegistrarAsync(
                     empleado.UsuarioId,
                     ModuloAuditoria.Prestamos,
                     AccionAuditoria.Devolver,
                     $"Devolución del préstamo {prestamo.Id}.",
-                    ResultadoAuditoria.Exitoso);
-
-                _prestamos.Actualizar(prestamo);
-                _inventarios.Actualizar(inventario);
-                if (multaGenerada is not null)
-                    await _multas.AgregarAsync(multaGenerada, ct);
-                await _auditorias.AgregarAsync(auditoria, ct);
+                    cancellationToken: ct);
             }, IsolationLevel.Serializable, cancellationToken);
 
             return multaGenerada is null ? null : _mapper.Map<MultaDto>(multaGenerada);
@@ -238,24 +286,17 @@ namespace SIGEBI.Application.Services.Prestamos
 
             await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
             {
-                var prestamo = await _prestamos.ObtenerPorIdAsync(dto.PrestamoId, ct)
-                    ?? throw new NotFoundException(nameof(Prestamo), dto.PrestamoId);
-                var empleado = await _empleados.ObtenerPorIdAsync(dto.EmpleadoResponsableId, ct)
-                    ?? throw new NotFoundException("Empleado", dto.EmpleadoResponsableId);
-                var inventario = await _inventarios.ObtenerPorLibroIdAsync(prestamo.LibroId, ct)
-                    ?? throw new BusinessRuleException("El libro no posee un inventario registrado.");
+                var contexto = await CargarContextoAsync(dto.PrestamoId, dto.EmpleadoResponsableId, ct);
+                var (prestamo, empleado, inventario, ejemplar) = contexto;
 
-                _prestamoDomainService.CancelarPrestamo(prestamo, inventario);
-                var auditoria = new AuditoriaEntidad(
+                _prestamoDomainService.CancelarPrestamo(prestamo, inventario, ejemplar);
+                ActualizarContexto(contexto);
+                await _auditoria.RegistrarAsync(
                     empleado.UsuarioId,
                     ModuloAuditoria.Prestamos,
                     AccionAuditoria.Cancelar,
                     $"Cancelación del préstamo {prestamo.Id}.",
-                    ResultadoAuditoria.Exitoso);
-
-                _prestamos.Actualizar(prestamo);
-                _inventarios.Actualizar(inventario);
-                await _auditorias.AgregarAsync(auditoria, ct);
+                    cancellationToken: ct);
             }, IsolationLevel.Serializable, cancellationToken);
         }
 
@@ -302,12 +343,8 @@ namespace SIGEBI.Application.Services.Prestamos
 
             await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
             {
-                var prestamo = await _prestamos.ObtenerPorIdAsync(prestamoId, ct)
-                    ?? throw new NotFoundException(nameof(Prestamo), prestamoId);
-                var empleado = await _empleados.ObtenerPorIdAsync(empleadoResponsableId, ct)
-                    ?? throw new NotFoundException("Empleado", empleadoResponsableId);
-                var inventario = await _inventarios.ObtenerPorLibroIdAsync(prestamo.LibroId, ct)
-                    ?? throw new BusinessRuleException("El libro no posee un inventario registrado.");
+                var contexto = await CargarContextoAsync(prestamoId, empleadoResponsableId, ct);
+                var (prestamo, empleado, inventario, ejemplar) = contexto;
                 var multasUsuario = await _multas.ObtenerPorUsuarioAsync(prestamo.UsuarioId, ct);
 
                 if (esPerdida)
@@ -315,6 +352,7 @@ namespace SIGEBI.Application.Services.Prestamos
                     _prestamoDomainService.RegistrarPerdida(
                         prestamo,
                         inventario,
+                        ejemplar,
                         empleado.Id,
                         fechaIncidencia);
                     multaGenerada = _multaDomainService.GenerarMultaPorPerdida(
@@ -328,6 +366,7 @@ namespace SIGEBI.Application.Services.Prestamos
                     _prestamoDomainService.RegistrarDevolucionConDanio(
                         prestamo,
                         inventario,
+                        ejemplar,
                         empleado.Id,
                         fechaIncidencia);
                     multaGenerada = _multaDomainService.GenerarMultaPorDanio(
@@ -337,32 +376,53 @@ namespace SIGEBI.Application.Services.Prestamos
                         multasUsuario);
                 }
 
-                var auditoria = new AuditoriaEntidad(
+                ActualizarContexto(contexto);
+                await _multas.AgregarAsync(multaGenerada, ct);
+                await _auditoria.RegistrarAsync(
                     empleado.UsuarioId,
                     ModuloAuditoria.Inventario,
                     esPerdida ? AccionAuditoria.RegistrarPerdida : AccionAuditoria.RegistrarDanio,
                     $"Incidencia registrada para el préstamo {prestamo.Id}.",
-                    ResultadoAuditoria.Exitoso);
-
-                _prestamos.Actualizar(prestamo);
-                _inventarios.Actualizar(inventario);
-                await _multas.AgregarAsync(multaGenerada, ct);
-                await _auditorias.AgregarAsync(auditoria, ct);
+                    cancellationToken: ct);
             }, IsolationLevel.Serializable, cancellationToken);
 
             return _mapper.Map<MultaDto>(
                 multaGenerada ?? throw new InvalidOperationException("No fue posible registrar la incidencia."));
         }
 
+        private async Task<ContextoPrestamo> CargarContextoAsync(
+            int prestamoId,
+            int empleadoId,
+            CancellationToken cancellationToken)
+        {
+            var prestamo = await _prestamos.ObtenerPorIdAsync(prestamoId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Prestamo), prestamoId);
+            var empleado = await _empleados.ObtenerPorIdAsync(empleadoId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Empleado), empleadoId);
+            var inventario = await _inventarios.ObtenerPorLibroIdAsync(prestamo.LibroId, cancellationToken)
+                ?? throw new BusinessRuleException("El libro no posee un inventario registrado.");
+            var ejemplar = await _ejemplares.ObtenerPorIdAsync(prestamo.EjemplarId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Ejemplar), prestamo.EjemplarId);
+
+            return new ContextoPrestamo(prestamo, empleado, inventario, ejemplar);
+        }
+
+        private void ActualizarContexto(ContextoPrestamo contexto)
+        {
+            _prestamos.Actualizar(contexto.Prestamo);
+            _inventarios.Actualizar(contexto.Inventario);
+            _ejemplares.Actualizar(contexto.Ejemplar);
+        }
+
+        private sealed record ContextoPrestamo(
+            Prestamo Prestamo,
+            Empleado Empleado,
+            InventarioCatalogo Inventario,
+            Ejemplar Ejemplar);
+
         private static EstadoPrestamo ConvertirEstadoPrestamo(string estado)
         {
-            if (!Enum.TryParse<EstadoPrestamo>(estado, ignoreCase: true, out var estadoPrestamo)
-                || !Enum.IsDefined(estadoPrestamo))
-            {
-                throw new BusinessRuleException("El estado del préstamo no es válido.");
-            }
-
-            return estadoPrestamo;
+            return EnumParser.ParseDefined<EstadoPrestamo>(estado, "estado del préstamo");
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using SIGEBI.Domain.Common;
 
 namespace SIGEBI.Domain.Entities.Prestamos
 {
@@ -10,6 +11,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
         // Encapsulación: el estado solo cambia mediante operaciones válidas del dominio.
         public int UsuarioId { get; private set; }
         public int LibroId { get; private set; }
+        public int EjemplarId { get; private set; }
         public int SolicitudPrestamoId { get; private set; }
         public int EmpleadoPrestamoId { get; private set; }
         public int? EmpleadoDevolucionId { get; private set; }
@@ -25,16 +27,18 @@ namespace SIGEBI.Domain.Entities.Prestamos
         public Prestamo(
             int usuarioId,
             int libroId,
+            int ejemplarId,
             int solicitudPrestamoId,
             int empleadoPrestamoId,
             DateTime fechaPrestamo,
             DateTime fechaEsperadaDevolucion)
         {
             // Fail Fast: evita que el préstamo nazca con relaciones o fechas inválidas.
-            ValidarIdentificador(usuarioId, nameof(usuarioId));
-            ValidarIdentificador(libroId, nameof(libroId));
-            ValidarIdentificador(solicitudPrestamoId, nameof(solicitudPrestamoId));
-            ValidarIdentificador(empleadoPrestamoId, nameof(empleadoPrestamoId));
+            Guard.AgainstNonPositive(usuarioId, nameof(usuarioId));
+            Guard.AgainstNonPositive(libroId, nameof(libroId));
+            Guard.AgainstNonPositive(ejemplarId, nameof(ejemplarId));
+            Guard.AgainstNonPositive(solicitudPrestamoId, nameof(solicitudPrestamoId));
+            Guard.AgainstNonPositive(empleadoPrestamoId, nameof(empleadoPrestamoId));
 
             if (fechaEsperadaDevolucion <= fechaPrestamo)
             {
@@ -45,6 +49,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
 
             UsuarioId = usuarioId;
             LibroId = libroId;
+            EjemplarId = ejemplarId;
             SolicitudPrestamoId = solicitudPrestamoId;
             EmpleadoPrestamoId = empleadoPrestamoId;
             FechaPrestamo = fechaPrestamo;
@@ -55,7 +60,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
         // Entidad con comportamiento: la devolución forma parte del ciclo de vida del préstamo.
         public bool RegistrarDevolucion(int empleadoDevolucionId, DateTime fechaRealDevolucion)
         {
-            ValidarIdentificador(empleadoDevolucionId, nameof(empleadoDevolucionId));
+            Guard.AgainstNonPositive(empleadoDevolucionId, nameof(empleadoDevolucionId));
 
             if (Estado is not SIGEBI.Domain.Enums.EstadoPrestamo.Activo
                 and not SIGEBI.Domain.Enums.EstadoPrestamo.Vencido)
@@ -127,7 +132,7 @@ namespace SIGEBI.Domain.Entities.Prestamos
             DateTime fechaCierre,
             SIGEBI.Domain.Enums.EstadoPrestamo estadoFinal)
         {
-            ValidarIdentificador(empleadoResponsableId, nameof(empleadoResponsableId));
+            Guard.AgainstNonPositive(empleadoResponsableId, nameof(empleadoResponsableId));
 
             if (Estado is not SIGEBI.Domain.Enums.EstadoPrestamo.Activo
                 and not SIGEBI.Domain.Enums.EstadoPrestamo.Vencido)
@@ -149,15 +154,5 @@ namespace SIGEBI.Domain.Entities.Prestamos
             MarcarComoModificada();
         }
 
-        // DRY: centraliza una validación utilizada por el constructor y la devolución.
-        private static void ValidarIdentificador(int identificador, string nombreParametro)
-        {
-            if (identificador <= 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nombreParametro,
-                    "El identificador debe ser mayor que cero.");
-            }
-        }
     }
 }

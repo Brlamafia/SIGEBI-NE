@@ -35,7 +35,7 @@ namespace SIGEBI.API.Controllers
         [HttpGet("{id}/detalles")]
         public async Task<IActionResult> GetDetallesUsuario(int id)
         {
-            return Ok(new { Mensaje = $"Devolviendo historial completo del usuario {id}" });
+            return Ok(await _usuarioService.ConsultarHistorialCompletoAsync(id));
         }
 
         [HttpPost]

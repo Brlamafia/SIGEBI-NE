@@ -4,6 +4,9 @@ namespace SIGEBI.Application.Interfaces.Auditoria
 {
     public interface IAuditoriaService
     {
+        Task<IReadOnlyCollection<AuditoriaDto>> ObtenerTodasAsync(
+            CancellationToken cancellationToken = default);
+
         Task<AuditoriaDto> ObtenerPorIdAsync(
             int auditoriaId,
             CancellationToken cancellationToken = default);

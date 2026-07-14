@@ -18,5 +18,8 @@
   <Folder Name="/IOC/">
     <Project Path="SIGEBI.IOC/SIGEBI.IOC.csproj" Id="8a184631-4664-4836-9c2a-2189cc4d8406" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="SIGEBI.Tests/SIGEBI.Tests.csproj" />
+  </Folder>
   <Folder Name="/Web/" />
 </Solution>

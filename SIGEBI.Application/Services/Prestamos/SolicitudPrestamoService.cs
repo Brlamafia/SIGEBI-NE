@@ -83,10 +83,17 @@ namespace SIGEBI.Application.Services.Prestamos
         // Resolviendo CS0535: Adaptado a la firma exacta que pide tu interfaz
         public async Task<bool> EvaluarSolicitudAsync(UpdateSolicitudPrestamoDto dto)
         {
-            // Resolviendo CS0272: Al usar el BaseService, AutoMapper se encarga de inyectar 
-            // las actualizaciones, respetando el encapsulamiento de tu Entidad de Dominio.
-            // Asegúrate de que UpdateSolicitudPrestamoDto contenga la propiedad 'Id'.
-            await base.UpdateAsync(dto.Id, dto);
+            var solicitud = await _solicitudRepository.GetByIdAsync(dto.Id)
+                ?? throw new BusinessRuleException("La solicitud especificada no existe.");
+
+            if (dto.Estado.Equals("Aprobada", StringComparison.OrdinalIgnoreCase))
+                solicitud.Aprobar();
+            else if (dto.Estado.Equals("Rechazada", StringComparison.OrdinalIgnoreCase))
+                solicitud.Rechazar(dto.MotivoRechazo ?? string.Empty);
+            else
+                throw new BusinessRuleException("El estado debe ser Aprobada o Rechazada.");
+
+            await _solicitudRepository.ActualizarAsync(solicitud);
 
             return true;
         }

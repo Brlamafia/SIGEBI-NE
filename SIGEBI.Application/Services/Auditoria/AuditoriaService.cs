@@ -1,4 +1,5 @@
 using AutoMapper;
+using SIGEBI.Application.Common;
 using SIGEBI.Application.Dtos.Auditoria;
 using SIGEBI.Application.Exceptions;
 using SIGEBI.Application.Interfaces.Auditoria;
@@ -31,6 +32,11 @@ namespace SIGEBI.Application.Services.Auditoria
 
             return _mapper.Map<AuditoriaDto>(auditoria);
         }
+
+        public async Task<IReadOnlyCollection<AuditoriaDto>> ObtenerTodasAsync(
+            CancellationToken cancellationToken = default)
+            => _mapper.Map<IReadOnlyCollection<AuditoriaDto>>(
+                await _auditorias.ObtenerTodasAsync(cancellationToken));
 
         public async Task<IReadOnlyCollection<AuditoriaDto>> ObtenerPorUsuarioAsync(
             int usuarioResponsableId,
@@ -81,18 +87,12 @@ namespace SIGEBI.Application.Services.Auditoria
             if (filtro.UsuarioResponsableId.HasValue)
                 return await ObtenerPorUsuarioAsync(filtro.UsuarioResponsableId.Value, cancellationToken);
 
-            throw new BusinessRuleException("Debe indicar al menos un filtro de auditoría.");
+            return await ObtenerTodasAsync(cancellationToken);
         }
 
         private static ModuloAuditoria ConvertirModulo(string modulo)
         {
-            if (!Enum.TryParse<ModuloAuditoria>(modulo, ignoreCase: true, out var moduloAuditoria)
-                || !Enum.IsDefined(moduloAuditoria))
-            {
-                throw new BusinessRuleException("El módulo de auditoría no es válido.");
-            }
-
-            return moduloAuditoria;
+            return EnumParser.ParseDefined<ModuloAuditoria>(modulo, "módulo de auditoría");
         }
     }
 }

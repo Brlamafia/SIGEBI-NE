@@ -8,6 +8,7 @@ namespace SIGEBI.Application.Dtos.Prestamos
         public int Id { get; set; }
         public int UsuarioId { get; set; }
         public int LibroId { get; set; }
+        public int EjemplarId { get; set; }
         public int SolicitudPrestamoId { get; set; }
         public int EmpleadoPrestamoId { get; set; }
         public int? EmpleadoDevolucionId { get; set; }

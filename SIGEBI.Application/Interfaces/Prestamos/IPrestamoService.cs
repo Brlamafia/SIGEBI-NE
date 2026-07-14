@@ -17,6 +17,11 @@ namespace SIGEBI.Application.Interfaces.Prestamos
             string estado,
             CancellationToken cancellationToken = default);
 
+        Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorRangoAsync(
+            DateTime fechaDesde,
+            DateTime fechaHasta,
+            CancellationToken cancellationToken = default);
+
         Task<IReadOnlyCollection<PrestamoDto>> ObtenerActivosAsync(
             CancellationToken cancellationToken = default);
 
@@ -29,6 +34,10 @@ namespace SIGEBI.Application.Interfaces.Prestamos
 
         Task<PrestamoDto> RegistrarPrestamoAsync(
             RegistrarPrestamoDto dto,
+            CancellationToken cancellationToken = default);
+
+        Task RechazarSolicitudAsync(
+            RechazarSolicitudPrestamoDto dto,
             CancellationToken cancellationToken = default);
 
         Task<MultaDto?> RegistrarDevolucionAsync(
