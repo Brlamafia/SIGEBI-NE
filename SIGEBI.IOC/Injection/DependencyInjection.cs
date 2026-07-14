@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SIGEBI.IOC.Dependencies;
 
@@ -8,10 +7,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddSigebiDependencies(
         this IServiceCollection services,
-        Action<DbContextOptionsBuilder> configureDbContext)
+        string connectionString)
     {
         services.AddApplicationDependencies();
-        services.AddPersistenceDependencies(configureDbContext);
+        services.AddPersistenceDependencies(connectionString);
         services.AddInfrastructureDependencies();
 
         return services;

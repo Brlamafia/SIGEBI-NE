@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SIGEBI.Domain.Entities.Catalogo;
 using SIGEBI.Domain.Entities.Notificaciones;
@@ -20,11 +19,9 @@ public static class PersistenceDependency
 {
     public static IServiceCollection AddPersistenceDependencies(
         this IServiceCollection services,
-        Action<DbContextOptionsBuilder> configureDbContext)
+        string connectionString)
     {
-        ArgumentNullException.ThrowIfNull(configureDbContext);
-
-        services.AddDbContext<SigebiContext>(configureDbContext);
+        services.AddSqlServerPersistence(connectionString);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddScoped<UsuarioRepository>();

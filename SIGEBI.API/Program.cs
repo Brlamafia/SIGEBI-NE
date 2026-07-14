@@ -1,12 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using SIGEBI.API.Exceptions;
 using SIGEBI.API.Filters;
 using SIGEBI.API.Jobs;
-using SIGEBI.API.Data;
 using SIGEBI.IOC.Injection;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -64,14 +61,13 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddSigebiDependencies(options =>
-    options.UseInMemoryDatabase("SIGEBI_Swagger")
-        .ConfigureWarnings(warnings =>
-            warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+var connectionString = builder.Configuration.GetConnectionString("NELibrary")
+    ?? throw new InvalidOperationException(
+        "Debe configurar ConnectionStrings:NELibrary mediante User Secrets.");
+
+builder.Services.AddSigebiDependencies(connectionString);
 
 var app = builder.Build();
-
-await DevelopmentDataSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

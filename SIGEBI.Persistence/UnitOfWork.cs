@@ -45,27 +45,34 @@ namespace SIGEBI.Persistence
             ArgumentNullException.ThrowIfNull(operacion);
 
             // Propiedad ACID: ante cualquier fallo se revierte toda la operación.
-            await using var transaccion =
-                await _context.Database.BeginTransactionAsync(nivelAislamiento, cancellationToken);
+            var estrategia = _context.Database.CreateExecutionStrategy();
 
-            try
+            await estrategia.ExecuteAsync(async () =>
             {
-                await operacion(cancellationToken);
-                await _context.SaveChangesAsync(cancellationToken);
-                await transaccion.CommitAsync(cancellationToken);
-            }
-            catch (DbUpdateConcurrencyException exception)
-            {
-                await transaccion.RollbackAsync(cancellationToken);
-                _context.ChangeTracker.Clear();
-                throw new ConflictoConcurrenciaException(exception);
-            }
-            catch
-            {
-                await transaccion.RollbackAsync(cancellationToken);
-                _context.ChangeTracker.Clear();
-                throw;
-            }
+                await using var transaccion =
+                    await _context.Database.BeginTransactionAsync(
+                        nivelAislamiento,
+                        cancellationToken);
+
+                try
+                {
+                    await operacion(cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
+                    await transaccion.CommitAsync(cancellationToken);
+                }
+                catch (DbUpdateConcurrencyException exception)
+                {
+                    await transaccion.RollbackAsync(cancellationToken);
+                    _context.ChangeTracker.Clear();
+                    throw new ConflictoConcurrenciaException(exception);
+                }
+                catch
+                {
+                    await transaccion.RollbackAsync(cancellationToken);
+                    _context.ChangeTracker.Clear();
+                    throw;
+                }
+            });
         }
     }
 }
