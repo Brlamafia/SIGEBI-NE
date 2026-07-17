@@ -1,5 +1,6 @@
 using System.Data;
 using AutoMapper;
+using Microsoft.Extensions.Logging;
 using SIGEBI.Application.Common;
 using SIGEBI.Application.Dtos.Inventario;
 using SIGEBI.Application.Exceptions;
@@ -8,12 +9,16 @@ using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces;
 using SIGEBI.Domain.Interfaces.Repositories;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using EjemplarEntidad = SIGEBI.Domain.Entities.Catalogo.Ejemplar;
 using InventarioEntidad = SIGEBI.Domain.Entities.Catalogo.Inventario;
 
 namespace SIGEBI.Application.Services.Inventario
 {
-    // Capa de Aplicación: coordina consultas y ajustes de inventario mediante DTOs.
     public class InventarioService : IInventarioService
     {
         private readonly IInventarioRepository _inventarios;
@@ -22,6 +27,7 @@ namespace SIGEBI.Application.Services.Inventario
         private readonly IAuditoriaWriter _auditoria;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ILogger<InventarioService> _logger;
 
         public InventarioService(
             IInventarioRepository inventarios,
@@ -29,7 +35,8 @@ namespace SIGEBI.Application.Services.Inventario
             ILibroRepository libros,
             IAuditoriaWriter auditoria,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            ILogger<InventarioService> logger)
         {
             _inventarios = inventarios;
             _ejemplares = ejemplares;
@@ -37,158 +44,91 @@ namespace SIGEBI.Application.Services.Inventario
             _auditoria = auditoria;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _logger = logger;
         }
 
-        public async Task<InventarioDto> ObtenerPorIdAsync(
-            int inventarioId,
-            CancellationToken cancellationToken = default)
+        public async Task<InventarioDto> ObtenerPorIdAsync(int inventarioId, CancellationToken ct = default)
         {
-            var inventario = await _inventarios.ObtenerPorIdAsync(inventarioId, cancellationToken)
-                ?? throw new NotFoundException(nameof(InventarioEntidad), inventarioId);
-
-            return _mapper.Map<InventarioDto>(inventario);
+            var inv = await _inventarios.ObtenerPorIdAsync(inventarioId, ct) ?? throw new NotFoundException(nameof(InventarioEntidad), inventarioId);
+            return _mapper.Map<InventarioDto>(inv);
         }
 
-        public async Task<IReadOnlyCollection<InventarioDto>> ObtenerTodosAsync(
-            CancellationToken cancellationToken = default)
-            => _mapper.Map<IReadOnlyCollection<InventarioDto>>(
-                await _inventarios.ObtenerTodosAsync(cancellationToken));
+        public async Task<IReadOnlyCollection<InventarioDto>> ObtenerTodosAsync(CancellationToken ct = default)
+            => _mapper.Map<IReadOnlyCollection<InventarioDto>>(await _inventarios.ObtenerTodosAsync(ct));
 
-        public async Task<InventarioDto> CrearAsync(
-            CrearInventarioDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<InventarioDto> CrearAsync(CrearInventarioDto dto, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(dto);
             ValidarResponsableYMotivo(dto.UsuarioResponsableId, dto.Motivo);
-            InventarioEntidad? inventarioCreado = null;
-
-            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            try
             {
-                if (await _inventarios.ObtenerPorLibroIdAsync(dto.LibroId, ct) is not null)
-                    throw new BusinessRuleException("El libro ya posee un inventario registrado.");
-                if (await _libros.ObtenerPorIdAsync(dto.LibroId, ct) is null)
-                    throw new NotFoundException("Libro", dto.LibroId);
+                InventarioEntidad? inventarioCreado = null;
+                await _unitOfWork.EjecutarEnTransaccionAsync(async c => {
+                    if (await _inventarios.ObtenerPorLibroIdAsync(dto.LibroId, c) is not null) throw new BusinessRuleException("El libro ya posee un inventario.");
+                    if (await _libros.ObtenerPorIdAsync(dto.LibroId, c) is null) throw new NotFoundException("Libro", dto.LibroId);
 
-                inventarioCreado = new InventarioEntidad(dto.LibroId, dto.CantidadTotal);
-                await _inventarios.AgregarAsync(inventarioCreado, ct);
-                await _ejemplares.AgregarRangoAsync(
-                    CrearEjemplares(dto.LibroId, dto.CantidadTotal), ct);
-                await _auditoria.RegistrarAsync(
-                    dto.UsuarioResponsableId,
-                    ModuloAuditoria.Inventario,
-                    AccionAuditoria.Registrar,
-                    $"Inventario inicial del libro {dto.LibroId}: {dto.CantidadTotal}. Motivo: {dto.Motivo.Trim()}",
-                    cancellationToken: ct);
-            }, IsolationLevel.Serializable, cancellationToken);
-
-            return _mapper.Map<InventarioDto>(inventarioCreado!);
+                    inventarioCreado = new InventarioEntidad(dto.LibroId, dto.CantidadTotal);
+                    await _inventarios.AgregarAsync(inventarioCreado, c);
+                    await _ejemplares.AgregarRangoAsync(CrearEjemplares(dto.LibroId, dto.CantidadTotal), c);
+                    await _auditoria.RegistrarAsync(dto.UsuarioResponsableId, ModuloAuditoria.Inventario, AccionAuditoria.Registrar, $"Inventario inicial libro {dto.LibroId}", cancellationToken: c);
+                }, IsolationLevel.Serializable, ct);
+                return _mapper.Map<InventarioDto>(inventarioCreado!);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Error al crear inventario para libro {Id}", dto.LibroId); throw; }
         }
 
-        public async Task<InventarioDto> ObtenerPorLibroIdAsync(
-            int libroId,
-            CancellationToken cancellationToken = default)
+        public async Task<InventarioDto> ObtenerPorLibroIdAsync(int libroId, CancellationToken ct = default)
         {
-            var inventario = await _inventarios.ObtenerPorLibroIdAsync(libroId, cancellationToken)
-                ?? throw new NotFoundException(nameof(InventarioEntidad), libroId);
-
-            return _mapper.Map<InventarioDto>(inventario);
+            var inv = await _inventarios.ObtenerPorLibroIdAsync(libroId, ct) ?? throw new NotFoundException(nameof(InventarioEntidad), libroId);
+            return _mapper.Map<InventarioDto>(inv);
         }
 
-        public async Task<InventarioDto> AjustarCantidadTotalAsync(
-            AjustarInventarioDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<InventarioDto> AjustarCantidadTotalAsync(AjustarInventarioDto dto, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(dto);
             ValidarResponsableYMotivo(dto.UsuarioResponsableId, dto.Motivo);
-            InventarioEntidad? inventarioActualizado = null;
-
-            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            try
             {
-                var inventario = await _inventarios.ObtenerPorIdAsync(dto.InventarioId, ct)
-                    ?? throw new NotFoundException(nameof(InventarioEntidad), dto.InventarioId);
-
-                var diferencia = dto.NuevaCantidadTotal - inventario.CantidadTotal;
-
-                inventario.AjustarCantidadTotal(dto.NuevaCantidadTotal);
-                inventarioActualizado = inventario;
-
-                if (diferencia > 0)
-                {
-                    await _ejemplares.AgregarRangoAsync(
-                        CrearEjemplares(inventario.LibroId, diferencia), ct);
-                }
-                else if (diferencia < 0)
-                {
-                    var disponibles = await _ejemplares.ObtenerPorLibroYEstadoAsync(
-                        inventario.LibroId, EstadoEjemplar.Disponible, ct);
-                    _ejemplares.EliminarRango(disponibles.Take(-diferencia));
-                }
-
-                _inventarios.Actualizar(inventario);
-                await _auditoria.RegistrarAsync(
-                    dto.UsuarioResponsableId,
-                    ModuloAuditoria.Inventario,
-                    AccionAuditoria.Ajustar,
-                    $"Ajuste de inventario {inventario.Id} a cantidad total {dto.NuevaCantidadTotal}. Motivo: {dto.Motivo.Trim()}",
-                    cancellationToken: ct);
-            }, IsolationLevel.Serializable, cancellationToken);
-
-            return _mapper.Map<InventarioDto>(
-                inventarioActualizado ?? throw new InvalidOperationException("No fue posible ajustar el inventario."));
+                InventarioEntidad? invActualizado = null;
+                await _unitOfWork.EjecutarEnTransaccionAsync(async c => {
+                    var inv = await _inventarios.ObtenerPorIdAsync(dto.InventarioId, c) ?? throw new NotFoundException(nameof(InventarioEntidad), dto.InventarioId);
+                    var dif = dto.NuevaCantidadTotal - inv.CantidadTotal;
+                    inv.AjustarCantidadTotal(dto.NuevaCantidadTotal);
+                    invActualizado = inv;
+                    if (dif > 0) await _ejemplares.AgregarRangoAsync(CrearEjemplares(inv.LibroId, dif), c);
+                    else if (dif < 0) _ejemplares.EliminarRango((await _ejemplares.ObtenerPorLibroYEstadoAsync(inv.LibroId, EstadoEjemplar.Disponible, c)).Take(-dif));
+                    _inventarios.Actualizar(inv);
+                    await _auditoria.RegistrarAsync(dto.UsuarioResponsableId, ModuloAuditoria.Inventario, AccionAuditoria.Ajustar, $"Ajuste inventario {inv.Id}", cancellationToken: c);
+                }, IsolationLevel.Serializable, ct);
+                return _mapper.Map<InventarioDto>(invActualizado!);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Error ajustando inventario {Id}", dto.InventarioId); throw; }
         }
 
-        public async Task<IReadOnlyCollection<EjemplarDto>> ObtenerEjemplaresPorLibroAsync(
-            int libroId,
-            CancellationToken cancellationToken = default)
-        {
-            var ejemplares = await _ejemplares.ObtenerPorLibroAsync(libroId, cancellationToken);
-            return _mapper.Map<IReadOnlyCollection<EjemplarDto>>(ejemplares);
-        }
-
-        public async Task<EjemplarDto> CambiarEstadoEjemplarAsync(
-            CambiarEstadoEjemplarDto dto,
-            CancellationToken cancellationToken = default)
+        public async Task<EjemplarDto> CambiarEstadoEjemplarAsync(CambiarEstadoEjemplarDto dto, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(dto);
             ValidarResponsableYMotivo(dto.UsuarioResponsableId, dto.Motivo);
-            EjemplarEntidad? actualizado = null;
-
-            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            try
             {
-                var ejemplar = await _ejemplares.ObtenerPorIdAsync(dto.EjemplarId, ct)
-                    ?? throw new NotFoundException(nameof(EjemplarEntidad), dto.EjemplarId);
-                var inventario = await _inventarios.ObtenerPorLibroIdAsync(ejemplar.LibroId, ct)
-                    ?? throw new NotFoundException(nameof(InventarioEntidad), ejemplar.LibroId);
-                var nuevoEstado = EnumParser.ParseDefined<EstadoEjemplar>(dto.NuevoEstado, "estado del ejemplar");
-                var estadoAnterior = ejemplar.Estado;
-
-                ejemplar.CambiarEstadoOperativo(nuevoEstado);
-                inventario.CambiarEstadoEjemplar(estadoAnterior, nuevoEstado);
-                actualizado = ejemplar;
-
-                _ejemplares.Actualizar(ejemplar);
-                _inventarios.Actualizar(inventario);
-                await _auditoria.RegistrarAsync(
-                    dto.UsuarioResponsableId,
-                    ModuloAuditoria.Inventario,
-                    AccionAuditoria.ActualizarEstado,
-                    $"Ejemplar {ejemplar.Codigo}: {estadoAnterior} -> {nuevoEstado}. Motivo: {dto.Motivo.Trim()}",
-                    cancellationToken: ct);
-            }, IsolationLevel.Serializable, cancellationToken);
-
-            return _mapper.Map<EjemplarDto>(actualizado!);
+                EjemplarEntidad? actualizado = null;
+                await _unitOfWork.EjecutarEnTransaccionAsync(async c => {
+                    var e = await _ejemplares.ObtenerPorIdAsync(dto.EjemplarId, c) ?? throw new NotFoundException(nameof(EjemplarEntidad), dto.EjemplarId);
+                    var i = await _inventarios.ObtenerPorLibroIdAsync(e.LibroId, c) ?? throw new NotFoundException(nameof(InventarioEntidad), e.LibroId);
+                    var nuevo = EnumParser.ParseDefined<EstadoEjemplar>(dto.NuevoEstado, "estado ejemplar");
+                    e.CambiarEstadoOperativo(nuevo);
+                    i.CambiarEstadoEjemplar(e.Estado, nuevo);
+                    actualizado = e;
+                    _ejemplares.Actualizar(e); _inventarios.Actualizar(i);
+                    await _auditoria.RegistrarAsync(dto.UsuarioResponsableId, ModuloAuditoria.Inventario, AccionAuditoria.ActualizarEstado, $"Ejemplar {e.Codigo}", cancellationToken: c);
+                }, IsolationLevel.Serializable, ct);
+                return _mapper.Map<EjemplarDto>(actualizado!);
+            }
+            catch (Exception ex) { _logger.LogError(ex, "Error al cambiar estado de ejemplar {Id}", dto.EjemplarId); throw; }
         }
 
-        private static IEnumerable<EjemplarEntidad> CrearEjemplares(int libroId, int cantidad)
-            => Enumerable.Range(0, cantidad)
-                .Select(_ => new EjemplarEntidad(libroId, $"LIB-{libroId}-{Guid.NewGuid():N}"));
-
-        private static void ValidarResponsableYMotivo(int usuarioResponsableId, string motivo)
-        {
-            if (usuarioResponsableId <= 0)
-                throw new BusinessRuleException("Debe indicar el usuario responsable.");
-            if (string.IsNullOrWhiteSpace(motivo))
-                throw new BusinessRuleException("Debe indicar el motivo del movimiento de inventario.");
-        }
+        private static IEnumerable<EjemplarEntidad> CrearEjemplares(int libroId, int cantidad) => Enumerable.Range(0, cantidad).Select(_ => new EjemplarEntidad(libroId, $"LIB-{libroId}-{Guid.NewGuid():N}"));
+        private static void ValidarResponsableYMotivo(int u, string m) { if (u <= 0 || string.IsNullOrWhiteSpace(m)) throw new BusinessRuleException("Responsable y motivo son obligatorios."); }
+        public async Task<IReadOnlyCollection<EjemplarDto>> ObtenerEjemplaresPorLibroAsync(int libroId, CancellationToken ct = default) => _mapper.Map<IReadOnlyCollection<EjemplarDto>>(await _ejemplares.ObtenerPorLibroAsync(libroId, ct));
     }
 }

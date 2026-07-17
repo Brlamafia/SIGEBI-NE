@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.Extensions.Logging;
 using SIGEBI.Application.Base;
 using SIGEBI.Application.Dtos.Notificaciones;
 using SIGEBI.Application.Dtos.Prestamos;
@@ -7,10 +8,10 @@ using SIGEBI.Application.Exceptions;
 using SIGEBI.Application.Interfaces.Notificaciones;
 using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
-using SIGEBI.Domain.Entities;
 using SIGEBI.Domain.Entities.Catalogo;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
+using SIGEBI.Domain.Exceptions;
 using SIGEBI.Domain.Interfaces.Repositories;
 using System;
 using System.Collections.Generic;
@@ -25,77 +26,91 @@ namespace SIGEBI.Application.Services.Prestamos
         private readonly IRepository<Libro> _libroRepository;
         private readonly IRepository<Usuario> _usuarioRepository;
         private readonly INotificacionService _notificacionService;
+        private readonly ILogger<SolicitudPrestamoService> _logger;
 
         public SolicitudPrestamoService(
             IRepository<SolicitudPrestamo> repository,
             IRepository<Libro> libroRepository,
             IRepository<Usuario> usuarioRepository,
             INotificacionService notificacionService,
-            IMapper mapper) : base(repository, mapper)
+            IMapper mapper,
+            ILogger<SolicitudPrestamoService> logger) : base(repository, mapper)
         {
             _solicitudRepository = repository;
             _libroRepository = libroRepository;
             _usuarioRepository = usuarioRepository;
             _notificacionService = notificacionService;
+            _logger = logger;
         }
 
-        // Resolviendo CS0535: Métodos faltantes exigidos por tu interfaz ISolicitudPrestamoService
         public async Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorUsuarioAsync(int usuarioId)
         {
             var todas = await _solicitudRepository.GetAllAsync();
-            var filtradas = todas.Where(s => s.UsuarioId == usuarioId).ToList();
-            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(filtradas);
+            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(todas.Where(s => s.UsuarioId == usuarioId));
         }
 
         public async Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorEstadoAsync(string estado)
         {
             var todas = await _solicitudRepository.GetAllAsync();
-            // Convertimos el Enum a string de forma segura para comparar
-            var filtradas = todas.Where(s => s.Estado.ToString().Equals(estado, StringComparison.OrdinalIgnoreCase)).ToList();
-            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(filtradas);
+            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(todas.Where(s => s.Estado.ToString().Equals(estado, StringComparison.OrdinalIgnoreCase)));
         }
 
         public async Task<bool> RegistrarSolicitudAsync(SaveSolicitudPrestamoDto dto)
         {
-            var usuario = await _usuarioRepository.GetByIdAsync(dto.UsuarioId);
-            if (usuario == null) throw new BusinessRuleException("El usuario especificado no existe.");
-
-            // Resolviendo CS0019: Comparación segura extrayendo el string del Enum 'EstadoUsuario'
-            if (usuario.Estado.ToString() != "Activo")
-                throw new BusinessRuleException("El usuario no está activo y no puede solicitar préstamos.");
-
-            var libro = await _libroRepository.GetByIdAsync(dto.LibroId);
-            if (libro == null) throw new BusinessRuleException("El libro solicitado no existe.");
-
-            // Resolviendo CS1061: Utilizamos el motor base para añadir, evadiendo problemas de extensión
-            var result = await base.AddAsync(dto);
-
-            // Resolviendo CS0117: Adaptado a las propiedades reales de tu DTO
-            await _notificacionService.EnviarNotificacionAsync(new SaveNotificacionDto
+            try
             {
-                UsuarioId = dto.UsuarioId,
-                Mensaje = $"Tu solicitud para el libro ha sido registrada y está en espera de evaluación."
-            });
+                var usuario = await _usuarioRepository.GetByIdAsync(dto.UsuarioId);
+                if (usuario == null) throw new BusinessRuleException("El usuario especificado no existe.");
+                if (usuario.Estado.ToString() != "Activo")
+                    throw new BusinessRuleException("El usuario no está activo y no puede solicitar préstamos.");
 
-            return true;
+                var libro = await _libroRepository.GetByIdAsync(dto.LibroId);
+                if (libro == null) throw new BusinessRuleException("El libro solicitado no existe.");
+
+                await base.AddAsync(dto);
+
+                await _notificacionService.EnviarNotificacionAsync(new SaveNotificacionDto
+                {
+                    UsuarioId = dto.UsuarioId,
+                    Mensaje = $"Tu solicitud para el libro ha sido registrada y está en espera de evaluación."
+                });
+
+                return true;
+            }
+            catch (BusinessRuleException ex)
+            {
+                _logger.LogWarning("Intento de solicitud no válido: {Msg}", ex.Message);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al registrar solicitud para usuario {Uid}", dto.UsuarioId);
+                throw;
+            }
         }
 
-        // Resolviendo CS0535: Adaptado a la firma exacta que pide tu interfaz
         public async Task<bool> EvaluarSolicitudAsync(UpdateSolicitudPrestamoDto dto)
         {
-            var solicitud = await _solicitudRepository.GetByIdAsync(dto.Id)
-                ?? throw new BusinessRuleException("La solicitud especificada no existe.");
+            try
+            {
+                var solicitud = await _solicitudRepository.GetByIdAsync(dto.Id)
+                    ?? throw new BusinessRuleException("La solicitud especificada no existe.");
 
-            if (dto.Estado.Equals("Aprobada", StringComparison.OrdinalIgnoreCase))
-                solicitud.Aprobar();
-            else if (dto.Estado.Equals("Rechazada", StringComparison.OrdinalIgnoreCase))
-                solicitud.Rechazar(dto.MotivoRechazo ?? string.Empty);
-            else
-                throw new BusinessRuleException("El estado debe ser Aprobada o Rechazada.");
+                if (dto.Estado.Equals("Aprobada", StringComparison.OrdinalIgnoreCase))
+                    solicitud.Aprobar();
+                else if (dto.Estado.Equals("Rechazada", StringComparison.OrdinalIgnoreCase))
+                    solicitud.Rechazar(dto.MotivoRechazo ?? string.Empty);
+                else
+                    throw new BusinessRuleException("El estado debe ser Aprobada o Rechazada.");
 
-            await _solicitudRepository.ActualizarAsync(solicitud);
-
-            return true;
+                await _solicitudRepository.ActualizarAsync(solicitud);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al evaluar solicitud {Id}", dto.Id);
+                throw;
+            }
         }
     }
 }
