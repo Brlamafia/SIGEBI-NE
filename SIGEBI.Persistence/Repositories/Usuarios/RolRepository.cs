@@ -1,13 +1,13 @@
+using Microsoft.Extensions.Logging;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Persistence.Base;
 using SIGEBI.Persistence.Context;
 
-namespace SIGEBI.Persistence.Repositories.Usuarios;
-
-public sealed class RolRepository : MutableRepository<Rol>, IRepository<Rol>
+namespace SIGEBI.Persistence.Repositories.Usuarios
 {
-    public RolRepository(SigebiContext context) : base(context)
+    public sealed class RolRepository : MutableRepository<Rol>, IRepository<Rol>
     {
+        public RolRepository(SigebiContext context, ILogger<BaseRepository<Rol>> logger) : base(context, logger) { }
     }
 }

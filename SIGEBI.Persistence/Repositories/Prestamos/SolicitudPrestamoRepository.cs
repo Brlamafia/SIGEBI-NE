@@ -1,10 +1,11 @@
-﻿// B.R
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Persistence.Base;
 using SIGEBI.Persistence.Context;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,24 +15,24 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
 {
     public class SolicitudPrestamoRepository : MutableRepository<SolicitudPrestamo>, ISolicitudPrestamoRepository
     {
-        public SolicitudPrestamoRepository(SigebiContext context) : base(context) { }
+        public SolicitudPrestamoRepository(SigebiContext context, ILogger<BaseRepository<SolicitudPrestamo>> logger) : base(context, logger) { }
 
-        // SECCIÓN 1: Consultas por Identificador
         public async Task<SolicitudPrestamo?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
-            return await _dbSet.FindAsync(new object[] { id }, ct);
+            try { return await _dbSet.FindAsync(new object[] { id }, ct); }
+            catch (Exception ex) { _logger.LogError(ex, "Error ID {Id}", id); throw; }
         }
 
-        // SECCIÓN 2: Consultas por Usuario (Ajustado a IEnumerable y sin CancellationToken)
         public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId)
         {
-            return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync();
+            try { return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(); }
+            catch (Exception ex) { _logger.LogError(ex, "Error usuario {Id}", usuarioId); throw; }
         }
 
-        // SECCIÓN 3: Consultas por Estado (Ajustado a IEnumerable y sin CancellationToken)
         public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado)
         {
-            return await _dbSet.Where(s => s.Estado == estado).ToListAsync();
+            try { return await _dbSet.Where(s => s.Estado == estado).ToListAsync(); }
+            catch (Exception ex) { _logger.LogError(ex, "Error estado {E}", estado); throw; }
         }
     }
 }
