@@ -20,14 +20,44 @@ namespace SIGEBI.Domain.Entities.Usuarios
 
         private Usuario() { }
 
-        public Usuario(string nombre, string apellido, string cedula, string email, TipoUsuario tipoUsuario)
+        public Usuario(
+            string nombre,
+            string apellido,
+            string cedula,
+            string email,
+            TipoUsuario tipoUsuario,
+            string telefono = "")
         {
             Nombre = ValidarTextoObligatorio(nombre, nameof(nombre));
             Apellido = ValidarTextoObligatorio(apellido, nameof(apellido));
             Cedula = ValidarTextoObligatorio(cedula, nameof(cedula));
             Email = ValidarTextoObligatorio(email, nameof(email));
+            Telefono = telefono?.Trim() ?? string.Empty;
             TipoUsuario = tipoUsuario;
             Estado = EstadoUsuario.Activo;
+        }
+
+        public void ActualizarDatos(
+            string nombre,
+            string apellido,
+            string cedula,
+            string telefono,
+            string email,
+            TipoUsuario tipoUsuario,
+            EstadoUsuario estado)
+        {
+            Nombre = ValidarTextoObligatorio(nombre, nameof(nombre));
+            Apellido = ValidarTextoObligatorio(apellido, nameof(apellido));
+            Cedula = ValidarTextoObligatorio(cedula, nameof(cedula));
+            Telefono = telefono?.Trim() ?? string.Empty;
+            Email = ValidarTextoObligatorio(email, nameof(email));
+            TipoUsuario = Enum.IsDefined(tipoUsuario)
+                ? tipoUsuario
+                : throw new ArgumentOutOfRangeException(nameof(tipoUsuario));
+            Estado = Enum.IsDefined(estado)
+                ? estado
+                : throw new ArgumentOutOfRangeException(nameof(estado));
+            MarcarComoModificada();
         }
 
         public void ActualizarContacto(string telefono, string email)

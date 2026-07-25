@@ -32,9 +32,14 @@ public sealed class PrestamosVencidosBackgroundService(
                         UsuarioResponsableId = configuracion.UsuarioResponsableId
                     },
                     stoppingToken);
+                var recordatorios = await prestamos.GenerarRecordatoriosVencimientoAsync(
+                    DateTime.UtcNow,
+                    stoppingToken);
 
                 if (cantidad > 0)
                     logger.LogInformation("Se actualizaron {Cantidad} préstamos vencidos.", cantidad);
+                if (recordatorios > 0)
+                    logger.LogInformation("Se enviaron {Cantidad} recordatorios de vencimiento.", recordatorios);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

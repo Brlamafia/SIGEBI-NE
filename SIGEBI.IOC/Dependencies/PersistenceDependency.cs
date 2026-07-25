@@ -21,7 +21,7 @@ public static class PersistenceDependency
         this IServiceCollection services,
         string connectionString)
     {
-        services.AddSqlServerPersistence(connectionString);
+        services.AddPostgreSqlPersistence(connectionString);
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddScoped<UsuarioRepository>();

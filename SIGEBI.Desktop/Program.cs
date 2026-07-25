@@ -8,10 +8,11 @@ namespace SIGEBI.Desktop
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            using var apiClient = new ApiClient();
+            using var login = new LoginForm(apiClient);
+            if (login.ShowDialog() == DialogResult.OK && login.Autenticado)
+                Application.Run(new MainForm(apiClient));
         }
     }
 }

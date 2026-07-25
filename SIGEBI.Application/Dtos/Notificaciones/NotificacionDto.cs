@@ -9,5 +9,6 @@ namespace SIGEBI.Application.Dtos.Notificaciones
         public required string Mensaje { get; set; }
         public required DateTime FechaEnvio { get; set; }
         public required bool Leida { get; set; }
+        public string TipoEvento { get; set; } = string.Empty;
     }
 }

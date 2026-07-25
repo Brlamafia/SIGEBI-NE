@@ -4,6 +4,7 @@ using SIGEBI.Domain.Entities.Catalogo;
 using SIGEBI.Domain.Entities.Notificaciones;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
+using SIGEBI.Domain.Enums;
 
 namespace SIGEBI.Persistence.Context;
 
@@ -79,7 +80,8 @@ public class SigebiContext : DbContext
         foreach (var entry in ChangeTracker.Entries<Notificacion>()
                      .Where(e => e.State == EntityState.Added))
         {
-            entry.Property("TipoEvento").CurrentValue = "General";
+            if (!Enum.IsDefined(entry.Entity.TipoEvento))
+                entry.Property(n => n.TipoEvento).CurrentValue = TipoNotificacion.Informacion;
         }
     }
 
@@ -166,7 +168,7 @@ public class SigebiContext : DbContext
         notificacion.Property(n => n.Mensaje).HasColumnName("mensaje").HasMaxLength(500).IsRequired();
         notificacion.Property(n => n.FechaEnvio).HasColumnName("fecha_envio");
         notificacion.Property(n => n.Leida).HasColumnName("leida");
-        notificacion.Property<string>("TipoEvento").HasColumnName("tipo_evento").HasMaxLength(100).IsRequired();
+        notificacion.Property(n => n.TipoEvento).HasColumnName("tipo_evento").HasConversion<string>().HasMaxLength(100).IsRequired();
         notificacion.HasOne<Usuario>().WithMany().HasForeignKey(n => n.UsuarioId).OnDelete(DeleteBehavior.Restrict);
     }
 

@@ -30,5 +30,9 @@ namespace SIGEBI.Application.Interfaces.Inventario
         Task<EjemplarDto> CambiarEstadoEjemplarAsync(
             CambiarEstadoEjemplarDto dto,
             CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyCollection<HistorialEstadoEjemplarDto>> ObtenerHistorialEjemplarAsync(
+            int ejemplarId,
+            CancellationToken cancellationToken = default);
     }
 }

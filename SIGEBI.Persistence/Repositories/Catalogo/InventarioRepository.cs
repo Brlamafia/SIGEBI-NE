@@ -16,13 +16,14 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
     public class InventarioRepository : MutableRepository<Inventario>, IInventarioRepository
     {
         // B.R: Inyectamos el logger y lo pasamos a MutableRepository
-        public InventarioRepository(SigebiContext context, ILogger<BaseRepository<Inventario>> logger)
+        public InventarioRepository(SigebiContext context, ILogger<InventarioRepository> logger)
             : base(context, logger) { }
 
         public async Task<Inventario?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
             try
             {
+                _logger.LogInformation("Consultando inventario {InventarioId}", id);
                 return await _dbSet.FindAsync(new object[] { id }, ct);
             }
             catch (Exception ex)
@@ -36,6 +37,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Consultando todo el inventario");
                 return await _dbSet.OrderBy(i => i.LibroId).ToListAsync(ct);
             }
             catch (Exception ex)
@@ -49,6 +51,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Consultando inventario del libro {LibroId}", libroId);
                 return await _dbSet.SingleOrDefaultAsync(i => i.LibroId == libroId, ct);
             }
             catch (Exception ex)

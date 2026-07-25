@@ -10,6 +10,7 @@ using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Application.Interfaces.Notificaciones;
 using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.Roles;
+using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
 using SIGEBI.Application.Interfaces.Usuarios;
 using SIGEBI.Application.Mappings;
@@ -22,6 +23,7 @@ using SIGEBI.Application.Services.Inventario;
 using SIGEBI.Application.Services.Notificaciones;
 using SIGEBI.Application.Services.Prestamos;
 using SIGEBI.Application.Services.Roles;
+using SIGEBI.Application.Services.Seguridad;
 using SIGEBI.Application.Services.Usuarios;
 using SIGEBI.Application.Validations;
 using SIGEBI.Domain.Policies;
@@ -50,6 +52,7 @@ namespace SIGEBI.IOC.Dependencies
             services.AddScoped<IAdministradorService, AdministradorService>();
             services.AddScoped<INotificacionService, NotificacionService>();
             services.AddScoped<IRolService, RolService>();
+            services.AddScoped<IUsuarioActual, UsuarioActualNulo>();
 
             services.AddScoped<PrestamoDomainService>();
             services.AddScoped<MultaDomainService>();

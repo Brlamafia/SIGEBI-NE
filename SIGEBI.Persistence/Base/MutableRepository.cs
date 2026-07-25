@@ -9,7 +9,7 @@ namespace SIGEBI.Persistence.Base
     public abstract class MutableRepository<T> : BaseRepository<T> where T : class
     {
         // B.R: Recibimos el logger aquí y se lo pasamos al padre (BaseRepository) mediante "base(...)"
-        protected MutableRepository(SigebiContext context, ILogger<BaseRepository<T>> logger)
+        protected MutableRepository(SigebiContext context, ILogger logger)
             : base(context, logger) { }
 
         public void Actualizar(T entidad)

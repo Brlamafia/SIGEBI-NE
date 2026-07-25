@@ -29,6 +29,18 @@ public class PrestamosController : ControllerBase
         CancellationToken cancellationToken)
         => Ok(await _prestamos.ObtenerPorUsuarioAsync(usuarioId, cancellationToken));
 
+    [HttpGet("libro/{libroId:int}")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorLibro(
+        int libroId,
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerPorLibroAsync(libroId, cancellationToken));
+
+    [HttpGet("ejemplar/{ejemplarId:int}")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorEjemplar(
+        int ejemplarId,
+        CancellationToken cancellationToken)
+        => Ok(await _prestamos.ObtenerPorEjemplarAsync(ejemplarId, cancellationToken));
+
     [HttpGet("estado/{estado}")]
     public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorEstado(
         string estado,

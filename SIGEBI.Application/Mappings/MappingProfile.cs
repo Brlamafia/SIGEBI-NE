@@ -37,9 +37,22 @@ namespace SIGEBI.Application.Mappings
                 .ForMember(dest => dest.Estado, opt => opt.MapFrom(src => src.Estado.ToString()))
                 .ForMember(dest => dest.TieneMultasPendientes, opt => opt.Ignore());
             CreateMap<SaveUsuarioDto, Usuario>()
-                .ConstructUsing(src => new Usuario(src.Nombre, src.Apellido, src.Cedula, src.Email, src.TipoUsuario));
+                .ConstructUsing(src => new Usuario(
+                    src.Nombre,
+                    src.Apellido,
+                    src.Cedula,
+                    src.Email,
+                    src.TipoUsuario,
+                    src.Telefono));
             CreateMap<UpdateUsuarioDto, Usuario>()
-                .AfterMap((src, dest) => dest.ActualizarContacto(src.Telefono, src.Email));
+                .AfterMap((src, dest) => dest.ActualizarDatos(
+                    src.Nombre,
+                    src.Apellido,
+                    src.Cedula,
+                    src.Telefono,
+                    src.Email,
+                    src.TipoUsuario,
+                    src.Estado));
 
             // DTO Pattern: Solicitudes de préstamo viajan como datos planos entre capas.
             CreateMap<SolicitudPrestamo, SolicitudPrestamoDto>().ReverseMap();
@@ -67,9 +80,13 @@ namespace SIGEBI.Application.Mappings
                 .ForMember(dest => dest.Resultado, opt => opt.MapFrom(src => src.Resultado.ToString()));
 
             // Separación de capas: Notificaciones se transportan como DTOs.
-            CreateMap<Notificacion, NotificacionDto>();
+            CreateMap<Notificacion, NotificacionDto>()
+                .ForMember(dest => dest.TipoEvento, opt => opt.MapFrom(src => src.TipoEvento.ToString()));
             CreateMap<SaveNotificacionDto, Notificacion>()
-                .ConstructUsing(src => new Notificacion(src.UsuarioId, src.Mensaje));
+                .ConstructUsing(src => new Notificacion(
+                    src.UsuarioId,
+                    src.Mensaje,
+                    ParsearTipoNotificacion(src.TipoEvento)));
 
             // DTO Pattern: Roles se comunican sin exponer colecciones internas del dominio.
             CreateMap<Rol, RolDto>();
@@ -97,5 +114,10 @@ namespace SIGEBI.Application.Mappings
             CreateMap<SaveAdministradorDto, Administrador>();
             CreateMap<UpdateAdministradorDto, Administrador>();
         }
+
+        private static SIGEBI.Domain.Enums.TipoNotificacion ParsearTipoNotificacion(string valor) =>
+            Enum.TryParse<SIGEBI.Domain.Enums.TipoNotificacion>(valor, true, out var tipo)
+                ? tipo
+                : SIGEBI.Domain.Enums.TipoNotificacion.Informacion;
     }
 }

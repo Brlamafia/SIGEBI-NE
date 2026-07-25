@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Cargos; // Asegúrate de tener este using
 using SIGEBI.Application.Interfaces.Cargos;
+using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     [Route("api/[controller]")]
     [ApiController]
     public class CargosController : ControllerBase

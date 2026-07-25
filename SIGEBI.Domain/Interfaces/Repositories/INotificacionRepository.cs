@@ -9,8 +9,17 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     public interface INotificacionRepository : IRepository<Notificacion>
     {
         Task<Notificacion?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
-        Task<IEnumerable<Notificacion>> ObtenerPorUsuarioAsync(int usuarioId);
-        Task<IEnumerable<Notificacion>> ObtenerNoLeidasPorUsuarioAsync(int usuarioId);
+        Task<IEnumerable<Notificacion>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
+        Task<IEnumerable<Notificacion>> ObtenerNoLeidasPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
+        Task<bool> ExisteEventoAsync(
+            int usuarioId,
+            string textoIdentificador,
+            DateTime desde,
+            CancellationToken cancellationToken = default);
         void Actualizar(Notificacion notificacion);
 
         // ELIMINAMOS la línea de AgregarAsync porque ya viene heredada de IRepository

@@ -11,8 +11,6 @@ namespace SIGEBI.Application.Validations.Prestamos
                 .GreaterThan(0).WithMessage("Se requiere un préstamo válido.");
             RuleFor(x => x.EmpleadoDevolucionId)
                 .GreaterThan(0).WithMessage("Se requiere un empleado responsable válido.");
-            RuleFor(x => x.MontoMultaPorDia)
-                .GreaterThan(0).WithMessage("El monto por día debe ser mayor que cero.");
         }
     }
 }

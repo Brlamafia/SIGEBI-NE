@@ -7,24 +7,24 @@ namespace SIGEBI.Persistence;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddSqlServerPersistence(
+    public static IServiceCollection AddPostgreSqlPersistence(
         this IServiceCollection services,
         string connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                "La cadena de conexion de NELibrary es obligatoria.");
+                "La cadena de conexion de Supabase es obligatoria.");
         }
 
         services.AddDbContext<SigebiContext>(options =>
         {
-            options.UseSqlServer(
+            options.UseNpgsql(
                     connectionString,
-                    sqlServerOptions => sqlServerOptions.EnableRetryOnFailure(
+                    postgreSqlOptions => postgreSqlOptions.EnableRetryOnFailure(
                         maxRetryCount: 3,
                         maxRetryDelay: TimeSpan.FromSeconds(5),
-                        errorNumbersToAdd: null))
+                        errorCodesToAdd: null))
                 .ConfigureWarnings(warnings => warnings.Ignore(
                     RelationalEventId.ForeignKeyPropertiesMappedToUnrelatedTables));
         });

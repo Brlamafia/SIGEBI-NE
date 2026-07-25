@@ -20,29 +20,53 @@ namespace SIGEBI.Application.Services.Notificaciones
             _notificacionRepository = notificacionRepository;
         }
 
-        public async Task<IEnumerable<NotificacionDto>> ObtenerPorUsuarioAsync(int usuarioId)
+        public async Task<IEnumerable<NotificacionDto>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default)
         {
-            var lista = await _notificacionRepository.ObtenerPorUsuarioAsync(usuarioId);
+            var lista = await _notificacionRepository.ObtenerPorUsuarioAsync(usuarioId, cancellationToken);
             return _mapper.Map<IEnumerable<NotificacionDto>>(lista);
         }
 
-        public async Task<IEnumerable<NotificacionDto>> ObtenerNoLeidasPorUsuarioAsync(int usuarioId)
+        public async Task<IEnumerable<NotificacionDto>> ObtenerNoLeidasPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default)
         {
-            var lista = await _notificacionRepository.ObtenerNoLeidasPorUsuarioAsync(usuarioId);
+            var lista = await _notificacionRepository.ObtenerNoLeidasPorUsuarioAsync(usuarioId, cancellationToken);
             return _mapper.Map<IEnumerable<NotificacionDto>>(lista);
         }
 
-        public async Task<bool> EnviarNotificacionAsync(SaveNotificacionDto dto)
+        public async Task<bool> EnviarNotificacionAsync(
+            SaveNotificacionDto dto,
+            CancellationToken cancellationToken = default)
         {
-            // Solución CS1061 y CS0272: El BaseService recibe el DTO, AutoMapper lo convierte
-            // y utiliza el repositorio genérico interno que sí tiene permisos para guardar.
-            await base.AddAsync(dto);
+            ArgumentNullException.ThrowIfNull(dto);
+            var entidad = _mapper.Map<Notificacion>(dto);
+            await _notificacionRepository.AgregarAsync(entidad, cancellationToken);
             return true;
         }
 
-        public async Task<bool> MarcarComoLeidaAsync(int notificacionId)
+        public async Task<bool> EnviarSiNoExisteAsync(
+            SaveNotificacionDto dto,
+            string textoIdentificador,
+            DateTime desde,
+            CancellationToken cancellationToken = default)
         {
-            var notificacion = await _notificacionRepository.ObtenerPorIdAsync(notificacionId)
+            if (await _notificacionRepository.ExisteEventoAsync(
+                    dto.UsuarioId,
+                    textoIdentificador,
+                    desde,
+                    cancellationToken))
+                return false;
+
+            return await EnviarNotificacionAsync(dto, cancellationToken);
+        }
+
+        public async Task<bool> MarcarComoLeidaAsync(
+            int notificacionId,
+            CancellationToken cancellationToken = default)
+        {
+            var notificacion = await _notificacionRepository.ObtenerPorIdAsync(notificacionId, cancellationToken)
                 ?? throw new BusinessRuleException("La notificación solicitada no existe.");
 
             notificacion.MarcarComoLeida();

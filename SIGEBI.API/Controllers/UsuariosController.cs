@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Administrador")]
     [ApiController]
     [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
@@ -39,23 +39,29 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] SaveUsuarioDto dto)
+        public async Task<IActionResult> Post(
+            [FromBody] SaveUsuarioDto dto,
+            CancellationToken cancellationToken)
         {
-            var result = await _usuarioService.AddAsync(dto);
-            return StatusCode(201, result);
+            var usuario = await _usuarioService.CrearAsync(dto, cancellationToken);
+            return CreatedAtAction(nameof(GetById), new { id = usuario.Id }, usuario);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] UpdateUsuarioDto dto)
+        public async Task<IActionResult> Put(
+            int id,
+            [FromBody] UpdateUsuarioDto dto,
+            CancellationToken cancellationToken)
         {
-            await _usuarioService.UpdateAsync(id, dto);
-            return NoContent();
+            return Ok(await _usuarioService.ActualizarAsync(id, dto, cancellationToken));
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(
+            int id,
+            CancellationToken cancellationToken)
         {
-            await _usuarioService.DeleteAsync(id);
+            await _usuarioService.EliminarAsync(id, cancellationToken);
             return NoContent();
         }
     }

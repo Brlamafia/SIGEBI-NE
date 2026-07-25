@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Data;
 using SIGEBI.Domain.Exceptions;
 using SIGEBI.Domain.Interfaces;
@@ -10,22 +11,37 @@ namespace SIGEBI.Persistence
     public sealed class UnitOfWork : IUnitOfWork
     {
         private readonly SigebiContext _context;
+        private readonly ILogger<UnitOfWork> _logger;
 
-        public UnitOfWork(SigebiContext context)
+        public UnitOfWork(SigebiContext context, ILogger<UnitOfWork> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<int> GuardarCambiosAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                return await _context.SaveChangesAsync(cancellationToken);
+                var cambios = await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Unidad de trabajo guardó {Cantidad} cambios.", cambios);
+                return cambios;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Guardado de la unidad de trabajo cancelado.");
+                throw;
             }
             catch (DbUpdateConcurrencyException exception)
             {
+                _logger.LogWarning(exception, "Conflicto de concurrencia al guardar la unidad de trabajo.");
                 _context.ChangeTracker.Clear();
                 throw new ConflictoConcurrenciaException(exception);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Error al guardar la unidad de trabajo.");
+                throw;
             }
         }
 
@@ -59,17 +75,29 @@ namespace SIGEBI.Persistence
                     await operacion(cancellationToken);
                     await _context.SaveChangesAsync(cancellationToken);
                     await transaccion.CommitAsync(cancellationToken);
+                    _logger.LogInformation(
+                        "Transacción confirmada con aislamiento {NivelAislamiento}.",
+                        nivelAislamiento);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    await transaccion.RollbackAsync(CancellationToken.None);
+                    _context.ChangeTracker.Clear();
+                    _logger.LogInformation("Transacción cancelada y revertida.");
+                    throw;
                 }
                 catch (DbUpdateConcurrencyException exception)
                 {
                     await transaccion.RollbackAsync(cancellationToken);
                     _context.ChangeTracker.Clear();
+                    _logger.LogWarning(exception, "Transacción revertida por conflicto de concurrencia.");
                     throw new ConflictoConcurrenciaException(exception);
                 }
-                catch
+                catch (Exception exception)
                 {
                     await transaccion.RollbackAsync(cancellationToken);
                     _context.ChangeTracker.Clear();
+                    _logger.LogError(exception, "Transacción revertida por un error no controlado.");
                     throw;
                 }
             });

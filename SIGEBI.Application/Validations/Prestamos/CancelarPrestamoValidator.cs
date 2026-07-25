@@ -11,6 +11,9 @@ namespace SIGEBI.Application.Validations.Prestamos
                 .GreaterThan(0).WithMessage("Se requiere un préstamo válido.");
             RuleFor(x => x.EmpleadoResponsableId)
                 .GreaterThan(0).WithMessage("Se requiere un empleado responsable válido.");
+            RuleFor(x => x.Motivo)
+                .NotEmpty().WithMessage("El motivo de cancelación es obligatorio.")
+                .MaximumLength(500).WithMessage("El motivo no puede exceder 500 caracteres.");
         }
     }
 }

@@ -5,5 +5,6 @@ namespace SIGEBI.Application.Dtos.Prestamos
     {
         public int PrestamoId { get; set; }
         public int EmpleadoResponsableId { get; set; }
+        public string Motivo { get; set; } = "Cancelación administrativa";
     }
 }
