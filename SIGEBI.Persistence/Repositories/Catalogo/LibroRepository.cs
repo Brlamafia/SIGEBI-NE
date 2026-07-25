@@ -15,7 +15,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
     public class LibroRepository : MutableRepository<Libro>, ILibroRepository
     {
         // B.R: Pedimos el Logger en el constructor y se lo pasamos a la clase base (MutableRepository)
-        public LibroRepository(SigebiContext context, ILogger<BaseRepository<Libro>> logger) : base(context, logger) { }
+        public LibroRepository(SigebiContext context, ILogger<LibroRepository> logger) : base(context, logger) { }
 
         public async Task<IReadOnlyCollection<Libro>> BuscarPorCriterioAsync(string criterio, CancellationToken ct = default)
         {
@@ -37,6 +37,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Consultando libro {LibroId}", id);
                 return await _dbSet.FindAsync(new object[] { id }, ct);
             }
             catch (Exception ex)
@@ -50,6 +51,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Consultando libro con ISBN {ISBN}", isbn);
                 return await _dbSet.FirstOrDefaultAsync(l => l.ISBN == isbn, ct);
             }
             catch (Exception ex)

@@ -6,6 +6,9 @@ using SIGEBI.Application.Exceptions;
 using SIGEBI.Application.Common;
 using SIGEBI.Application.Interfaces.Auditoria;
 using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Application.Interfaces.Notificaciones;
+using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Application.Dtos.Notificaciones;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces;
@@ -22,6 +25,8 @@ namespace SIGEBI.Application.Services.Prestamos
         private readonly IMultaRepository _multas;
         private readonly IEmpleadoRepository _empleados;
         private readonly IAuditoriaWriter _auditoria;
+        private readonly INotificacionService _notificaciones;
+        private readonly IUsuarioActual _usuarioActual;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ILogger<MultaService> _logger;
@@ -30,6 +35,8 @@ namespace SIGEBI.Application.Services.Prestamos
             IMultaRepository multas,
             IEmpleadoRepository empleados,
             IAuditoriaWriter auditoria,
+            INotificacionService notificaciones,
+            IUsuarioActual usuarioActual,
             IUnitOfWork unitOfWork,
             IMapper mapper,
             ILogger<MultaService> logger)
@@ -37,6 +44,8 @@ namespace SIGEBI.Application.Services.Prestamos
             _multas = multas;
             _empleados = empleados;
             _auditoria = auditoria;
+            _notificaciones = notificaciones;
+            _usuarioActual = usuarioActual;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _logger = logger;
@@ -77,7 +86,16 @@ namespace SIGEBI.Application.Services.Prestamos
 
                     multa.MarcarComoPagada();
                     _multas.Actualizar(multa);
-                    await _auditoria.RegistrarAsync(dto.UsuarioResponsableId, ModuloAuditoria.Multas, AccionAuditoria.Pagar, $"Pago de la multa {multa.Id}.", cancellationToken: c);
+                    var responsableId = ResolverResponsable(dto.UsuarioResponsableId);
+                    await _auditoria.RegistrarAsync(responsableId, ModuloAuditoria.Multas, AccionAuditoria.Pagar, $"Pago de la multa {multa.Id}.", cancellationToken: c);
+                    await _notificaciones.EnviarNotificacionAsync(
+                        new SaveNotificacionDto
+                        {
+                            UsuarioId = multa.UsuarioId,
+                            TipoEvento = "Multa",
+                            Mensaje = $"Se registró el pago de la multa #{multa.Id}."
+                        },
+                        c);
                 }, IsolationLevel.Serializable, ct);
             }
             catch (Exception ex)
@@ -96,12 +114,19 @@ namespace SIGEBI.Application.Services.Prestamos
                 {
                     var multa = await _multas.ObtenerPorIdAsync(dto.MultaId, c)
                         ?? throw new NotFoundException(nameof(Multa), dto.MultaId);
-                    var empleado = await _empleados.ObtenerPorIdAsync(dto.EmpleadoResolucionId, c)
-                        ?? throw new NotFoundException("Empleado", dto.EmpleadoResolucionId);
+                    var empleado = await ResolverEmpleadoAsync(dto.EmpleadoResolucionId, c);
 
                     multa.Resolver(empleado.Id, dto.FechaResolucion, dto.Observacion);
                     _multas.Actualizar(multa);
                     await _auditoria.RegistrarAsync(empleado.UsuarioId, ModuloAuditoria.Multas, AccionAuditoria.Resolver, $"Resolución de la multa {multa.Id}.", cancellationToken: c);
+                    await _notificaciones.EnviarNotificacionAsync(
+                        new SaveNotificacionDto
+                        {
+                            UsuarioId = multa.UsuarioId,
+                            TipoEvento = "Multa",
+                            Mensaje = $"La multa #{multa.Id} fue resuelta. El usuario queda habilitado si no mantiene otras multas pendientes."
+                        },
+                        c);
                 }, IsolationLevel.Serializable, ct);
             }
             catch (Exception ex)
@@ -112,5 +137,22 @@ namespace SIGEBI.Application.Services.Prestamos
         }
 
         private static EstadoMulta ConvertirEstadoMulta(string estado) => EnumParser.ParseDefined<EstadoMulta>(estado, "estado de la multa");
+
+        private int ResolverResponsable(int informado) =>
+            _usuarioActual.EstaAutenticado ? _usuarioActual.UsuarioId : informado;
+
+        private async Task<SIGEBI.Domain.Entities.Usuarios.Empleado> ResolverEmpleadoAsync(
+            int informado,
+            CancellationToken ct)
+        {
+            if (_usuarioActual.EstaAutenticado)
+            {
+                return await _empleados.ObtenerPorUsuarioIdAsync(_usuarioActual.UsuarioId, ct)
+                    ?? throw new BusinessRuleException("El usuario autenticado no está registrado como empleado.");
+            }
+
+            return await _empleados.ObtenerPorIdAsync(informado, ct)
+                ?? throw new NotFoundException("Empleado", informado);
+        }
     }
 }

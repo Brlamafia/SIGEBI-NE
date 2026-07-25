@@ -13,23 +13,23 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
 {
     public class CargoRepository : MutableRepository<Cargo>, ICargoRepository
     {
-        public CargoRepository(SigebiContext context, ILogger<BaseRepository<Cargo>> logger) : base(context, logger) { }
+        public CargoRepository(SigebiContext context, ILogger<CargoRepository> logger) : base(context, logger) { }
 
         public async Task<Cargo?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
-            try { return await _dbSet.FindAsync(new object[] { id }, ct); }
+            try { _logger.LogInformation("Consultando cargo {CargoId}", id); return await _dbSet.FindAsync(new object[] { id }, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error Cargo ID {Id}", id); throw; }
         }
 
         public async Task<Cargo?> ObtenerPorNombreAsync(string nombre, CancellationToken ct = default)
         {
-            try { return await _dbSet.SingleOrDefaultAsync(c => c.Nombre == nombre, ct); }
+            try { _logger.LogInformation("Consultando cargo por nombre"); return await _dbSet.SingleOrDefaultAsync(c => c.Nombre == nombre, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error Cargo Nombre {Nombre}", nombre); throw; }
         }
 
         public async Task<IReadOnlyCollection<Cargo>> ObtenerTodosAsync(CancellationToken ct = default)
         {
-            try { return await _dbSet.ToListAsync(); }
+            try { _logger.LogInformation("Consultando todos los cargos"); return await _dbSet.ToListAsync(); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando cargos"); throw; }
         }
     }

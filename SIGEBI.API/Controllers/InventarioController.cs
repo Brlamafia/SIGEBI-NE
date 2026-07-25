@@ -28,6 +28,12 @@ public class InventarioController(IInventarioService inventario) : ControllerBas
         CancellationToken cancellationToken)
         => Ok(await inventario.ObtenerEjemplaresPorLibroAsync(libroId, cancellationToken));
 
+    [HttpGet("ejemplares/{ejemplarId:int}/historial")]
+    public async Task<ActionResult<IReadOnlyCollection<HistorialEstadoEjemplarDto>>> ObtenerHistorialEjemplar(
+        int ejemplarId,
+        CancellationToken cancellationToken)
+        => Ok(await inventario.ObtenerHistorialEjemplarAsync(ejemplarId, cancellationToken));
+
     [HttpPost]
     public async Task<ActionResult<InventarioDto>> Crear(
         [FromBody] CrearInventarioDto dto,

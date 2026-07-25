@@ -27,25 +27,25 @@ namespace SIGEBI.Persistence.Repositories.Auditoria
 
         public async Task<AuditoriaEntidad?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
-            try { return await _auditorias.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct); }
+            try { _logger.LogInformation("Consultando auditoría {AuditoriaId}", id); return await _auditorias.AsNoTracking().SingleOrDefaultAsync(a => a.Id == id, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error buscando Auditoría ID {Id}", id); throw; }
         }
 
         public async Task<IReadOnlyCollection<AuditoriaEntidad>> ObtenerTodasAsync(CancellationToken ct = default)
         {
-            try { return await _auditorias.AsNoTracking().OrderByDescending(a => a.Fecha).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando todos los registros de auditoría"); return await _auditorias.AsNoTracking().OrderByDescending(a => a.Fecha).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando todas las auditorías"); throw; }
         }
 
         public async Task<IReadOnlyCollection<AuditoriaEntidad>> ObtenerPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
         {
-            try { return await _auditorias.AsNoTracking().Where(a => a.UsuarioResponsableId == usuarioId).OrderByDescending(a => a.Fecha).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando auditoría del usuario {UsuarioId}", usuarioId); return await _auditorias.AsNoTracking().Where(a => a.UsuarioResponsableId == usuarioId).OrderByDescending(a => a.Fecha).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando auditorías usuario {Id}", usuarioId); throw; }
         }
 
         public async Task<IReadOnlyCollection<AuditoriaEntidad>> ObtenerPorModuloAsync(ModuloAuditoria modulo, CancellationToken ct = default)
         {
-            try { return await _auditorias.AsNoTracking().Where(a => a.Modulo == modulo).OrderByDescending(a => a.Fecha).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando auditoría del módulo {Modulo}", modulo); return await _auditorias.AsNoTracking().Where(a => a.Modulo == modulo).OrderByDescending(a => a.Fecha).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando auditorías módulo {M}", modulo); throw; }
         }
 
@@ -53,6 +53,7 @@ namespace SIGEBI.Persistence.Repositories.Auditoria
         {
             try
             {
+                _logger.LogInformation("Consultando auditoría entre {Desde} y {Hasta}", desde, hasta);
                 if (hasta < desde) throw new ArgumentException("Rango de fechas inválido");
                 return await _auditorias.AsNoTracking().Where(a => a.Fecha >= desde && a.Fecha <= hasta).OrderByDescending(a => a.Fecha).ToListAsync(ct);
             }
@@ -61,7 +62,7 @@ namespace SIGEBI.Persistence.Repositories.Auditoria
 
         public async Task AgregarAsync(AuditoriaEntidad auditoria, CancellationToken ct = default)
         {
-            try { await _auditorias.AddAsync(auditoria, ct); }
+            try { _logger.LogInformation("Registrando auditoría de {Modulo}/{Accion}", auditoria.Modulo, auditoria.Accion); await _auditorias.AddAsync(auditoria, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error al registrar nueva auditoría"); throw; }
         }
     }

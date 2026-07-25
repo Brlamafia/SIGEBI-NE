@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Roles;
 using SIGEBI.Application.Interfaces.Roles;
+using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     [Route("api/[controller]")]
     [ApiController]
     public class RolesController : ControllerBase

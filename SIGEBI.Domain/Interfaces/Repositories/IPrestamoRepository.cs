@@ -13,6 +13,18 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<IReadOnlyCollection<Prestamo>> ObtenerPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerPorLibroAsync(
+            int libroId,
+            CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerPorEjemplarAsync(
+            int ejemplarId,
+            CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerDevolucionesPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerDevolucionesPorLibroAsync(
+            int libroId,
+            CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Prestamo>> ObtenerPorEstadoAsync(
             EstadoPrestamo estado,
             CancellationToken cancellationToken = default);
@@ -22,6 +34,10 @@ namespace SIGEBI.Domain.Interfaces.Repositories
             CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(
             DateTime fechaReferencia,
+            CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerActivosProximosAVencerAsync(
+            DateTime desde,
+            DateTime hasta,
             CancellationToken cancellationToken = default);
         Task<int> ContarActivosPorUsuarioAsync(
             int usuarioId,

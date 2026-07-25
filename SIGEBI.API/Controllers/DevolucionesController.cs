@@ -11,6 +11,18 @@ namespace SIGEBI.API.Controllers;
 [Route("api/[controller]")]
 public class DevolucionesController(IPrestamoService prestamos) : ControllerBase
 {
+    [HttpGet("usuario/{usuarioId:int}")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorUsuario(
+        int usuarioId,
+        CancellationToken cancellationToken)
+        => Ok(await prestamos.ObtenerDevolucionesPorUsuarioAsync(usuarioId, cancellationToken));
+
+    [HttpGet("libro/{libroId:int}")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPorLibro(
+        int libroId,
+        CancellationToken cancellationToken)
+        => Ok(await prestamos.ObtenerDevolucionesPorLibroAsync(libroId, cancellationToken));
+
     [HttpPost]
     public async Task<ActionResult<MultaDto?>> Registrar(
         [FromBody] RegistrarDevolucionDto dto,

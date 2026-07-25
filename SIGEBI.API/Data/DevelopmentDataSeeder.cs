@@ -15,7 +15,6 @@ internal static class DevelopmentDataSeeder
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<SigebiContext>();
 
-        await context.Database.EnsureCreatedAsync();
         if (await context.Usuarios.AnyAsync())
             return;
 

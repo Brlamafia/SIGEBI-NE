@@ -16,10 +16,10 @@ namespace SIGEBI.Persistence.Base
         protected readonly DbSet<T> _dbSet;
 
         // 3. Declaramos la "Caja negra" (Logger)
-        protected readonly ILogger<BaseRepository<T>> _logger;
+        protected readonly ILogger _logger;
 
         // 4. Pedimos el ILogger en el constructor
-        protected BaseRepository(SigebiContext context, ILogger<BaseRepository<T>> logger)
+        protected BaseRepository(SigebiContext context, ILogger logger)
         {
             _context = context;
             _dbSet = _context.Set<T>();
@@ -30,7 +30,13 @@ namespace SIGEBI.Persistence.Base
         {
             try
             {
-                return await _dbSet.ToListAsync();
+                _logger.LogInformation("Consultando todos los registros de {Entidad}", typeof(T).Name);
+                var registros = await _dbSet.ToListAsync();
+                _logger.LogInformation(
+                    "Consulta de {Entidad} completada con {Cantidad} registros",
+                    typeof(T).Name,
+                    registros.Count);
+                return registros;
             }
             catch (Exception ex)
             {
@@ -44,7 +50,14 @@ namespace SIGEBI.Persistence.Base
         {
             try
             {
-                return await _dbSet.FindAsync(id);
+                _logger.LogInformation("Consultando {Entidad} con ID {Id}", typeof(T).Name, id);
+                var registro = await _dbSet.FindAsync(id);
+                _logger.LogInformation(
+                    "Consulta de {Entidad} ID {Id} completada. Encontrado: {Encontrado}",
+                    typeof(T).Name,
+                    id,
+                    registro is not null);
+                return registro;
             }
             catch (Exception ex)
             {

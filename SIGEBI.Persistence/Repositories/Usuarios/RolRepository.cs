@@ -8,6 +8,6 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
 {
     public sealed class RolRepository : MutableRepository<Rol>, IRepository<Rol>
     {
-        public RolRepository(SigebiContext context, ILogger<BaseRepository<Rol>> logger) : base(context, logger) { }
+        public RolRepository(SigebiContext context, ILogger<RolRepository> logger) : base(context, logger) { }
     }
 }

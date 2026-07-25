@@ -4,11 +4,19 @@ using Microsoft.OpenApi;
 using SIGEBI.API.Exceptions;
 using SIGEBI.API.Filters;
 using SIGEBI.API.Jobs;
+using SIGEBI.API.Logging;
+using SIGEBI.API.Security;
+using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Domain.Policies;
 using SIGEBI.IOC.Injection;
 using System.Text;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var logDirectory = builder.Configuration["Logging:FileDirectory"]
+    ?? Path.Combine(builder.Environment.ContentRootPath, "logs");
+builder.Logging.AddProvider(new DailyFileLoggerProvider(logDirectory));
 
 builder.Services.AddControllers(options =>
     options.Filters.Add<FluentValidationActionFilter>())
@@ -61,11 +69,18 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var connectionString = builder.Configuration.GetConnectionString("NELibrary")
+var connectionString = builder.Configuration.GetConnectionString("Supabase")
     ?? throw new InvalidOperationException(
-        "Debe configurar ConnectionStrings:NELibrary mediante User Secrets.");
+        "Debe configurar ConnectionStrings:Supabase mediante una variable de entorno o User Secrets.");
 
 builder.Services.AddSigebiDependencies(connectionString);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
+
+var politicaPrestamos = builder.Configuration
+    .GetSection("PoliticasPrestamo")
+    .Get<PoliticaPrestamosOptions>() ?? new PoliticaPrestamosOptions();
+builder.Services.AddSingleton(new PoliticaPrestamos(politicaPrestamos));
 
 var app = builder.Build();
 

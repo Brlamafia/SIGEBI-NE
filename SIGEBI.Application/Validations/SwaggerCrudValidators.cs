@@ -38,6 +38,7 @@ public sealed class SaveUsuarioValidator : AbstractValidator<SaveUsuarioDto>
         RuleFor(x => x.Apellido).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Cedula).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
+        RuleFor(x => x.Telefono).MaximumLength(20);
         RuleFor(x => x.TipoUsuario).IsInEnum();
     }
 }
@@ -46,8 +47,13 @@ public sealed class UpdateUsuarioValidator : AbstractValidator<UpdateUsuarioDto>
 {
     public UpdateUsuarioValidator()
     {
-        RuleFor(x => x.Telefono).MaximumLength(30);
+        RuleFor(x => x.Nombre).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Apellido).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Cedula).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Telefono).MaximumLength(20);
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
+        RuleFor(x => x.TipoUsuario).IsInEnum();
+        RuleFor(x => x.Estado).IsInEnum();
     }
 }
 

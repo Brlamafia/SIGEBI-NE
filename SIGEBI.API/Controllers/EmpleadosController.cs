@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Empleados;
 using SIGEBI.Application.Interfaces.Empleados;
+using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     [Route("api/[controller]")]
     [ApiController]
     public class EmpleadosController : ControllerBase

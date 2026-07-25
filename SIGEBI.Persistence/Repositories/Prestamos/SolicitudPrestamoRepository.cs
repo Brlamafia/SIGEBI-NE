@@ -15,23 +15,23 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
 {
     public class SolicitudPrestamoRepository : MutableRepository<SolicitudPrestamo>, ISolicitudPrestamoRepository
     {
-        public SolicitudPrestamoRepository(SigebiContext context, ILogger<BaseRepository<SolicitudPrestamo>> logger) : base(context, logger) { }
+        public SolicitudPrestamoRepository(SigebiContext context, ILogger<SolicitudPrestamoRepository> logger) : base(context, logger) { }
 
         public async Task<SolicitudPrestamo?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
-            try { return await _dbSet.FindAsync(new object[] { id }, ct); }
+            try { _logger.LogInformation("Consultando solicitud {SolicitudId}", id); return await _dbSet.FindAsync(new object[] { id }, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error ID {Id}", id); throw; }
         }
 
         public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId)
         {
-            try { return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(); }
+            try { _logger.LogInformation("Consultando solicitudes del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(); }
             catch (Exception ex) { _logger.LogError(ex, "Error usuario {Id}", usuarioId); throw; }
         }
 
         public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado)
         {
-            try { return await _dbSet.Where(s => s.Estado == estado).ToListAsync(); }
+            try { _logger.LogInformation("Consultando solicitudes en estado {Estado}", estado); return await _dbSet.Where(s => s.Estado == estado).ToListAsync(); }
             catch (Exception ex) { _logger.LogError(ex, "Error estado {E}", estado); throw; }
         }
     }

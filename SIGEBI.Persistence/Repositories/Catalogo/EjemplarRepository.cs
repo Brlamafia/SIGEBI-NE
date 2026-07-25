@@ -16,12 +16,12 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
     // B.R: Ahora hereda de MutableRepository para unificar el manejo de errores
     public sealed class EjemplarRepository : MutableRepository<Ejemplar>, IEjemplarRepository
     {
-        public EjemplarRepository(SigebiContext context, ILogger<BaseRepository<Ejemplar>> logger)
+        public EjemplarRepository(SigebiContext context, ILogger<EjemplarRepository> logger)
             : base(context, logger) { }
 
         public async Task<Ejemplar?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
-            try { return await _dbSet.SingleOrDefaultAsync(e => e.Id == id, ct); }
+            try { _logger.LogInformation("Consultando ejemplar {EjemplarId}", id); return await _dbSet.SingleOrDefaultAsync(e => e.Id == id, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error buscando Ejemplar ID {Id}", id); throw; }
         }
 
@@ -29,6 +29,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Buscando ejemplar disponible del libro {LibroId}", libroId);
                 return await _dbSet
                     .Where(e => e.LibroId == libroId && e.Estado == EstadoEjemplar.Disponible)
                     .OrderBy(e => e.Id)
@@ -41,6 +42,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Consultando ejemplares del libro {LibroId}", libroId);
                 return await _dbSet
                     .AsNoTracking()
                     .Where(e => e.LibroId == libroId)
@@ -54,6 +56,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
         {
             try
             {
+                _logger.LogInformation("Consultando ejemplares del libro {LibroId} en estado {Estado}", libroId, estado);
                 return await _dbSet
                     .Where(e => e.LibroId == libroId && e.Estado == estado)
                     .OrderBy(e => e.Id)
@@ -64,19 +67,19 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
 
         public async Task AgregarRangoAsync(IEnumerable<Ejemplar> ejemplares, CancellationToken ct = default)
         {
-            try { await _dbSet.AddRangeAsync(ejemplares, ct); }
+            try { _logger.LogInformation("Agregando un rango de ejemplares"); await _dbSet.AddRangeAsync(ejemplares, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error agregando rango de ejemplares"); throw; }
         }
 
         public void EliminarRango(IEnumerable<Ejemplar> ejemplares)
         {
-            try { _dbSet.RemoveRange(ejemplares); }
+            try { _logger.LogInformation("Eliminando un rango de ejemplares"); _dbSet.RemoveRange(ejemplares); }
             catch (Exception ex) { _logger.LogError(ex, "Error eliminando rango de ejemplares"); throw; }
         }
 
         public new void Actualizar(Ejemplar ejemplar)
         {
-            try { base.Actualizar(ejemplar); }
+            try { _logger.LogInformation("Actualizando ejemplar {EjemplarId}", ejemplar.Id); base.Actualizar(ejemplar); }
             catch (Exception ex) { _logger.LogError(ex, "Error actualizando ejemplar {Id}", ejemplar.Id); throw; }
         }
     }

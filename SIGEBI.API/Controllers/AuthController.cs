@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SIGEBI.Application.Interfaces.Usuarios;
+using SIGEBI.Domain.Interfaces.Repositories;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -13,11 +14,19 @@ namespace SIGEBI.API.Controllers
     {
         private readonly IConfiguration _config;
         private readonly IUsuarioService _usuarioService;
+        private readonly IAdministradorRepository _administradores;
+        private readonly IEmpleadoRepository _empleados;
 
-        public AuthController(IConfiguration config, IUsuarioService usuarioService)
+        public AuthController(
+            IConfiguration config,
+            IUsuarioService usuarioService,
+            IAdministradorRepository administradores,
+            IEmpleadoRepository empleados)
         {
             _config = config;
             _usuarioService = usuarioService;
+            _administradores = administradores;
+            _empleados = empleados;
         }
 
         [HttpPost("login")]
@@ -41,6 +50,7 @@ namespace SIGEBI.API.Controllers
             var jwtKey = _config["Jwt:Key"] ?? "EstaEsUnaClaveSuperSecretaDeMasDe32CaracteresParaElITLA";
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.UTF8.GetBytes(jwtKey);
+            var role = await DeterminarRolAsync(usuarioValido.Id, HttpContext.RequestAborted);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -48,7 +58,7 @@ namespace SIGEBI.API.Controllers
                 {
                     new Claim(ClaimTypes.NameIdentifier, usuarioValido.Id.ToString()),
                     new Claim(ClaimTypes.Email, usuarioValido.Email),
-                    new Claim(ClaimTypes.Role, "Administrador") // Rol por defecto
+                    new Claim(ClaimTypes.Role, role)
                 }),
                 Expires = DateTime.UtcNow.AddHours(2),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -58,6 +68,17 @@ namespace SIGEBI.API.Controllers
             var tokenString = tokenHandler.WriteToken(token);
 
             return Ok(new { Token = tokenString, Usuario = usuarioValido });
+        }
+
+        private async Task<string> DeterminarRolAsync(
+            int usuarioId,
+            CancellationToken cancellationToken)
+        {
+            if (await _administradores.ObtenerPorUsuarioIdAsync(usuarioId, cancellationToken) is not null)
+                return "Administrador";
+            if (await _empleados.ObtenerPorUsuarioIdAsync(usuarioId, cancellationToken) is not null)
+                return "Bibliotecario";
+            return "Usuario";
         }
     }
 

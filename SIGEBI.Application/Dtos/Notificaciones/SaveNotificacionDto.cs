@@ -4,5 +4,6 @@
     {
         public required int UsuarioId { get; set; }
         public required string Mensaje { get; set; }
+        public string TipoEvento { get; set; } = "Informacion";
     }
 }
