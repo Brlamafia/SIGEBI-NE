@@ -1,0 +1,29 @@
+@model CuentaViewModel
+@{ ViewData["Title"] = "Mi cuenta"; }
+<div class="account-grid">
+    <section class="panel">
+        <div class="section-head"><div><h3>Datos personales</h3><p>Información asociada a tu cuenta.</p></div></div>
+        <div class="detail-grid">
+            <div><small>Nombre</small><strong>@Model.Usuario.Nombre @Model.Usuario.Apellido</strong></div>
+            <div><small>Correo</small><strong>@Model.Usuario.Email</strong></div>
+            <div><small>Cédula</small><strong>@Model.Usuario.Cedula</strong></div>
+            <div><small>Teléfono</small><strong>@Model.Usuario.Telefono</strong></div>
+            <div><small>Tipo</small><strong>@Model.Usuario.TipoUsuario</strong></div>
+            <div><small>Estado</small><strong>@Model.Usuario.Estado</strong></div>
+        </div>
+    </section>
+    <section class="panel">
+        <div class="section-head"><div><h3>Cambiar contraseña</h3><p>Actualiza tus credenciales de acceso.</p></div></div>
+        <form class="inline-form" asp-action="CambiarPassword" method="post">
+            <div asp-validation-summary="ModelOnly" class="form-error"></div>
+            <label asp-for="Password.PasswordActual"></label>
+            <input asp-for="Password.PasswordActual" autocomplete="current-password" />
+            <span asp-validation-for="Password.PasswordActual" class="field-error"></span>
+            <label asp-for="Password.PasswordNueva"></label>
+            <input asp-for="Password.PasswordNueva" autocomplete="new-password" />
+            <span asp-validation-for="Password.PasswordNueva" class="field-error"></span>
+            <button class="primary-button" type="submit"><span>Actualizar contraseña</span><span>→</span></button>
+        </form>
+    </section>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

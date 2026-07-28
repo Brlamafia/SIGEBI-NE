@@ -1,0 +1,104 @@
+@model CatalogoViewModel
+@{ ViewData["Title"] = "Catálogo"; }
+@if (!string.IsNullOrWhiteSpace(Model.RestriccionSolicitud))
+{
+    <div class="eligibility-alert" role="alert">
+        <span aria-hidden="true">!</span>
+        <div>
+            <strong>Solicitudes temporalmente restringidas</strong>
+            <p>@Model.RestriccionSolicitud</p>
+        </div>
+        <a class="card-button button-danger"
+           asp-controller="Multas"
+           asp-action="Index">Ver multas</a>
+    </div>
+}
+<form class="toolbar" method="get">
+    <input name="termino" value="@Model.Termino" placeholder="Título, autor o ISBN" aria-label="Buscar libro" />
+    <select name="genero" aria-label="Filtrar por género">
+        <option value="">Géneros</option>
+        @foreach (var genero in Model.GenerosDisponibles)
+        {
+            <option value="@genero" selected="@(Model.Genero == genero)">@genero</option>
+        }
+    </select>
+    <select name="editorial" aria-label="Filtrar por editorial">
+        <option value="">Editoriales</option>
+        @foreach (var editorial in Model.EditorialesDisponibles)
+        {
+            <option value="@editorial" selected="@(Model.Editorial == editorial)">@editorial</option>
+        }
+    </select>
+    <select name="disponible">
+        <option value="">Disponibilidad</option>
+        <option value="true" selected="@(Model.Disponible == true)">Disponibles</option>
+        <option value="false" selected="@(Model.Disponible == false)">No disponibles</option>
+    </select>
+    <button class="card-button" type="submit">Buscar</button>
+</form>
+<div class="books-grid">
+    @foreach (var libro in Model.Libros)
+    {
+        var solicitudPendiente =
+            Model.LibrosConSolicitudPendiente.Contains(libro.Id);
+        <article class="book-card">
+            <div class="book-cover cover-@((libro.Id - 1) % 6)"
+                 role="img"
+                 aria-label="Ilustración de portada de @libro.Titulo"></div>
+            <h4>@libro.Titulo</h4>
+            <p>@libro.Autor</p>
+            <p>@libro.Genero · @libro.Editorial</p>
+            <div class="book-meta">
+                <span class="pill @(libro.Disponible ? "" : "unavailable")">
+                    @(libro.Disponible ? $"{libro.CantidadDisponible} disponibles" : "No disponible")
+                </span>
+                @if (solicitudPendiente)
+                {
+                    <a class="card-button button-pending"
+                       asp-controller="Solicitudes"
+                       asp-action="Index">Ver solicitud</a>
+                }
+                else if (string.IsNullOrWhiteSpace(Model.RestriccionSolicitud))
+                {
+                    <form asp-action="Solicitar" method="post">
+                        <input type="hidden" name="libroId" value="@libro.Id" />
+                        <button class="card-button button-request"
+                                type="submit"
+                                disabled="@(!libro.Disponible)"
+                                title="@(libro.Disponible ? "Solicitar este libro" : "No hay ejemplares disponibles")">
+                            @(libro.Disponible ? "Solicitar préstamo" : "Sin disponibilidad")
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <a class="card-button button-pending"
+                       asp-controller="Multas"
+                       asp-action="Index">Cuenta restringida</a>
+                }
+            </div>
+            @if (solicitudPendiente)
+            {
+                <div class="book-request-state">
+                    <span aria-hidden="true">✓</span>
+                    Solicitud pendiente de aprobación
+                </div>
+            }
+        </article>
+    }
+</div>
+@if (Model.Libros.Count == 0)
+{
+    <div class="empty"><strong>No encontramos libros</strong>Prueba con otros criterios de búsqueda.</div>
+}
+<nav class="pagination" aria-label="Paginación">
+    @if (Model.Pagina > 1)
+    {
+        <a class="card-button" asp-route-pagina="@(Model.Pagina - 1)" asp-route-termino="@Model.Termino" asp-route-genero="@Model.Genero" asp-route-editorial="@Model.Editorial" asp-route-disponible="@Model.Disponible">Anterior</a>
+    }
+    <span>Página @Model.Pagina</span>
+    @if (Model.Libros.Count == 12)
+    {
+        <a class="card-button" asp-route-pagina="@(Model.Pagina + 1)" asp-route-termino="@Model.Termino" asp-route-genero="@Model.Genero" asp-route-editorial="@Model.Editorial" asp-route-disponible="@Model.Disponible">Siguiente</a>
+    }
+</nav>

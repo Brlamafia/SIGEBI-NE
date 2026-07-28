@@ -1,0 +1,25 @@
+@model PrestamosViewModel
+@{ ViewData["Title"] = "Préstamos"; }
+<div class="section-head"><div><h3>Mis préstamos</h3><p>Préstamos activos e historial de devoluciones.</p></div></div>
+<div class="list">
+    @foreach (var item in Model.Prestamos.OrderByDescending(x => x.FechaPrestamo))
+    {
+        <article class="list-card">
+            <div>
+                <h4>@(Model.TitulosLibros.GetValueOrDefault(item.LibroId, $"Libro #{item.LibroId}"))</h4>
+                <p>Retirado: @item.FechaPrestamo.ToString("dd/MM/yyyy") · Entrega: @item.FechaEsperadaDevolucion.ToString("dd/MM/yyyy")</p>
+                <small>Préstamo #@item.Id</small>
+                @if (item.FechaRealDevolucion.HasValue) { <small>Devuelto: @item.FechaRealDevolucion.Value.ToString("dd/MM/yyyy")</small> }
+            </div>
+            <span class="pill @item.Estado">@item.Estado</span>
+        </article>
+    }
+</div>
+@if (Model.Prestamos.Count == 0)
+{
+    <div class="empty">
+        <strong>No tienes préstamos registrados</strong>
+        <p>Tus préstamos aparecerán aquí cuando una solicitud sea aprobada.</p>
+        <a class="card-button" asp-controller="Catalogo" asp-action="Index">Explorar catálogo</a>
+    </div>
+}

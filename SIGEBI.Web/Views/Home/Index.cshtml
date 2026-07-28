@@ -1,79 +1,83 @@
+@model DashboardViewModel
 @{
-    ViewData["Title"] = "Biblioteca Nueva Era";
+    ViewData["Title"] = "Inicio";
+    var activos = Model.Prestamos.Count(p => p.Estado is "Activo" or "Vencido");
+    var pendientes = Model.Solicitudes.Count(s => s.Estado == "Pendiente");
+    var aprobadas = Model.Solicitudes.Count(s => s.Estado == "Aprobada");
+    var finalizadas = Model.Solicitudes.Count(s =>
+        s.Estado is "Cancelada" or "Rechazada");
+    var totalSolicitudes = Math.Max(1, Model.Solicitudes.Count);
+    var porcentajeAprobadas = (int)Math.Round(aprobadas * 100d / totalSolicitudes);
+    var maxEstado = Math.Max(1, Math.Max(pendientes, Math.Max(aprobadas, finalizadas)));
 }
-
-<section id="login-view" class="login-shell">
-    <div class="login-brand">
-        <div class="brand-mark" aria-hidden="true">NE</div>
+<section class="hero">
+    <div>
+        <span class="eyebrow">Tu biblioteca, siempre contigo</span>
+        <h3>Hola, @Model.Usuario.Nombre.</h3>
+        <p>Consulta el catálogo, gestiona tus solicitudes y mantente al día con tus préstamos desde un solo lugar.</p>
+    </div>
+    <div class="hero-stat"><strong>@activos</strong><small>préstamos por completar</small></div>
+</section>
+<div class="stats-grid">
+    <article class="stat-card"><span>Solicitudes pendientes</span><strong>@pendientes</strong></article>
+    <article class="stat-card"><span>Multas pendientes</span><strong>@Model.MontoMultasPendientes.ToString("C")</strong></article>
+    <article class="stat-card"><span>Notificaciones sin leer</span><strong>@Model.Notificaciones.Count(n => !n.Leida)</strong></article>
+</div>
+<section class="insights-grid" aria-label="Resumen gráfico">
+    <article class="chart-card chart-card-featured">
         <div>
-            <span class="eyebrow">Biblioteca Nueva Era</span>
-            <h1>Tu próxima historia<br />empieza aquí.</h1>
-            <p>Explora el catálogo, solicita tus libros y mantén cada préstamo bajo control desde un solo lugar.</p>
+            <span class="eyebrow">Rendimiento</span>
+            <h3>Estado de solicitudes</h3>
+            <p>Visualiza rápidamente el avance de tus solicitudes bibliotecarias.</p>
         </div>
-        <div class="quote-card">
-            <span>“</span>
-            <p>Una biblioteca no es un lujo, sino una de las necesidades de la vida.</p>
-            <small>Henry Ward Beecher</small>
+        <div class="donut-chart"
+             style="--chart-value: @porcentajeAprobadas"
+             role="img"
+             aria-label="@porcentajeAprobadas% de solicitudes aprobadas">
+            <div><strong>@porcentajeAprobadas%</strong><span>aprobadas</span></div>
         </div>
-    </div>
-    <div class="login-panel">
-        <form id="login-form" class="login-form">
-            <div class="mobile-brand"><span>NE</span> Biblioteca Nueva Era</div>
-            <span class="eyebrow">Bienvenido a SIGEBI</span>
-            <h2>Inicia sesión</h2>
-            <p>Usa las credenciales asignadas por la biblioteca.</p>
-            <label for="email">Correo electrónico</label>
-            <input id="email" name="email" type="email" autocomplete="username" placeholder="nombre@correo.com" required />
-            <label for="password">Contraseña</label>
-            <div class="password-wrap">
-                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required />
-                <button id="toggle-password" type="button" class="text-button">Mostrar</button>
+    </article>
+    <article class="chart-card">
+        <div class="chart-title">
+            <div><span class="eyebrow">Actividad</span><h3>Distribución</h3></div>
+            <span class="chart-total">@Model.Solicitudes.Count total</span>
+        </div>
+        <div class="bar-chart" aria-label="Distribución de solicitudes">
+            <div class="bar-row">
+                <span>Pendientes</span>
+                <div><i style="--bar-width: @(pendientes * 100 / maxEstado)%"></i></div>
+                <strong>@pendientes</strong>
             </div>
-            <button class="primary-button" type="submit">
-                <span>Entrar a la biblioteca</span><span aria-hidden="true">→</span>
-            </button>
-            <p id="login-error" class="form-error" hidden></p>
-        </form>
-    </div>
-</section>
-
-<section id="app-view" class="app-shell" hidden>
-    <aside class="sidebar">
-        <div class="logo-lockup"><span class="brand-mark small">NE</span><div><strong>Nueva Era</strong><small>Biblioteca</small></div></div>
-        <nav aria-label="Navegación principal">
-            <button class="nav-item active" data-view="inicio"><span>⌂</span> Inicio</button>
-            <button class="nav-item" data-view="catalogo"><span>⌕</span> Catálogo</button>
-            <button class="nav-item" data-view="solicitudes"><span>◎</span> Mis solicitudes</button>
-            <button class="nav-item" data-view="prestamos"><span>▤</span> Mis préstamos</button>
-            <button class="nav-item" data-view="multas"><span>◇</span> Mis multas</button>
-            <button class="nav-item" data-view="notificaciones"><span>◌</span> Notificaciones <b id="notification-badge" hidden>0</b></button>
-            <button class="nav-item report-link" data-view="reportes" hidden><span>▥</span> Reportes</button>
-        </nav>
-        <div class="sidebar-bottom">
-            <button class="nav-item" data-view="cuenta"><span>○</span> Mi cuenta</button>
-            <button id="logout-button" class="nav-item danger"><span>↗</span> Cerrar sesión</button>
+            <div class="bar-row approved">
+                <span>Aprobadas</span>
+                <div><i style="--bar-width: @(aprobadas * 100 / maxEstado)%"></i></div>
+                <strong>@aprobadas</strong>
+            </div>
+            <div class="bar-row closed">
+                <span>Cerradas</span>
+                <div><i style="--bar-width: @(finalizadas * 100 / maxEstado)%"></i></div>
+                <strong>@finalizadas</strong>
+            </div>
         </div>
-    </aside>
-
-    <main class="main-content">
-        <header class="topbar">
-            <button id="menu-button" class="menu-button" aria-label="Abrir menú">☰</button>
+    </article>
+</section>
+<div class="section-head">
+    <div><h3>Actividad reciente</h3><p>Resumen de tus solicitudes.</p></div>
+    <a class="card-button button-add" asp-controller="Catalogo" asp-action="Index"><span>＋</span>Explorar catálogo</a>
+</div>
+<div class="list">
+    @foreach (var solicitud in Model.Solicitudes.OrderByDescending(s => s.FechaSolicitud).Take(4))
+    {
+        <article class="list-card">
             <div>
-                <span class="eyebrow">SIGEBI · Portal de usuarios</span>
-                <h2 id="page-title">Inicio</h2>
+                <h4>@(Model.TitulosLibros.GetValueOrDefault(solicitud.LibroId, $"Libro #{solicitud.LibroId}"))</h4>
+                <p>Solicitud #@solicitud.Id · @solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</p>
             </div>
-            <button class="user-chip" data-view="cuenta">
-                <span id="user-initials">NE</span>
-                <span><strong id="user-name">Usuario</strong><small id="user-role">Lector</small></span>
-            </button>
-        </header>
-
-        <section id="content" class="content" aria-live="polite"></section>
-    </main>
-</section>
-
-<template id="loading-template">
-    <div class="loading-grid">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
-    </div>
-</template>
+            <span class="pill @solicitud.Estado">@solicitud.Estado</span>
+        </article>
+    }
+    @if (Model.Solicitudes.Count == 0)
+    {
+        <div class="empty"><strong>Aún no tienes solicitudes</strong>Encuentra tu próxima lectura en el catálogo.</div>
+    }
+</div>

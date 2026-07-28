@@ -1,0 +1,39 @@
+@model GoogleRegistrationViewModel
+@{ ViewData["Title"] = "Completar cuenta de Google"; }
+<div class="auth-single auth-blue">
+    <section class="auth-card">
+        <span class="google-link-icon">G</span>
+        <span class="eyebrow">Cuenta verificada</span>
+        <h1>Completa tu perfil</h1>
+        <p>Google validó tu correo. Solo necesitamos los datos bibliotecarios que faltan para crear tu cuenta SIGEBI.</p>
+        <form asp-action="CompleteGoogleRegistration" method="post">
+            <div asp-validation-summary="ModelOnly" class="form-error"></div>
+            <label asp-for="Email"></label>
+            <input asp-for="Email" readonly />
+            <fieldset class="reader-type-fieldset">
+                <legend>¿Cómo deseas registrarte?</legend>
+                <div class="reader-type-selector">
+                    <label class="reader-type-option">
+                        <input asp-for="TipoUsuario" type="radio" value="Estudiante" />
+                        <span class="reader-type-icon" aria-hidden="true">E</span>
+                        <span><strong>Estudiante</strong><small>Hasta 3 préstamos · 7 días</small></span>
+                    </label>
+                    <label class="reader-type-option">
+                        <input asp-for="TipoUsuario" type="radio" value="Docente" />
+                        <span class="reader-type-icon" aria-hidden="true">D</span>
+                        <span><strong>Docente</strong><small>Hasta 5 préstamos · 14 días</small></span>
+                    </label>
+                </div>
+                <span asp-validation-for="TipoUsuario" class="field-error"></span>
+            </fieldset>
+            <div class="auth-form-grid">
+                <div><label asp-for="Nombre"></label><input asp-for="Nombre" /><span asp-validation-for="Nombre" class="field-error"></span></div>
+                <div><label asp-for="Apellido"></label><input asp-for="Apellido" /><span asp-validation-for="Apellido" class="field-error"></span></div>
+                <div><label asp-for="Cedula"></label><input asp-for="Cedula" /><span asp-validation-for="Cedula" class="field-error"></span></div>
+                <div><label asp-for="Telefono"></label><input asp-for="Telefono" /><span asp-validation-for="Telefono" class="field-error"></span></div>
+            </div>
+            <button class="primary-button" type="submit"><span>Crear y vincular cuenta</span><span>→</span></button>
+        </form>
+    </section>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
