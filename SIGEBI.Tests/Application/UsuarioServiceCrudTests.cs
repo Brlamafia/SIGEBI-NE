@@ -52,7 +52,7 @@ public class UsuarioServiceCrudTests
         var service = new UsuarioService(
             genericRepository.Object,
             users.Object,
-            Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<ISolicitudPrestamoRepository>(),
             Mock.Of<IPrestamoService>(),
             Mock.Of<IMultaService>(),
             Mock.Of<INotificacionService>(),
@@ -113,7 +113,7 @@ public class UsuarioServiceCrudTests
         var service = new UsuarioService(
             genericRepository.Object,
             users.Object,
-            Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<ISolicitudPrestamoRepository>(),
             Mock.Of<IPrestamoService>(),
             Mock.Of<IMultaService>(),
             Mock.Of<INotificacionService>(),

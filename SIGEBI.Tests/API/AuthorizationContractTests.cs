@@ -44,4 +44,36 @@ public class AuthorizationContractTests
             .Where(attribute => attribute.HttpMethods.Contains("DELETE"));
         Assert.Empty(deleteRoutes);
     }
+
+    [Fact]
+    public void Usuarios_PermiteConsultaABibliotecarioPeroRestringeEscritura()
+    {
+        foreach (var method in new[]
+                 {
+                     nameof(UsuariosController.GetAll),
+                     nameof(UsuariosController.GetById),
+                     nameof(UsuariosController.GetDetallesUsuario)
+                 })
+        {
+            var authorize = GetAuthorize<UsuariosController>(method);
+            Assert.Equal("Administrador,Bibliotecario", authorize.Roles);
+        }
+
+        foreach (var method in new[]
+                 {
+                     nameof(UsuariosController.Post),
+                     nameof(UsuariosController.Put),
+                     nameof(UsuariosController.Delete)
+                 })
+        {
+            var authorize = GetAuthorize<UsuariosController>(method);
+            Assert.Equal("Administrador", authorize.Roles);
+        }
+    }
+
+    private static AuthorizeAttribute GetAuthorize<TController>(string method) =>
+        typeof(TController).GetMethod(method)!
+            .GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
+            .Single();
 }

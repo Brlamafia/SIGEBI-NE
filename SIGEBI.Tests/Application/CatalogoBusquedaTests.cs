@@ -24,10 +24,41 @@ public class CatalogoBusquedaTests
         };
         AsignarId(libros[0], 1);
         AsignarId(libros[1], 2);
-        var repository = new Mock<IRepository<Libro>>();
-        repository.Setup(r => r.GetAllAsync()).ReturnsAsync(libros);
+        var repository = new Mock<ILibroRepository>();
+        repository.Setup(r => r.BuscarAsync(
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((
+                string? termino,
+                string? genero,
+                string? editorial,
+                bool? disponible,
+                int? skip,
+                int? take,
+                CancellationToken _) =>
+                libros.Where(libro =>
+                        string.IsNullOrWhiteSpace(termino) ||
+                        libro.Titulo.Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                        libro.Autor.Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+                        libro.ISBN.Contains(termino, StringComparison.OrdinalIgnoreCase))
+                    .Where(libro =>
+                        string.IsNullOrWhiteSpace(genero) ||
+                        libro.Genero.Contains(genero, StringComparison.OrdinalIgnoreCase))
+                    .Where(libro =>
+                        string.IsNullOrWhiteSpace(editorial) ||
+                        libro.Editorial.Contains(editorial, StringComparison.OrdinalIgnoreCase))
+                    .Skip(skip ?? 0)
+                    .Take(take ?? int.MaxValue)
+                    .ToArray());
         var inventario = new Mock<IInventarioService>();
-        inventario.Setup(s => s.ObtenerTodosAsync(It.IsAny<CancellationToken>()))
+        inventario.Setup(s => s.ObtenerPorLibrosAsync(
+                It.IsAny<IReadOnlyCollection<int>>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[]
             {
                 new InventarioDto { LibroId = 1, CantidadTotal = 2, CantidadDisponible = 1, CantidadPrestada = 1 },
@@ -57,11 +88,21 @@ public class CatalogoBusquedaTests
         var resultado = (await service.BuscarLibrosAsync(
             genero: "tec",
             editorial: "prent",
-            disponible: true)).ToArray();
+            disponible: true,
+            skip: 0,
+            take: 10)).ToArray();
 
         var libro = Assert.Single(resultado);
         Assert.Equal("Clean Code", libro.Titulo);
         Assert.Equal(1, libro.CantidadDisponible);
+        repository.Verify(item => item.BuscarAsync(
+            null,
+            "tec",
+            "prent",
+            true,
+            0,
+            10,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static void AsignarId(SIGEBI.Domain.Base.EntidadBase entity, int id) =>

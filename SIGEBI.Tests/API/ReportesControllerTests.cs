@@ -41,7 +41,13 @@ public sealed class ReportesControllerTests
             .ToArray();
         var catalogo = new Mock<ILibroService>();
         catalogo.Setup(x => x.BuscarLibrosAsync(
-                null, null, null, null, It.IsAny<CancellationToken>()))
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(libros);
         var servicioPrestamos = new Mock<IPrestamoService>();
         servicioPrestamos.Setup(x => x.ObtenerPorRangoAsync(

@@ -15,6 +15,8 @@ usuarios y una aplicación Windows Forms para el personal bibliotecario.
 
 El portal web consume la URL configurada en `SIGEBI.Web/appsettings*.json`.
 Los orígenes permitidos se configuran en `SIGEBI.API/appsettings*.json`.
+Las consultas de catálogo, usuarios y notificaciones aceptan `pagina` y
+`tamanoPagina`; el tamaño predeterminado es 50 y el máximo permitido es 200.
 
 ## Base de datos
 
@@ -33,6 +35,11 @@ La carga de datos de demostración está deshabilitada por defecto. Puede
 activarse con `Database:SeedDevelopmentData=true` en un entorno de desarrollo
 vacío. Las credenciales de demostración son `admin@sigebi.local / Admin123` y
 `usuario@sigebi.local / Usuario123`.
+
+Al iniciar la API se garantiza de forma idempotente la existencia del rol
+`Administrador`, el permiso `SIGEBI.ADMIN` y su asignación a los usuarios con
+perfil administrativo. Esto evita que una base existente quede sin acceso a la
+administración de roles y permisos.
 
 ## Verificación
 

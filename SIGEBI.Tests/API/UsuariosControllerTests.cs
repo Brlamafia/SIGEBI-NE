@@ -51,4 +51,29 @@ public class UsuariosControllerTests
         var ok = Assert.IsType<OkObjectResult>(put);
         Assert.Same(updated, ok.Value);
     }
+
+    [Fact]
+    public async Task GetAll_AplicaPaginaYTamanoSolicitados()
+    {
+        var service = new Mock<IUsuarioService>();
+        service.Setup(value => value.ObtenerPaginaAsync(
+                2,
+                25,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var controller = new UsuariosController(
+            service.Object,
+            Mock.Of<IPrestamoService>(),
+            Mock.Of<IMultaService>(),
+            Mock.Of<INotificacionService>(),
+            Mock.Of<IUsuarioActual>());
+
+        var result = await controller.GetAll(2, 25, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        service.Verify(value => value.ObtenerPaginaAsync(
+            2,
+            25,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

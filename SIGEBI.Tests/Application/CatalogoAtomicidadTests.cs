@@ -20,8 +20,16 @@ public sealed class CatalogoAtomicidadTests
     {
         var libro = new Libro("Clean Architecture", "Robert Martin", "9780", "Tecnología", "Prentice");
         AsignarId(libro, 12);
-        var repositorio = new Mock<IRepository<Libro>>();
-        repositorio.Setup(x => x.GetAllAsync()).ReturnsAsync([libro]);
+        var repositorio = new Mock<ILibroRepository>();
+        repositorio.Setup(x => x.BuscarAsync(
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<int?>(),
+                It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([libro]);
         var inventario = new Mock<IInventarioService>();
         inventario.Setup(x => x.CrearAsync(
                 It.IsAny<CrearInventarioDto>(),
@@ -32,7 +40,9 @@ public sealed class CatalogoAtomicidadTests
                 CantidadTotal = 3,
                 CantidadDisponible = 3
             });
-        inventario.Setup(x => x.ObtenerTodosAsync(It.IsAny<CancellationToken>()))
+        inventario.Setup(x => x.ObtenerPorLibrosAsync(
+                It.IsAny<IReadOnlyCollection<int>>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync([
                 new InventarioDto
                 {

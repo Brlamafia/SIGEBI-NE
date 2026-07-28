@@ -7,6 +7,7 @@ using SIGEBI.Application.Interfaces.Auditoria;
 using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Application.Services.Empleados;
 using SIGEBI.Application.Services.Notificaciones;
+using SIGEBI.Application.Exceptions;
 using SIGEBI.Domain.Entities.Notificaciones;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Enums;
@@ -119,6 +120,64 @@ public sealed class EmpleadoYNotificacionServiceTests
                 ResultadoAuditoria.Exitoso,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task MarcarNotificacionComoLeida_RechazaNotificacionAjena()
+    {
+        var repositorio = new Mock<INotificacionRepository>();
+        var notificacion = new Notificacion(7, "Aviso privado");
+        repositorio.Setup(x => x.ObtenerPorIdAsync(
+                3,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(notificacion);
+        var usuarioActual = UsuarioActual(99);
+        usuarioActual.Setup(x => x.TieneRol(It.IsAny<string>())).Returns(false);
+        var servicio = new NotificacionService(
+            repositorio.Object,
+            Mock.Of<IAuditoriaWriter>(),
+            usuarioActual.Object,
+            Mock.Of<IUnitOfWork>(),
+            Mock.Of<IMapper>());
+
+        var error = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            servicio.MarcarComoLeidaAsync(3));
+
+        Assert.Contains("no pertenece", error.Message);
+        repositorio.Verify(
+            x => x.ActualizarAsync(It.IsAny<Notificacion>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ObtenerNotificaciones_AplicaPaginacionEnRepositorio()
+    {
+        var repositorio = new Mock<INotificacionRepository>();
+        repositorio.Setup(x => x.ObtenerPorUsuarioAsync(
+                7,
+                20,
+                20,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var mapper = new Mock<IMapper>();
+        mapper.Setup(x => x.Map<IReadOnlyCollection<NotificacionDto>>(
+                It.IsAny<object>()))
+            .Returns([]);
+        var servicio = new NotificacionService(
+            repositorio.Object,
+            Mock.Of<IAuditoriaWriter>(),
+            UsuarioActual(7).Object,
+            Mock.Of<IUnitOfWork>(),
+            mapper.Object);
+
+        var resultado = await servicio.ObtenerPorUsuarioAsync(7, 2, 20);
+
+        Assert.Empty(resultado);
+        repositorio.Verify(x => x.ObtenerPorUsuarioAsync(
+            7,
+            20,
+            20,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static Mock<IUsuarioActual> UsuarioActual(int usuarioId)
