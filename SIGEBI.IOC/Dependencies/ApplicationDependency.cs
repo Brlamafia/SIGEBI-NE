@@ -4,7 +4,7 @@ using SIGEBI.Application.Interfaces;
 using SIGEBI.Application.Interfaces.Administradores;
 using SIGEBI.Application.Interfaces.Auditoria;
 using SIGEBI.Application.Interfaces.Cargos;
-using SIGEBI.Application.Interfaces.Catalogo; // <-- Faltaba este using
+using SIGEBI.Application.Interfaces.Catalogo;
 using SIGEBI.Application.Interfaces.Empleados;
 using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Application.Interfaces.Notificaciones;
@@ -26,6 +26,7 @@ using SIGEBI.Application.Services.Roles;
 using SIGEBI.Application.Services.Seguridad;
 using SIGEBI.Application.Services.Usuarios;
 using SIGEBI.Application.Validations;
+using SIGEBI.Application.Options;
 using SIGEBI.Domain.Policies;
 using SIGEBI.Domain.Services;
 
@@ -40,7 +41,7 @@ namespace SIGEBI.IOC.Dependencies
             services.AddValidatorsFromAssemblyContaining<SaveRolValidator>();
 
             services.AddScoped<IUsuarioService, UsuarioService>();
-            services.AddScoped<ILibroService, LibroService>(); // <-- Sintaxis corregida aquí
+            services.AddScoped<ILibroService, LibroService>();
             services.AddScoped<ISolicitudPrestamoService, SolicitudPrestamoService>();
             services.AddScoped<IPrestamoService, PrestamoService>();
             services.AddScoped<IMultaService, MultaService>();
@@ -52,7 +53,9 @@ namespace SIGEBI.IOC.Dependencies
             services.AddScoped<IAdministradorService, AdministradorService>();
             services.AddScoped<INotificacionService, NotificacionService>();
             services.AddScoped<IRolService, RolService>();
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
             services.AddScoped<IUsuarioActual, UsuarioActualNulo>();
+            services.AddSingleton(new AuthenticationOptions());
 
             services.AddScoped<PrestamoDomainService>();
             services.AddScoped<MultaDomainService>();

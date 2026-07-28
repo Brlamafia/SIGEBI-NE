@@ -8,11 +8,13 @@ using SIGEBI.API.Logging;
 using SIGEBI.API.Security;
 using SIGEBI.API.Data;
 using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Application.Options;
 using SIGEBI.Domain.Policies;
 using SIGEBI.IOC.Injection;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using SIGEBI.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,6 +90,15 @@ var connectionString = builder.Configuration.GetConnectionString("Supabase")
         "Debe configurar ConnectionStrings:Supabase mediante una variable de entorno o User Secrets.");
 
 builder.Services.AddSigebiDependencies(connectionString);
+builder.Services.AddSingleton(new AuthenticationOptions
+{
+    MaxFailedAttempts = builder.Configuration.GetValue(
+        "Authentication:MaxFailedAttempts",
+        5),
+    LockoutMinutes = builder.Configuration.GetValue(
+        "Authentication:LockoutMinutes",
+        15)
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
 builder.Services.AddCors(options =>
@@ -104,6 +115,7 @@ builder.Services.AddSingleton(new PoliticaPrestamos(politicaPrestamos));
 
 var app = builder.Build();
 
+await LegacySchemaCompatibility.EnsureAsync(app.Services);
 if (app.Environment.IsDevelopment() &&
     builder.Configuration.GetValue("Database:SeedDevelopmentData", false))
     await DevelopmentDataSeeder.SeedAsync(app.Services);
