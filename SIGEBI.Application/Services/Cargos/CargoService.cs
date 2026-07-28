@@ -2,7 +2,7 @@
 using SIGEBI.Application.Base;
 using SIGEBI.Application.Dtos.Cargos;
 using SIGEBI.Application.Interfaces.Cargos;
-using SIGEBI.Domain.Entities.Usuarios; 
+using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Interfaces.Repositories;
 
 namespace SIGEBI.Application.Services.Cargos

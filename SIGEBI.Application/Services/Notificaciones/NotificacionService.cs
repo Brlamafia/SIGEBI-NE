@@ -59,6 +59,24 @@ namespace SIGEBI.Application.Services.Notificaciones
             return _mapper.Map<IEnumerable<NotificacionDto>>(lista);
         }
 
+        public async Task<IReadOnlyCollection<NotificacionDto>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            int pagina,
+            int tamanoPagina,
+            CancellationToken cancellationToken = default)
+        {
+            if (pagina <= 0)
+                throw new ArgumentOutOfRangeException(nameof(pagina));
+            if (tamanoPagina is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(tamanoPagina));
+            var lista = await _notificacionRepository.ObtenerPorUsuarioAsync(
+                usuarioId,
+                (pagina - 1) * tamanoPagina,
+                tamanoPagina,
+                cancellationToken);
+            return _mapper.Map<IReadOnlyCollection<NotificacionDto>>(lista);
+        }
+
         public async Task<IEnumerable<NotificacionDto>> ObtenerNoLeidasPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default)
@@ -99,6 +117,13 @@ namespace SIGEBI.Application.Services.Notificaciones
         {
             var notificacion = await _notificacionRepository.ObtenerPorIdAsync(notificacionId, cancellationToken)
                 ?? throw new BusinessRuleException("La notificación solicitada no existe.");
+            if (notificacion.UsuarioId != _usuarioActual.UsuarioId &&
+                !_usuarioActual.TieneRol("Administrador") &&
+                !_usuarioActual.TieneRol("Auditor"))
+            {
+                throw new BusinessRuleException(
+                    "La notificación no pertenece al usuario autenticado.");
+            }
 
             await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
             {

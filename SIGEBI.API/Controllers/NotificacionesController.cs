@@ -3,6 +3,7 @@ using SIGEBI.Application.Dtos.Notificaciones;
 using SIGEBI.Application.Interfaces.Notificaciones;
 using SIGEBI.Application.Interfaces.Seguridad;
 using Microsoft.AspNetCore.Authorization;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
@@ -32,9 +33,14 @@ namespace SIGEBI.API.Controllers
         public async Task<IActionResult> GetById(int id) => Ok(await _notificacionService.GetByIdAsync(id));
 
         [HttpGet("mias")]
-        public async Task<IActionResult> GetMias(CancellationToken cancellationToken) =>
+        public async Task<IActionResult> GetMias(
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 50,
+            CancellationToken cancellationToken = default) =>
             Ok(await _notificacionService.ObtenerPorUsuarioAsync(
                 _usuarioActual.UsuarioId,
+                pagina,
+                tamanoPagina,
                 cancellationToken));
 
         [HttpPut("{id:int}/leer")]
@@ -42,14 +48,6 @@ namespace SIGEBI.API.Controllers
             int id,
             CancellationToken cancellationToken)
         {
-            var propias = await _notificacionService.ObtenerPorUsuarioAsync(
-                _usuarioActual.UsuarioId,
-                cancellationToken);
-            if (!propias.Any(notificacion => notificacion.Id == id) &&
-                !_usuarioActual.TieneRol("Administrador") &&
-                !_usuarioActual.TieneRol("Auditor"))
-                return Forbid();
-
             await _notificacionService.MarcarComoLeidaAsync(id, cancellationToken);
             return NoContent();
         }

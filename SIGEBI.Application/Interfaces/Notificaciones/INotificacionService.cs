@@ -10,6 +10,11 @@ namespace SIGEBI.Application.Interfaces.Notificaciones
         Task<IEnumerable<NotificacionDto>> ObtenerPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<NotificacionDto>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            int pagina,
+            int tamanoPagina,
+            CancellationToken cancellationToken = default);
         Task<IEnumerable<NotificacionDto>> ObtenerNoLeidasPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);

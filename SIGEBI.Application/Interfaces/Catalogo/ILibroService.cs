@@ -10,6 +10,8 @@ namespace SIGEBI.Application.Interfaces.Catalogo
             string? genero = null,
             string? editorial = null,
             bool? disponible = null,
+            int? skip = null,
+            int? take = null,
             CancellationToken cancellationToken = default);
     }
 }

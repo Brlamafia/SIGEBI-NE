@@ -56,7 +56,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
     options.AddPolicy(
         "AdministracionCompleta",
-        policy => policy.RequireClaim("permission", "SIGEBI.ADMIN")));
+        policy => policy.RequireAssertion(context =>
+            context.User.IsInRole("Administrador") ||
+            context.User.HasClaim("permission", "SIGEBI.ADMIN"))));
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -105,6 +107,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment() &&
     builder.Configuration.GetValue("Database:SeedDevelopmentData", false))
     await DevelopmentDataSeeder.SeedAsync(app.Services);
+
+await SecurityDataSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

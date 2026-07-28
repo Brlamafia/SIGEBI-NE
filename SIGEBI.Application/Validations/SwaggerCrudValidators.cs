@@ -5,6 +5,7 @@ using SIGEBI.Application.Dtos.Empleados;
 using SIGEBI.Application.Dtos.Notificaciones;
 using SIGEBI.Application.Dtos.Usuarios;
 using SIGEBI.Application.Dtos.Auth;
+using SIGEBI.Domain.Enums;
 
 namespace SIGEBI.Application.Validations;
 
@@ -13,10 +14,10 @@ public sealed class SaveLibroValidator : AbstractValidator<SaveLibroDto>
     public SaveLibroValidator()
     {
         RuleFor(x => x.Titulo).NotEmpty().MaximumLength(250);
-        RuleFor(x => x.Autor).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Autor).NotEmpty().MaximumLength(150);
         RuleFor(x => x.ISBN).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Genero).MaximumLength(100);
-        RuleFor(x => x.Editorial).MaximumLength(150);
+        RuleFor(x => x.Editorial).MaximumLength(100);
         RuleFor(x => x.NumeroEjemplares).GreaterThan(0).LessThanOrEqualTo(500);
     }
 }
@@ -26,9 +27,9 @@ public sealed class UpdateLibroValidator : AbstractValidator<UpdateLibroDto>
     public UpdateLibroValidator()
     {
         RuleFor(x => x.Titulo).NotEmpty().MaximumLength(250);
-        RuleFor(x => x.Autor).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Autor).NotEmpty().MaximumLength(150);
         RuleFor(x => x.Genero).MaximumLength(100);
-        RuleFor(x => x.Editorial).MaximumLength(150);
+        RuleFor(x => x.Editorial).MaximumLength(100);
     }
 }
 
@@ -39,7 +40,7 @@ public sealed class SaveUsuarioValidator : AbstractValidator<SaveUsuarioDto>
         RuleFor(x => x.Nombre).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Apellido).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Cedula).NotEmpty().MaximumLength(20);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(100);
         RuleFor(x => x.Telefono).MaximumLength(20);
         RuleFor(x => x.TipoUsuario).IsInEnum();
         RuleFor(x => x.Password)
@@ -73,7 +74,7 @@ public sealed class UpdateUsuarioValidator : AbstractValidator<UpdateUsuarioDto>
         RuleFor(x => x.Apellido).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Cedula).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Telefono).MaximumLength(20);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(100);
         RuleFor(x => x.TipoUsuario).IsInEnum();
         RuleFor(x => x.Estado).IsInEnum();
     }
@@ -108,6 +109,14 @@ public sealed class SaveNotificacionValidator : AbstractValidator<SaveNotificaci
     public SaveNotificacionValidator()
     {
         RuleFor(x => x.UsuarioId).GreaterThan(0);
-        RuleFor(x => x.Mensaje).NotEmpty().MaximumLength(1000);
+        RuleFor(x => x.Mensaje).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.TipoEvento)
+            .NotEmpty()
+            .Must(value => Enum.TryParse<TipoNotificacion>(
+                    value,
+                    true,
+                    out var parsed) &&
+                Enum.IsDefined(parsed))
+            .WithMessage("El tipo de evento no es válido.");
     }
 }

@@ -22,7 +22,7 @@ namespace SIGEBI.Application.Services.Catalogo
 {
     public class LibroService : BaseService<Libro, LibroDto>, ILibroService
     {
-        private readonly IRepository<Libro> _libroRepository;
+        private readonly ILibroRepository _libroRepository;
         private readonly IPrestamoRepository _prestamos;
         private readonly IInventarioService _inventarioService;
         private readonly IAuditoriaWriter _auditoria;
@@ -31,7 +31,7 @@ namespace SIGEBI.Application.Services.Catalogo
 
         // Inyectamos el repositorio de solicitudes para poder verificar si el libro está prestado
         public LibroService(
-            IRepository<Libro> repository,
+            ILibroRepository repository,
             IPrestamoRepository prestamos,
             IInventarioService inventarioService,
             IAuditoriaWriter auditoria,
@@ -121,24 +121,24 @@ namespace SIGEBI.Application.Services.Catalogo
             string? genero = null,
             string? editorial = null,
             bool? disponible = null,
+            int? skip = null,
+            int? take = null,
             CancellationToken cancellationToken = default)
         {
-            var libros = await _libroRepository.GetAllAsync();
-            var inventarios = await _inventarioService.ObtenerTodosAsync(cancellationToken);
+            var libros = await _libroRepository.BuscarAsync(
+                termino,
+                genero,
+                editorial,
+                disponible,
+                skip,
+                take,
+                cancellationToken);
+            var inventarios = await _inventarioService.ObtenerPorLibrosAsync(
+                libros.Select(libro => libro.Id).ToArray(),
+                cancellationToken);
             var porLibro = inventarios.ToDictionary(i => i.LibroId);
-            var consulta = libros.AsEnumerable();
 
-            if (!string.IsNullOrWhiteSpace(termino))
-                consulta = consulta.Where(l =>
-                    l.Titulo.Contains(termino, StringComparison.OrdinalIgnoreCase) ||
-                    l.Autor.Contains(termino, StringComparison.OrdinalIgnoreCase) ||
-                    l.ISBN.Contains(termino, StringComparison.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(genero))
-                consulta = consulta.Where(l => l.Genero.Contains(genero, StringComparison.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(editorial))
-                consulta = consulta.Where(l => l.Editorial.Contains(editorial, StringComparison.OrdinalIgnoreCase));
-
-            var resultados = consulta.Select(libro =>
+            var resultados = libros.Select(libro =>
             {
                 var result = _mapper.Map<LibroDto>(libro);
                 if (porLibro.TryGetValue(libro.Id, out var inventario))

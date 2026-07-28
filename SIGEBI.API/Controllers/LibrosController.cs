@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Catalogo;
 using SIGEBI.Application.Interfaces.Catalogo;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
@@ -19,9 +20,15 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetAll(
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 50,
+            CancellationToken cancellationToken = default)
         {
-            var libros = await _libroService.BuscarLibrosAsync(cancellationToken: cancellationToken);
+            var libros = await _libroService.BuscarLibrosAsync(
+                skip: (pagina - 1) * tamanoPagina,
+                take: tamanoPagina,
+                cancellationToken: cancellationToken);
             return Ok(libros);
         }
 
@@ -38,10 +45,18 @@ namespace SIGEBI.API.Controllers
             [FromQuery] string? genero,
             [FromQuery] string? editorial,
             [FromQuery] bool? disponible,
-            CancellationToken cancellationToken)
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 50,
+            CancellationToken cancellationToken = default)
         {
             return Ok(await _libroService.BuscarLibrosAsync(
-                termino, genero, editorial, disponible, cancellationToken));
+                termino,
+                genero,
+                editorial,
+                disponible,
+                (pagina - 1) * tamanoPagina,
+                tamanoPagina,
+                cancellationToken));
         }
 
         [Authorize(Roles = "Administrador,Bibliotecario")]

@@ -68,14 +68,20 @@ namespace SIGEBI.Application.Services.Prestamos
 
         public async Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorUsuarioAsync(int usuarioId)
         {
-            var todas = await _solicitudRepository.GetAllAsync();
-            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(todas.Where(s => s.UsuarioId == usuarioId));
+            var solicitudes = await _solicitudRepository.ObtenerPorUsuarioAsync(usuarioId);
+            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(solicitudes);
         }
 
         public async Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorEstadoAsync(string estado)
         {
-            var todas = await _solicitudRepository.GetAllAsync();
-            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(todas.Where(s => s.Estado.ToString().Equals(estado, StringComparison.OrdinalIgnoreCase)));
+            if (!Enum.TryParse<EstadoSolicitud>(estado, true, out var parsed) ||
+                !Enum.IsDefined(parsed))
+            {
+                throw new BusinessRuleException("El estado de solicitud no es válido.");
+            }
+
+            var solicitudes = await _solicitudRepository.ObtenerPorEstadoAsync(parsed);
+            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(solicitudes);
         }
 
         public async Task<bool> RegistrarSolicitudAsync(SaveSolicitudPrestamoDto dto)
@@ -104,7 +110,9 @@ namespace SIGEBI.Application.Services.Prestamos
                     if (await _prestamos.ContarActivosPorUsuarioAsync(dto.UsuarioId, cancellationToken)
                         >= _politica.ObtenerCondiciones(usuario.TipoUsuario).LimitePrestamos)
                         throw new BusinessRuleException("El usuario alcanzó su límite de préstamos activos.");
-                    if ((await _solicitudRepository.ObtenerPorUsuarioAsync(dto.UsuarioId))
+                    if ((await _solicitudRepository.ObtenerPorUsuarioAsync(
+                            dto.UsuarioId,
+                            cancellationToken))
                         .Any(s => s.LibroId == dto.LibroId && s.Estado == EstadoSolicitud.Pendiente))
                         throw new BusinessRuleException("Ya existe una solicitud pendiente para este libro.");
 

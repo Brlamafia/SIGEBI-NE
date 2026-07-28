@@ -6,6 +6,7 @@ using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.Notificaciones;
 using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Application.Dtos.Auth;
+using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
@@ -35,15 +36,21 @@ namespace SIGEBI.API.Controllers
             _usuarioActual = usuarioActual;
         }
 
-        [Authorize(Roles = "Administrador")]
+        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 50,
+            CancellationToken cancellationToken = default)
         {
-            var usuarios = await _usuarioService.GetAllAsync();
+            var usuarios = await _usuarioService.ObtenerPaginaAsync(
+                pagina,
+                tamanoPagina,
+                cancellationToken);
             return Ok(usuarios);
         }
 
-        [Authorize(Roles = "Administrador")]
+        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -51,7 +58,7 @@ namespace SIGEBI.API.Controllers
             return Ok(usuario);
         }
 
-        [Authorize(Roles = "Administrador")]
+        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpGet("{id}/detalles")]
         public async Task<IActionResult> GetDetallesUsuario(int id)
         {

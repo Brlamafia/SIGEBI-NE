@@ -30,6 +30,26 @@ namespace SIGEBI.Persistence.Repositories.Notificaciones
             catch (Exception ex) { _logger.LogError(ex, "Error usuario {Id}", usuarioId); throw; }
         }
 
+        public async Task<IReadOnlyCollection<Notificacion>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            int skip,
+            int take,
+            CancellationToken ct = default)
+        {
+            if (skip < 0)
+                throw new ArgumentOutOfRangeException(nameof(skip));
+            if (take is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(take));
+
+            return await _dbSet
+                .AsNoTracking()
+                .Where(notification => notification.UsuarioId == usuarioId)
+                .OrderByDescending(notification => notification.FechaEnvio)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(ct);
+        }
+
         public async Task<IEnumerable<Notificacion>> ObtenerNoLeidasPorUsuarioAsync(
             int usuarioId,
             CancellationToken ct = default)

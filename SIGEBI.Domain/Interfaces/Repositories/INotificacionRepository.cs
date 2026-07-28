@@ -12,6 +12,11 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<IEnumerable<Notificacion>> ObtenerPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Notificacion>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            int skip,
+            int take,
+            CancellationToken cancellationToken = default);
         Task<IEnumerable<Notificacion>> ObtenerNoLeidasPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);

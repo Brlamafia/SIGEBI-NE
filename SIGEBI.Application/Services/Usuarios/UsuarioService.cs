@@ -26,7 +26,7 @@ namespace SIGEBI.Application.Services.Usuarios
     {
         private readonly IRepository<Usuario> _usuarioRepository;
         private readonly IUsuarioRepository _usuarios;
-        private readonly IRepository<SolicitudPrestamo> _solicitudesRepository;
+        private readonly ISolicitudPrestamoRepository _solicitudesRepository;
         private readonly ILogger<UsuarioService> _logger; // B.R: Logger
         private readonly IPrestamoService _prestamos;
         private readonly IMultaService _multas;
@@ -38,7 +38,7 @@ namespace SIGEBI.Application.Services.Usuarios
         public UsuarioService(
             IRepository<Usuario> repository,
             IUsuarioRepository usuarios,
-            IRepository<SolicitudPrestamo> solicitudesRepository,
+            ISolicitudPrestamoRepository solicitudesRepository,
             IPrestamoService prestamos,
             IMultaService multas,
             INotificacionService notificaciones,
@@ -66,6 +66,22 @@ namespace SIGEBI.Application.Services.Usuarios
             if (dto is not SaveUsuarioDto datos)
                 throw new ArgumentException("El contrato de creación de usuario no es válido.", nameof(dto));
             return await CrearAsync(datos);
+        }
+
+        public async Task<IReadOnlyCollection<UsuarioDto>> ObtenerPaginaAsync(
+            int pagina,
+            int tamanoPagina,
+            CancellationToken cancellationToken = default)
+        {
+            if (pagina <= 0)
+                throw new ArgumentOutOfRangeException(nameof(pagina));
+            if (tamanoPagina is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(tamanoPagina));
+            var usuarios = await _usuarios.ObtenerPaginaAsync(
+                (pagina - 1) * tamanoPagina,
+                tamanoPagina,
+                cancellationToken);
+            return _mapper.Map<IReadOnlyCollection<UsuarioDto>>(usuarios);
         }
 
         public async Task<UsuarioDto> CrearAsync(
@@ -178,8 +194,9 @@ namespace SIGEBI.Application.Services.Usuarios
                     throw new BusinessRuleException("Usuario no encontrado.");
                 }
 
-                var todasLasSolicitudes = await _solicitudesRepository.GetAllAsync();
-                var solicitudes = todasLasSolicitudes.Where(s => s.UsuarioId == usuarioId).ToList();
+                var solicitudes = (await _solicitudesRepository
+                    .ObtenerPorUsuarioAsync(usuarioId))
+                    .ToList();
                 var prestamos = await _prestamos.ObtenerPorUsuarioAsync(usuarioId);
                 var multas = await _multas.ObtenerPorUsuarioAsync(usuarioId);
                 var notificaciones = await _notificaciones.ObtenerPorUsuarioAsync(usuarioId);

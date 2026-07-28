@@ -8,7 +8,7 @@ using SIGEBI.Domain.Enums;
 
 namespace SIGEBI.Persistence.Context;
 
-// El contexto adapta el modelo de dominio al esquema SQL Server existente.
+// El contexto adapta el modelo de dominio al esquema PostgreSQL de SIGEBI.
 public class SigebiContext : DbContext
 {
     public SigebiContext(DbContextOptions<SigebiContext> options) : base(options) { }

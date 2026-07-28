@@ -23,15 +23,19 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             catch (Exception ex) { _logger.LogError(ex, "Error ID {Id}", id); throw; }
         }
 
-        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId)
+        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando solicitudes del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(); }
+            try { _logger.LogInformation("Consultando solicitudes del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error usuario {Id}", usuarioId); throw; }
         }
 
-        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado)
+        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(
+            EstadoSolicitud estado,
+            CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando solicitudes en estado {Estado}", estado); return await _dbSet.Where(s => s.Estado == estado).ToListAsync(); }
+            try { _logger.LogInformation("Consultando solicitudes en estado {Estado}", estado); return await _dbSet.Where(s => s.Estado == estado).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error estado {E}", estado); throw; }
         }
     }

@@ -8,6 +8,10 @@ namespace SIGEBI.Application.Interfaces.Usuarios
         Task<UsuarioDto> CrearAsync(
             SaveUsuarioDto dto,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<UsuarioDto>> ObtenerPaginaAsync(
+            int pagina,
+            int tamanoPagina,
+            CancellationToken cancellationToken = default);
         Task<UsuarioDto> ActualizarAsync(
             int usuarioId,
             UpdateUsuarioDto dto,

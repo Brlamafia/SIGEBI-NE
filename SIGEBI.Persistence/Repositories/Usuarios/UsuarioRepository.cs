@@ -37,6 +37,25 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
             _dbSet.Include(u => u.Roles).ThenInclude(r => r.Permisos)
                 .FirstOrDefaultAsync(u => u.Id == id, ct);
 
+        public async Task<IReadOnlyCollection<Usuario>> ObtenerPaginaAsync(
+            int skip,
+            int take,
+            CancellationToken ct = default)
+        {
+            if (skip < 0)
+                throw new ArgumentOutOfRangeException(nameof(skip));
+            if (take is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(take));
+
+            return await _dbSet
+                .AsNoTracking()
+                .OrderBy(usuario => usuario.Apellido)
+                .ThenBy(usuario => usuario.Nombre)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(ct);
+        }
+
         public async Task<bool> TieneRelacionesAsync(int usuarioId, CancellationToken ct = default)
         {
             try
