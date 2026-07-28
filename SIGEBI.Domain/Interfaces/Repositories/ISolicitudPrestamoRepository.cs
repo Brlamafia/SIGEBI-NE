@@ -13,10 +13,14 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<SolicitudPrestamo?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
 
         // Ajustado a IEnumerable para coincidir con el Servicio de Aplicación
-        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(int usuarioId);
+        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
 
         // Ajustado a IEnumerable para coincidir con el Servicio de Aplicación
-        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(EstadoSolicitud estado);
+        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorEstadoAsync(
+            EstadoSolicitud estado,
+            CancellationToken cancellationToken = default);
 
         void Actualizar(SolicitudPrestamo solicitud);
     }

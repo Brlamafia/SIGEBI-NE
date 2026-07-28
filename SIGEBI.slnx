@@ -21,5 +21,7 @@
   <Folder Name="/Tests/">
     <Project Path="SIGEBI.Tests/SIGEBI.Tests.csproj" />
   </Folder>
-  <Folder Name="/Web/" />
+  <Folder Name="/Web/">
+    <Project Path="SIGEBI.Web/SIGEBI.Web.csproj" />
+  </Folder>
 </Solution>

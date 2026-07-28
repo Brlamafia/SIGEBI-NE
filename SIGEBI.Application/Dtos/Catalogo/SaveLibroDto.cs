@@ -11,5 +11,6 @@ namespace SIGEBI.Application.Dtos.Catalogo
         public string ISBN { get; set; } = string.Empty;
         public string Genero { get; set; } = string.Empty;
         public string Editorial { get; set; } = string.Empty;
+        public int NumeroEjemplares { get; set; } = 1;
     }
 }

@@ -10,6 +10,9 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     {
         Task<IReadOnlyCollection<Inventario>> ObtenerTodosAsync(
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Inventario>> ObtenerPorLibrosAsync(
+            IReadOnlyCollection<int> libroIds,
+            CancellationToken cancellationToken = default);
         Task<Inventario?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Inventario?> ObtenerPorLibroIdAsync(int libroId, CancellationToken cancellationToken = default);
         Task AgregarAsync(Inventario inventario, CancellationToken cancellationToken = default);

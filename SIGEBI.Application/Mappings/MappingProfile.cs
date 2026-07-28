@@ -90,6 +90,7 @@ namespace SIGEBI.Application.Mappings
 
             // DTO Pattern: Roles se comunican sin exponer colecciones internas del dominio.
             CreateMap<Rol, RolDto>();
+            CreateMap<Permiso, PermisoDto>();
             CreateMap<SaveRolDto, Rol>()
                 .ConstructUsing(src => new Rol(src.Nombre, src.Descripcion));
             CreateMap<UpdateRolDto, Rol>()

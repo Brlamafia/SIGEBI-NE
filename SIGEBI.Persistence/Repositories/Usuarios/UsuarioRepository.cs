@@ -29,8 +29,31 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
 
         public async Task<Usuario?> ObtenerPorEmailAsync(string email, CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando usuario por correo"); return await _dbSet.FirstOrDefaultAsync(u => u.Email == email, ct); }
+            try { _logger.LogInformation("Consultando usuario por correo"); return await _dbSet.Include(u => u.Roles).ThenInclude(r => r.Permisos).FirstOrDefaultAsync(u => u.Email == email, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error buscando usuario por email {Email}", email); throw; }
+        }
+
+        public Task<Usuario?> ObtenerPorIdConRolesAsync(int id, CancellationToken ct = default) =>
+            _dbSet.Include(u => u.Roles).ThenInclude(r => r.Permisos)
+                .FirstOrDefaultAsync(u => u.Id == id, ct);
+
+        public async Task<IReadOnlyCollection<Usuario>> ObtenerPaginaAsync(
+            int skip,
+            int take,
+            CancellationToken ct = default)
+        {
+            if (skip < 0)
+                throw new ArgumentOutOfRangeException(nameof(skip));
+            if (take is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(take));
+
+            return await _dbSet
+                .AsNoTracking()
+                .OrderBy(usuario => usuario.Apellido)
+                .ThenBy(usuario => usuario.Nombre)
+                .Skip(skip)
+                .Take(take)
+                .ToListAsync(ct);
         }
 
         public async Task<bool> TieneRelacionesAsync(int usuarioId, CancellationToken ct = default)

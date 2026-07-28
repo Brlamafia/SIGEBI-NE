@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Policy = "AdministracionCompleta")]
     [Route("api/[controller]")]
     [ApiController]
     public class RolesController : ControllerBase
@@ -42,6 +42,39 @@ namespace SIGEBI.API.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             await _rolService.DeleteAsync(id);
+            return NoContent();
+        }
+
+        [HttpPost("asignar")]
+        public async Task<IActionResult> AsignarRol([FromBody] AsignarRolDto dto)
+        {
+            await _rolService.AsignarAUsuarioAsync(dto, HttpContext.RequestAborted);
+            return NoContent();
+        }
+
+        [HttpDelete("asignar")]
+        public async Task<IActionResult> RemoverRol([FromBody] AsignarRolDto dto)
+        {
+            await _rolService.RemoverDeUsuarioAsync(dto, HttpContext.RequestAborted);
+            return NoContent();
+        }
+
+        [HttpPost("permisos")]
+        public async Task<IActionResult> CrearPermiso([FromBody] SavePermisoDto dto) =>
+            StatusCode(StatusCodes.Status201Created,
+                await _rolService.CrearPermisoAsync(dto, HttpContext.RequestAborted));
+
+        [HttpPost("permisos/asignar")]
+        public async Task<IActionResult> AsignarPermiso([FromBody] AsignarPermisoDto dto)
+        {
+            await _rolService.AsignarPermisoAsync(dto, HttpContext.RequestAborted);
+            return NoContent();
+        }
+
+        [HttpDelete("permisos/asignar")]
+        public async Task<IActionResult> RemoverPermiso([FromBody] AsignarPermisoDto dto)
+        {
+            await _rolService.RemoverPermisoAsync(dto, HttpContext.RequestAborted);
             return NoContent();
         }
     }

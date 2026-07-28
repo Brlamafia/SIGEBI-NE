@@ -63,6 +63,12 @@ namespace SIGEBI.Application.Services.Inventario
         public async Task<IReadOnlyCollection<InventarioDto>> ObtenerTodosAsync(CancellationToken ct = default)
             => _mapper.Map<IReadOnlyCollection<InventarioDto>>(await _inventarios.ObtenerTodosAsync(ct));
 
+        public async Task<IReadOnlyCollection<InventarioDto>> ObtenerPorLibrosAsync(
+            IReadOnlyCollection<int> libroIds,
+            CancellationToken ct = default)
+            => _mapper.Map<IReadOnlyCollection<InventarioDto>>(
+                await _inventarios.ObtenerPorLibrosAsync(libroIds, ct));
+
         public async Task<InventarioDto> CrearAsync(CrearInventarioDto dto, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(dto);
@@ -71,7 +77,8 @@ namespace SIGEBI.Application.Services.Inventario
             try
             {
                 InventarioEntidad? inventarioCreado = null;
-                await _unitOfWork.EjecutarEnTransaccionAsync(async c => {
+                await _unitOfWork.EjecutarEnTransaccionAsync(async c =>
+                {
                     if (await _inventarios.ObtenerPorLibroIdAsync(dto.LibroId, c) is not null) throw new BusinessRuleException("El libro ya posee un inventario.");
                     if (await _libros.ObtenerPorIdAsync(dto.LibroId, c) is null) throw new NotFoundException("Libro", dto.LibroId);
 
@@ -99,7 +106,8 @@ namespace SIGEBI.Application.Services.Inventario
             try
             {
                 InventarioEntidad? invActualizado = null;
-                await _unitOfWork.EjecutarEnTransaccionAsync(async c => {
+                await _unitOfWork.EjecutarEnTransaccionAsync(async c =>
+                {
                     var inv = await _inventarios.ObtenerPorIdAsync(dto.InventarioId, c) ?? throw new NotFoundException(nameof(InventarioEntidad), dto.InventarioId);
                     var dif = dto.NuevaCantidadTotal - inv.CantidadTotal;
                     inv.AjustarCantidadTotal(dto.NuevaCantidadTotal);
@@ -122,7 +130,8 @@ namespace SIGEBI.Application.Services.Inventario
             try
             {
                 EjemplarEntidad? actualizado = null;
-                await _unitOfWork.EjecutarEnTransaccionAsync(async c => {
+                await _unitOfWork.EjecutarEnTransaccionAsync(async c =>
+                {
                     var e = await _ejemplares.ObtenerPorIdAsync(dto.EjemplarId, c) ?? throw new NotFoundException(nameof(EjemplarEntidad), dto.EjemplarId);
                     var i = await _inventarios.ObtenerPorLibroIdAsync(e.LibroId, c) ?? throw new NotFoundException(nameof(InventarioEntidad), e.LibroId);
                     var nuevo = EnumParser.ParseDefined<EstadoEjemplar>(dto.NuevoEstado, "estado ejemplar");

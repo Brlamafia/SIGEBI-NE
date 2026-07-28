@@ -74,6 +74,11 @@ namespace SIGEBI.Application.Services.Prestamos
         public Task<bool> TienePendientesPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
             => _multas.TienePendientesPorUsuarioAsync(usuarioId, ct);
 
+        public Task<decimal> ObtenerMontoPendientePorUsuarioAsync(
+            int usuarioId,
+            CancellationToken ct = default) =>
+            _multas.ObtenerMontoPendientePorUsuarioAsync(usuarioId, ct);
+
         public async Task MarcarComoPagadaAsync(PagarMultaDto dto, CancellationToken ct = default)
         {
             ArgumentNullException.ThrowIfNull(dto);

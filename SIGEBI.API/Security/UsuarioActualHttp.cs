@@ -15,4 +15,7 @@ public sealed class UsuarioActualHttp(IHttpContextAccessor httpContextAccessor) 
             : 0;
 
     public string? Rol => Principal?.FindFirstValue(ClaimTypes.Role);
+
+    public bool TieneRol(string rol) =>
+        Principal?.IsInRole(rol) == true;
 }

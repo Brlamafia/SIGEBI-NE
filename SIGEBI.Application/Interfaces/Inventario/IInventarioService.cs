@@ -6,6 +6,9 @@ namespace SIGEBI.Application.Interfaces.Inventario
     {
         Task<IReadOnlyCollection<InventarioDto>> ObtenerTodosAsync(
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<InventarioDto>> ObtenerPorLibrosAsync(
+            IReadOnlyCollection<int> libroIds,
+            CancellationToken cancellationToken = default);
 
         Task<InventarioDto> CrearAsync(
             CrearInventarioDto dto,

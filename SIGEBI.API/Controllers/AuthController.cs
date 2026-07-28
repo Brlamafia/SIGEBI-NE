@@ -1,90 +1,77 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using SIGEBI.Application.Interfaces.Usuarios;
-using SIGEBI.Domain.Interfaces.Repositories;
+using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using SIGEBI.Application.Exceptions;
+using SIGEBI.Application.Interfaces.Seguridad;
 
-namespace SIGEBI.API.Controllers
+namespace SIGEBI.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public sealed class AuthController(
+    IConfiguration configuration,
+    IAuthenticationService authentication) : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        private readonly IConfiguration _config;
-        private readonly IUsuarioService _usuarioService;
-        private readonly IAdministradorRepository _administradores;
-        private readonly IEmpleadoRepository _empleados;
-
-        public AuthController(
-            IConfiguration config,
-            IUsuarioService usuarioService,
-            IAdministradorRepository administradores,
-            IEmpleadoRepository empleados)
+        SIGEBI.Application.Dtos.Auth.AuthenticatedUserDto authenticated;
+        try
         {
-            _config = config;
-            _usuarioService = usuarioService;
-            _administradores = administradores;
-            _empleados = empleados;
+            authenticated = await authentication.AuthenticateAsync(
+                request.Email,
+                request.Password,
+                HttpContext.RequestAborted);
+        }
+        catch (AuthenticationException exception)
+        {
+            return Unauthorized(exception.Message);
         }
 
-        [HttpPost("login")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        var jwtKey = configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("Debe configurar Jwt:Key.");
+        var claims = new List<Claim>
         {
-            var usuarios = await _usuarioService.GetAllAsync();
-            var usuarioValido = usuarios.FirstOrDefault(u =>
-                string.Equals(u.Email, request.Email, StringComparison.OrdinalIgnoreCase));
-            var demoPassword = _config["SwaggerDemo:Password"];
+            new(ClaimTypes.NameIdentifier, authenticated.Usuario.Id.ToString()),
+            new(ClaimTypes.Email, authenticated.Usuario.Email)
+        };
+        claims.AddRange(authenticated.Roles.Select(
+            role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(authenticated.Permisos.Select(
+            permission => new Claim("permission", permission)));
 
-            if (usuarioValido == null
-                || string.IsNullOrWhiteSpace(demoPassword)
-                || request.Password != demoPassword)
-            {
-                return Unauthorized("Credenciales inválidas.");
-            }
-
-            // Generación de Token JWT Real
-            var jwtKey = _config["Jwt:Key"] ?? "EstaEsUnaClaveSuperSecretaDeMasDe32CaracteresParaElITLA";
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(jwtKey);
-            var role = await DeterminarRolAsync(usuarioValido.Id, HttpContext.RequestAborted);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, usuarioValido.Id.ToString()),
-                    new Claim(ClaimTypes.Email, usuarioValido.Email),
-                    new Claim(ClaimTypes.Role, role)
-                }),
-                Expires = DateTime.UtcNow.AddHours(2),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            var tokenString = tokenHandler.WriteToken(token);
-
-            return Ok(new { Token = tokenString, Usuario = usuarioValido });
-        }
-
-        private async Task<string> DeterminarRolAsync(
-            int usuarioId,
-            CancellationToken cancellationToken)
+        var tokenDescriptor = new SecurityTokenDescriptor
         {
-            if (await _administradores.ObtenerPorUsuarioIdAsync(usuarioId, cancellationToken) is not null)
-                return "Administrador";
-            if (await _empleados.ObtenerPorUsuarioIdAsync(usuarioId, cancellationToken) is not null)
-                return "Bibliotecario";
-            return "Usuario";
-        }
+            Subject = new ClaimsIdentity(claims),
+            Issuer = configuration["Jwt:Issuer"],
+            Audience = configuration["Jwt:Audience"],
+            Expires = DateTime.UtcNow.AddHours(2),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                SecurityAlgorithms.HmacSha256Signature)
+        };
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+
+        return Ok(new
+        {
+            Token = token,
+            authenticated.Usuario,
+            authenticated.Roles
+        });
     }
+}
 
-    public class LoginRequest
-    {
-        public string Email { get; set; } = "admin@sigebi.local";
-        public string Password { get; set; } = "Admin123";
-    }
+public sealed class LoginRequest
+{
+    [Required, EmailAddress]
+    public string Email { get; set; } = "admin@sigebi.local";
+
+    [Required, MinLength(8)]
+    public string Password { get; set; } = "Admin123";
 }

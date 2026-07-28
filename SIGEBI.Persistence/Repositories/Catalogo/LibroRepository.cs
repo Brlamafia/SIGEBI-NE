@@ -33,6 +33,60 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             }
         }
 
+        public async Task<IReadOnlyCollection<Libro>> BuscarAsync(
+            string? termino,
+            string? genero,
+            string? editorial,
+            bool? disponible = null,
+            int? skip = null,
+            int? take = null,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                IQueryable<Libro> query = _dbSet.AsNoTracking();
+                if (!string.IsNullOrWhiteSpace(termino))
+                {
+                    var pattern = $"%{termino.Trim()}%";
+                    query = query.Where(libro =>
+                        EF.Functions.ILike(libro.Titulo, pattern) ||
+                        EF.Functions.ILike(libro.Autor, pattern) ||
+                        EF.Functions.ILike(libro.ISBN, pattern));
+                }
+
+                if (!string.IsNullOrWhiteSpace(genero))
+                    query = query.Where(libro =>
+                        EF.Functions.ILike(libro.Genero, $"%{genero.Trim()}%"));
+                if (!string.IsNullOrWhiteSpace(editorial))
+                    query = query.Where(libro =>
+                        EF.Functions.ILike(libro.Editorial, $"%{editorial.Trim()}%"));
+                if (disponible.HasValue)
+                {
+                    query = disponible.Value
+                        ? query.Where(libro => _context.Inventario.Any(
+                            inventory =>
+                                inventory.LibroId == libro.Id &&
+                                inventory.CantidadDisponible > 0))
+                        : query.Where(libro => !_context.Inventario.Any(
+                            inventory =>
+                                inventory.LibroId == libro.Id &&
+                                inventory.CantidadDisponible > 0));
+                }
+
+                query = query.OrderBy(libro => libro.Titulo);
+                if (skip.HasValue)
+                    query = query.Skip(skip.Value);
+                if (take.HasValue)
+                    query = query.Take(take.Value);
+                return await query.ToListAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al filtrar el catálogo");
+                throw;
+            }
+        }
+
         public async Task<Libro?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
             try

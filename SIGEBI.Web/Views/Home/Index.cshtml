@@ -1,8 +1,83 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Inicio";
+    var activos = Model.Prestamos.Count(p => p.Estado is "Activo" or "Vencido");
+    var pendientes = Model.Solicitudes.Count(s => s.Estado == "Pendiente");
+    var aprobadas = Model.Solicitudes.Count(s => s.Estado == "Aprobada");
+    var finalizadas = Model.Solicitudes.Count(s =>
+        s.Estado is "Cancelada" or "Rechazada");
+    var totalSolicitudes = Math.Max(1, Model.Solicitudes.Count);
+    var porcentajeAprobadas = (int)Math.Round(aprobadas * 100d / totalSolicitudes);
+    var maxEstado = Math.Max(1, Math.Max(pendientes, Math.Max(aprobadas, finalizadas)));
 }
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="hero">
+    <div>
+        <span class="eyebrow">Tu biblioteca, siempre contigo</span>
+        <h3>Hola, @Model.Usuario.Nombre.</h3>
+        <p>Consulta el catálogo, gestiona tus solicitudes y mantente al día con tus préstamos desde un solo lugar.</p>
+    </div>
+    <div class="hero-stat"><strong>@activos</strong><small>préstamos por completar</small></div>
+</section>
+<div class="stats-grid">
+    <article class="stat-card"><span>Solicitudes pendientes</span><strong>@pendientes</strong></article>
+    <article class="stat-card"><span>Multas pendientes</span><strong>@Model.MontoMultasPendientes.ToString("C")</strong></article>
+    <article class="stat-card"><span>Notificaciones sin leer</span><strong>@Model.Notificaciones.Count(n => !n.Leida)</strong></article>
+</div>
+<section class="insights-grid" aria-label="Resumen gráfico">
+    <article class="chart-card chart-card-featured">
+        <div>
+            <span class="eyebrow">Rendimiento</span>
+            <h3>Estado de solicitudes</h3>
+            <p>Visualiza rápidamente el avance de tus solicitudes bibliotecarias.</p>
+        </div>
+        <div class="donut-chart"
+             style="--chart-value: @porcentajeAprobadas"
+             role="img"
+             aria-label="@porcentajeAprobadas% de solicitudes aprobadas">
+            <div><strong>@porcentajeAprobadas%</strong><span>aprobadas</span></div>
+        </div>
+    </article>
+    <article class="chart-card">
+        <div class="chart-title">
+            <div><span class="eyebrow">Actividad</span><h3>Distribución</h3></div>
+            <span class="chart-total">@Model.Solicitudes.Count total</span>
+        </div>
+        <div class="bar-chart" aria-label="Distribución de solicitudes">
+            <div class="bar-row">
+                <span>Pendientes</span>
+                <div><i style="--bar-width: @(pendientes * 100 / maxEstado)%"></i></div>
+                <strong>@pendientes</strong>
+            </div>
+            <div class="bar-row approved">
+                <span>Aprobadas</span>
+                <div><i style="--bar-width: @(aprobadas * 100 / maxEstado)%"></i></div>
+                <strong>@aprobadas</strong>
+            </div>
+            <div class="bar-row closed">
+                <span>Cerradas</span>
+                <div><i style="--bar-width: @(finalizadas * 100 / maxEstado)%"></i></div>
+                <strong>@finalizadas</strong>
+            </div>
+        </div>
+    </article>
+</section>
+<div class="section-head">
+    <div><h3>Actividad reciente</h3><p>Resumen de tus solicitudes.</p></div>
+    <a class="card-button button-add" asp-controller="Catalogo" asp-action="Index"><span>＋</span>Explorar catálogo</a>
+</div>
+<div class="list">
+    @foreach (var solicitud in Model.Solicitudes.OrderByDescending(s => s.FechaSolicitud).Take(4))
+    {
+        <article class="list-card">
+            <div>
+                <h4>@(Model.TitulosLibros.GetValueOrDefault(solicitud.LibroId, $"Libro #{solicitud.LibroId}"))</h4>
+                <p>Solicitud #@solicitud.Id · @solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</p>
+            </div>
+            <span class="pill @solicitud.Estado">@solicitud.Estado</span>
+        </article>
+    }
+    @if (Model.Solicitudes.Count == 0)
+    {
+        <div class="empty"><strong>Aún no tienes solicitudes</strong>Encuentra tu próxima lectura en el catálogo.</div>
+    }
 </div>

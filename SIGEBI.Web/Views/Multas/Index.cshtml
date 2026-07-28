@@ -1,0 +1,25 @@
+@model MultasViewModel
+@{ ViewData["Title"] = "Multas"; }
+<div class="section-head"><div><h3>Mis multas</h3><p>Consulta los cargos y su estado de resolución.</p></div></div>
+<div class="list">
+    @foreach (var item in Model.Multas.OrderByDescending(x => x.FechaGeneracion))
+    {
+        var tipoVisible = item.Tipo == "Danio" ? "Daño" : item.Tipo;
+        var prestamo = item.PrestamoId.HasValue
+            ? Model.Prestamos.GetValueOrDefault(item.PrestamoId.Value)
+            : null;
+        <article class="list-card">
+            <div>
+                <h4>@tipoVisible · @item.Monto.ToString("C")</h4>
+                <p>@item.Motivo</p>
+                @if (prestamo is not null)
+                {
+                    <small>@(Model.TitulosLibros.GetValueOrDefault(prestamo.LibroId, $"Libro #{prestamo.LibroId}")) · Préstamo #@prestamo.Id</small>
+                }
+                <small>@item.FechaGeneracion.ToString("dd/MM/yyyy")</small>
+            </div>
+            <span class="pill @item.Estado">@item.Estado</span>
+        </article>
+    }
+</div>
+@if (Model.Multas.Count == 0) { <div class="empty"><strong>No tienes multas</strong>Tu cuenta se encuentra al día.</div> }

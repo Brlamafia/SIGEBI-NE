@@ -5,4 +5,5 @@ public interface IUsuarioActual
     bool EstaAutenticado { get; }
     int UsuarioId { get; }
     string? Rol { get; }
+    bool TieneRol(string rol);
 }

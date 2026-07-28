@@ -7,6 +7,7 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     {
         Task<Empleado?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Empleado?> ObtenerPorUsuarioIdAsync(int usuarioId, CancellationToken cancellationToken = default);
+        Task<bool> TieneOperacionesAsync(int empleadoId, CancellationToken cancellationToken = default);
         Task AgregarAsync(Empleado empleado, CancellationToken cancellationToken = default);
         void Actualizar(Empleado empleado);
     }

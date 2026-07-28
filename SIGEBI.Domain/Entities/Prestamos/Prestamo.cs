@@ -114,6 +114,12 @@ namespace SIGEBI.Domain.Entities.Prestamos
             MarcarComoModificada();
         }
 
+        public void CargarEjemplarPersistido(int ejemplarId)
+        {
+            Guard.AgainstNonPositive(ejemplarId, nameof(ejemplarId));
+            EjemplarId = ejemplarId;
+        }
+
         public void RegistrarPerdida(int empleadoResponsableId, DateTime fechaReporte)
         {
             CerrarPrestamo(empleadoResponsableId, fechaReporte, SIGEBI.Domain.Enums.EstadoPrestamo.Perdido);

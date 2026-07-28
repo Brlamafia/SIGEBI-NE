@@ -6,11 +6,15 @@ using SIGEBI.API.Filters;
 using SIGEBI.API.Jobs;
 using SIGEBI.API.Logging;
 using SIGEBI.API.Security;
+using SIGEBI.API.Data;
 using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Application.Options;
 using SIGEBI.Domain.Policies;
 using SIGEBI.IOC.Injection;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using SIGEBI.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,19 +36,31 @@ builder.Services.AddHostedService<PrestamosVencidosBackgroundService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Debe configurar Jwt:Key.");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Debe configurar Jwt:Issuer.");
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException("Debe configurar Jwt:Audience.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(
+        "AdministracionCompleta",
+        policy => policy.RequireAssertion(context =>
+            context.User.IsInRole("Administrador") ||
+            context.User.HasClaim("permission", "SIGEBI.ADMIN"))));
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -74,8 +90,23 @@ var connectionString = builder.Configuration.GetConnectionString("Supabase")
         "Debe configurar ConnectionStrings:Supabase mediante una variable de entorno o User Secrets.");
 
 builder.Services.AddSigebiDependencies(connectionString);
+builder.Services.AddSingleton(new AuthenticationOptions
+{
+    MaxFailedAttempts = builder.Configuration.GetValue(
+        "Authentication:MaxFailedAttempts",
+        5),
+    LockoutMinutes = builder.Configuration.GetValue(
+        "Authentication:LockoutMinutes",
+        15)
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
+builder.Services.AddCors(options =>
+    options.AddPolicy("WebClient", policy =>
+        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                ?? ["https://localhost:7030", "http://localhost:5065"])
+            .AllowAnyHeader()
+            .AllowAnyMethod()));
 
 var politicaPrestamos = builder.Configuration
     .GetSection("PoliticasPrestamo")
@@ -83,6 +114,13 @@ var politicaPrestamos = builder.Configuration
 builder.Services.AddSingleton(new PoliticaPrestamos(politicaPrestamos));
 
 var app = builder.Build();
+
+await LegacySchemaCompatibility.EnsureAsync(app.Services);
+if (app.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue("Database:SeedDevelopmentData", false))
+    await DevelopmentDataSeeder.SeedAsync(app.Services);
+
+await SecurityDataSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
@@ -93,7 +131,16 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 app.UseExceptionHandler();
+app.UseCors("WebClient");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+}).AllowAnonymous();
 app.MapControllers();
 app.Run();

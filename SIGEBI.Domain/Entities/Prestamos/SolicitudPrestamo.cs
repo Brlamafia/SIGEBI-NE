@@ -49,5 +49,14 @@ namespace SIGEBI.Domain.Entities.Prestamos
             MotivoRechazo = motivo.Trim();
             MarcarComoModificada();
         }
+
+        public void Cancelar()
+        {
+            if (Estado != EstadoSolicitud.Pendiente)
+                throw new SIGEBI.Domain.Exceptions.DomainException(
+                    "Solo se pueden cancelar solicitudes pendientes.");
+            Estado = EstadoSolicitud.Cancelada;
+            MarcarComoModificada();
+        }
     }
 }

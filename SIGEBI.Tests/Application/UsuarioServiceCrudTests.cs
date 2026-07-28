@@ -9,6 +9,8 @@ using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces.Repositories;
+using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Application.Interfaces.Notificaciones;
 
 namespace SIGEBI.Tests.Application;
 
@@ -50,7 +52,10 @@ public class UsuarioServiceCrudTests
         var service = new UsuarioService(
             genericRepository.Object,
             users.Object,
-            Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<ISolicitudPrestamoRepository>(),
+            Mock.Of<IPrestamoService>(),
+            Mock.Of<IMultaService>(),
+            Mock.Of<INotificacionService>(),
             mapper.Object,
             NullLogger<UsuarioService>.Instance);
 
@@ -61,6 +66,7 @@ public class UsuarioServiceCrudTests
             Cedula = "TEST-001",
             Telefono = "8090000000",
             Email = "inicial@sigebi.test",
+            Password = "Segura123",
             TipoUsuario = TipoUsuario.Estudiante
         });
         var updated = await service.ActualizarAsync(77, new UpdateUsuarioDto
@@ -83,8 +89,9 @@ public class UsuarioServiceCrudTests
         Assert.Equal("Docente", updated.TipoUsuario);
         Assert.Equal("Suspendido", updated.Estado);
         users.Verify(value => value.AgregarAsync(createdEntity, It.IsAny<CancellationToken>()), Times.Once);
-        genericRepository.Verify(value => value.ActualizarAsync(createdEntity), Times.Once);
-        genericRepository.Verify(value => value.EliminarAsync(createdEntity), Times.Once);
+        Assert.Equal(EstadoUsuario.Inactivo, createdEntity.Estado);
+        genericRepository.Verify(value => value.ActualizarAsync(createdEntity), Times.Exactly(2));
+        genericRepository.Verify(value => value.EliminarAsync(createdEntity), Times.Never);
     }
 
     [Fact]
@@ -106,15 +113,18 @@ public class UsuarioServiceCrudTests
         var service = new UsuarioService(
             genericRepository.Object,
             users.Object,
-            Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<ISolicitudPrestamoRepository>(),
+            Mock.Of<IPrestamoService>(),
+            Mock.Of<IMultaService>(),
+            Mock.Of<INotificacionService>(),
             Mock.Of<IMapper>(),
             NullLogger<UsuarioService>.Instance);
 
-        var exception = await Assert.ThrowsAsync<SIGEBI.Application.Exceptions.BusinessRuleException>(
-            () => service.EliminarAsync(9));
+        await service.EliminarAsync(9);
 
-        Assert.Contains("no puede eliminarse", exception.Message);
+        Assert.Equal(SIGEBI.Domain.Enums.EstadoUsuario.Inactivo, user.Estado);
         genericRepository.Verify(value => value.EliminarAsync(It.IsAny<Usuario>()), Times.Never);
+        genericRepository.Verify(value => value.ActualizarAsync(user), Times.Once);
     }
 
     private static void AsignarId(EntidadBase entity, int id) =>

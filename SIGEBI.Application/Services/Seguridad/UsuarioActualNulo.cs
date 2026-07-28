@@ -7,4 +7,5 @@ public sealed class UsuarioActualNulo : IUsuarioActual
     public bool EstaAutenticado => false;
     public int UsuarioId => 0;
     public string? Rol => null;
+    public bool TieneRol(string rol) => false;
 }

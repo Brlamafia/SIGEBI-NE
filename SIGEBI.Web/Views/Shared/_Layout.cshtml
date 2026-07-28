@@ -1,49 +1,79 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - SIGEBI.Web</title>
-    <script type="importmap"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <meta name="theme-color" content="#286CF7" />
+    <title>@ViewData["Title"] · Nueva Era</title>
+    <link rel="icon" type="image/png" href="~/images/sigebi-new-era-logo.png" asp-append-version="true" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Franklin:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/SIGEBI.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">SIGEBI.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        var currentController =
+            ViewContext.RouteData.Values["controller"]?.ToString() ?? "Home";
+        string NavClass(string controller) =>
+            currentController.Equals(controller, StringComparison.OrdinalIgnoreCase)
+                ? "nav-item active"
+                : "nav-item";
+        string? CurrentPage(string controller) =>
+            currentController.Equals(controller, StringComparison.OrdinalIgnoreCase)
+                ? "page"
+                : null;
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - SIGEBI.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        <div class="app-shell">
+            <aside class="sidebar" id="sidebar">
+                <div class="logo-lockup">
+                    <img class="sidebar-logo"
+                         src="~/images/sigebi-new-era-logo.png"
+                         asp-append-version="true"
+                         alt="SIGEBI-NE · SIGEBI New Era" />
+                </div>
+                <nav aria-label="Navegación principal">
+                    <a class="@NavClass("Home")" aria-current="@CurrentPage("Home")" asp-controller="Home" asp-action="Index"><span aria-hidden="true">⌂</span>Inicio</a>
+                    <a class="@NavClass("Catalogo")" aria-current="@CurrentPage("Catalogo")" asp-controller="Catalogo" asp-action="Index"><span aria-hidden="true">⌕</span>Catálogo</a>
+                    <a class="@NavClass("Solicitudes")" aria-current="@CurrentPage("Solicitudes")" asp-controller="Solicitudes" asp-action="Index"><span aria-hidden="true">◇</span>Solicitudes</a>
+                    <a class="@NavClass("Prestamos")" aria-current="@CurrentPage("Prestamos")" asp-controller="Prestamos" asp-action="Index"><span aria-hidden="true">▤</span>Préstamos</a>
+                    <a class="@NavClass("Multas")" aria-current="@CurrentPage("Multas")" asp-controller="Multas" asp-action="Index"><span aria-hidden="true">!</span>Multas</a>
+                    <a class="@NavClass("Notificaciones")" aria-current="@CurrentPage("Notificaciones")" asp-controller="Notificaciones" asp-action="Index"><span aria-hidden="true">●</span>Notificaciones</a>
+                    <a class="@NavClass("Cuenta")" aria-current="@CurrentPage("Cuenta")" asp-controller="Cuenta" asp-action="Index"><span aria-hidden="true">○</span>Mi cuenta</a>
+                </nav>
+                <div class="sidebar-bottom">
+                    <form asp-controller="Auth" asp-action="Logout" method="post">
+                        <button class="nav-item danger" type="submit"><span>↪</span>Cerrar sesión</button>
+                    </form>
+                </div>
+            </aside>
+            <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Cerrar menú"></button>
+            <main class="main-content">
+                <header class="topbar">
+                    <button class="menu-button" id="menuButton" type="button" aria-label="Abrir menú">☰</button>
+                    <div><span class="eyebrow">SIGEBI</span><h2>@ViewData["Title"]</h2></div>
+                    <a class="user-chip" asp-controller="Cuenta" asp-action="Index">
+                        <span>@(User.Identity.Name?.Substring(0, 1).ToUpperInvariant() ?? "U")</span>
+                        <span><strong>@User.Identity.Name</strong><small>Mi cuenta</small></span>
+                    </a>
+                </header>
+                <section class="content">@RenderBody()</section>
+            </main>
         </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    }
+    else
+    {
+        @RenderBody()
+    }
+    @if (TempData["Success"] is string success)
+    {
+        <div class="toast show" role="status">@success</div>
+    }
+    @if (TempData["Error"] is string error)
+    {
+        <div class="toast show error" role="alert">@error</div>
+    }
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

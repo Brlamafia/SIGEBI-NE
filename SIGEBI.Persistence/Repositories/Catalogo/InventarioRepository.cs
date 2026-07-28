@@ -47,6 +47,27 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             }
         }
 
+        public async Task<IReadOnlyCollection<Inventario>> ObtenerPorLibrosAsync(
+            IReadOnlyCollection<int> libroIds,
+            CancellationToken ct = default)
+        {
+            if (libroIds.Count == 0)
+                return [];
+
+            try
+            {
+                return await _dbSet
+                    .Where(inventario => libroIds.Contains(inventario.LibroId))
+                    .OrderBy(inventario => inventario.LibroId)
+                    .ToListAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al consultar inventario por libros");
+                throw;
+            }
+        }
+
         public async Task<Inventario?> ObtenerPorLibroIdAsync(int libroId, CancellationToken ct = default)
         {
             try

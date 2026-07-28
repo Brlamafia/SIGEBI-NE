@@ -1,0 +1,24 @@
+@model IReadOnlyCollection<NotificacionDto>
+@{ ViewData["Title"] = "Notificaciones"; var pagina = (int)(ViewData["Pagina"] ?? 1); }
+<div class="section-head"><div><h3>Notificaciones</h3><p>Avisos importantes sobre tu actividad.</p></div></div>
+<div class="list">
+    @foreach (var item in Model.OrderByDescending(x => x.FechaEnvio))
+    {
+        <article class="list-card @(!item.Leida ? "unread" : "")">
+            <div><h4>@item.TipoEvento</h4><p>@item.Mensaje</p><small>@item.FechaEnvio.ToString("dd/MM/yyyy HH:mm")</small></div>
+            @if (!item.Leida)
+            {
+                <form asp-action="MarcarLeida" method="post">
+                    <input type="hidden" name="id" value="@item.Id" />
+                    <button class="card-button button-success" type="submit">✓ Marcar leída</button>
+                </form>
+            }
+        </article>
+    }
+</div>
+@if (Model.Count == 0) { <div class="empty"><strong>No hay notificaciones</strong>Estás al día.</div> }
+<nav class="pagination">
+    @if (pagina > 1) { <a class="card-button" asp-route-pagina="@(pagina - 1)">Anterior</a> }
+    <span>Página @pagina</span>
+    @if (Model.Count == 20) { <a class="card-button" asp-route-pagina="@(pagina + 1)">Siguiente</a> }
+</nav>

@@ -53,11 +53,13 @@ namespace SIGEBI.API.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _solicitudService.DeleteAsync(id);
+            await _solicitudService.CancelarAsync(
+                id,
+                _usuarioActual.UsuarioId,
+                HttpContext.RequestAborted);
             return NoContent();
         }
     }

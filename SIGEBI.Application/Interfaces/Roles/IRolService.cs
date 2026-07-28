@@ -6,8 +6,10 @@ namespace SIGEBI.Application.Interfaces.Roles
 {
     public interface IRolService : IBaseService<RolDto>
     {
-        // El CRUD básico (GetAll, GetById) ya viene heredado de IBaseService.
-        // Aquí podemos agregar métodos específicos si la arquitectura lo requiere más adelante, 
-        // por ejemplo: Task<RolDto> ObtenerPorNombreAsync(string nombre);
+        Task AsignarAUsuarioAsync(AsignarRolDto dto, CancellationToken ct = default);
+        Task RemoverDeUsuarioAsync(AsignarRolDto dto, CancellationToken ct = default);
+        Task<PermisoDto> CrearPermisoAsync(SavePermisoDto dto, CancellationToken ct = default);
+        Task AsignarPermisoAsync(AsignarPermisoDto dto, CancellationToken ct = default);
+        Task RemoverPermisoAsync(AsignarPermisoDto dto, CancellationToken ct = default);
     }
 }

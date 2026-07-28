@@ -1,0 +1,37 @@
+@model SolicitudesViewModel
+@{ ViewData["Title"] = "Solicitudes"; }
+<div class="section-head">
+    <div><h3>Mis solicitudes</h3><p>Seguimiento de las solicitudes de préstamo.</p></div>
+    <a class="card-button button-add" asp-controller="Catalogo" asp-action="Index"><span>＋</span>Nueva solicitud</a>
+</div>
+<div class="list">
+    @foreach (var item in Model.Solicitudes.OrderByDescending(x => x.FechaSolicitud))
+    {
+        <article class="list-card">
+            <div>
+                <h4>@(Model.TitulosLibros.GetValueOrDefault(item.LibroId, $"Libro #{item.LibroId}"))</h4>
+                <p>@item.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</p>
+                <small>Solicitud #@item.Id</small>
+                @if (!string.IsNullOrWhiteSpace(item.MotivoRechazo)) { <small>@item.MotivoRechazo</small> }
+            </div>
+            <div class="item-actions">
+                <span class="pill @item.Estado">@item.Estado</span>
+                @if (item.Estado == "Pendiente")
+                {
+                    <form asp-action="Cancelar" method="post">
+                        <input type="hidden" name="id" value="@item.Id" />
+                        <button class="card-button button-danger" type="submit">Cancelar solicitud</button>
+                    </form>
+                }
+            </div>
+        </article>
+    }
+</div>
+@if (Model.Solicitudes.Count == 0)
+{
+    <div class="empty">
+        <strong>No tienes solicitudes</strong>
+        <p>Visita el catálogo para solicitar un libro.</p>
+        <a class="card-button" asp-controller="Catalogo" asp-action="Index">Explorar catálogo</a>
+    </div>
+}
