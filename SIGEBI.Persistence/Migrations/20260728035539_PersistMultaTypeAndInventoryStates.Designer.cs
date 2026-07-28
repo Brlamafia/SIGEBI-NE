@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SIGEBI.Persistence.Context;
@@ -11,9 +12,11 @@ using SIGEBI.Persistence.Context;
 namespace SIGEBI.Persistence.Migrations
 {
     [DbContext(typeof(SigebiContext))]
-    partial class SigebiContextModelSnapshot : ModelSnapshot
+    [Migration("20260728035539_PersistMultaTypeAndInventoryStates")]
+    partial class PersistMultaTypeAndInventoryStates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -620,10 +623,6 @@ namespace SIGEBI.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("apellido");
 
-                    b.Property<DateTime?>("BloqueadoHasta")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("bloqueado_hasta");
-
                     b.Property<string>("Cedula")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -651,10 +650,6 @@ namespace SIGEBI.Persistence.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("fecha_registro");
-
-                    b.Property<int>("IntentosAccesoFallidos")
-                        .HasColumnType("integer")
-                        .HasColumnName("intentos_acceso_fallidos");
 
                     b.Property<string>("Nombre")
                         .IsRequired()

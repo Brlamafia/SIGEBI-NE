@@ -46,7 +46,8 @@ namespace SIGEBI.API.Controllers
                 _usuarioActual.UsuarioId,
                 cancellationToken);
             if (!propias.Any(notificacion => notificacion.Id == id) &&
-                _usuarioActual.Rol is not ("Administrador" or "Auditor"))
+                !_usuarioActual.TieneRol("Administrador") &&
+                !_usuarioActual.TieneRol("Auditor"))
                 return Forbid();
 
             await _notificacionService.MarcarComoLeidaAsync(id, cancellationToken);

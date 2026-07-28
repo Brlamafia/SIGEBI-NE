@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SIGEBI.API.Controllers
 {
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Policy = "AdministracionCompleta")]
     [Route("api/[controller]")]
     [ApiController]
     public class RolesController : ControllerBase

@@ -60,6 +60,13 @@ namespace SIGEBI.Persistence
         {
             ArgumentNullException.ThrowIfNull(operacion);
 
+            // Reutiliza la transacción activa cuando una operación compone servicios.
+            if (_context.Database.CurrentTransaction is not null)
+            {
+                await operacion(cancellationToken);
+                return;
+            }
+
             // Propiedad ACID: ante cualquier fallo se revierte toda la operación.
             var estrategia = _context.Database.CreateExecutionStrategy();
 

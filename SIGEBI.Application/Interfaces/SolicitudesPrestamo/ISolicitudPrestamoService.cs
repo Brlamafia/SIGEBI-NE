@@ -11,5 +11,6 @@ namespace SIGEBI.Application.Interfaces.SolicitudesPrestamo
         Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorEstadoAsync(string estado);
         Task<bool> RegistrarSolicitudAsync(SaveSolicitudPrestamoDto dto);
         Task<bool> EvaluarSolicitudAsync(UpdateSolicitudPrestamoDto dto);
+        Task CancelarAsync(int solicitudId, int usuarioId, CancellationToken cancellationToken = default);
     }
 }

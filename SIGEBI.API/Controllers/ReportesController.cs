@@ -4,6 +4,7 @@ using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.Catalogo;
 using SIGEBI.Application.Dtos.Reportes;
+using SIGEBI.Application.Interfaces.Usuarios;
 
 namespace SIGEBI.API.Controllers
 {
@@ -16,24 +17,40 @@ namespace SIGEBI.API.Controllers
         private readonly IPrestamoService _prestamoService;
         private readonly ILibroService _libroService;
         private readonly IMultaService _multaService;
+        private readonly IUsuarioService _usuarioService;
 
         public ReportesController(
             IInventarioService inventarioService,
             IPrestamoService prestamoService,
             ILibroService libroService,
-            IMultaService multaService)
+            IMultaService multaService,
+            IUsuarioService usuarioService)
         {
             _inventarioService = inventarioService;
             _prestamoService = prestamoService;
             _libroService = libroService;
             _multaService = multaService;
+            _usuarioService = usuarioService;
         }
 
         [Authorize(Roles = "Administrador,Auditor,Bibliotecario")]
         [HttpGet("inventario")]
         public async Task<IActionResult> GetReporteInventario()
         {
-            return Ok(await _inventarioService.ObtenerTodosAsync(HttpContext.RequestAborted));
+            var inventarios = await _inventarioService.ObtenerTodosAsync(HttpContext.RequestAborted);
+            var libros = (await _libroService.BuscarLibrosAsync(
+                cancellationToken: HttpContext.RequestAborted)).ToDictionary(l => l.Id);
+            return Ok(inventarios.Select(inventario =>
+            {
+                libros.TryGetValue(inventario.LibroId, out var libro);
+                return new InventarioReporteDto(
+                    inventario.LibroId,
+                    libro?.Titulo ?? $"Libro {inventario.LibroId}",
+                    libro?.Genero ?? "Sin categoría",
+                    inventario.CantidadTotal,
+                    inventario.CantidadDisponible,
+                    inventario.CantidadPrestada);
+            }).OrderBy(item => item.Categoria).ThenBy(item => item.Titulo));
         }
 
         [Authorize(Roles = "Administrador,Auditor")]
@@ -48,9 +65,12 @@ namespace SIGEBI.API.Controllers
                 cancellationToken: cancellationToken)).ToDictionary(l => l.Id);
             var prestamos = await _prestamoService.ObtenerPorRangoAsync(
                 desde, hasta, cancellationToken);
-            var totalCopias = libros.Values.Sum(l => l.CantidadTotal);
-            var disponibles = libros.Values.Sum(l => l.CantidadDisponible);
-            var recursos = prestamos.GroupBy(p => p.LibroId)
+            var disponibilidadPromedio = libros.Count == 0
+                ? 0
+                : libros.Values.Average(libro => libro.CantidadTotal == 0
+                    ? 0
+                    : libro.CantidadDisponible * 100m / libro.CantidadTotal);
+            var todosRecursos = prestamos.GroupBy(p => p.LibroId)
                 .Select(g =>
                 {
                     libros.TryGetValue(g.Key, out var libro);
@@ -62,17 +82,14 @@ namespace SIGEBI.API.Controllers
                 })
                 .OrderByDescending(r => r.Solicitudes)
                 .ThenBy(r => r.Titulo)
-                .Take(10)
                 .ToArray();
             return Ok(new ReporteCatalogoDto
             {
                 Desde = desde,
                 Hasta = hasta,
-                DisponibilidadPromedioPorcentaje = totalCopias == 0
-                    ? 0
-                    : Math.Round(disponibles * 100m / totalCopias, 2),
-                RecursosMasSolicitados = recursos,
-                DemandaPorCategoria = recursos
+                DisponibilidadPromedioPorcentaje = Math.Round(disponibilidadPromedio, 2),
+                RecursosMasSolicitados = todosRecursos.Take(10).ToArray(),
+                DemandaPorCategoria = todosRecursos
                     .GroupBy(r => r.Genero)
                     .Select(g => new DemandaCategoriaDto(g.Key, g.Sum(x => x.Solicitudes)))
                     .OrderByDescending(x => x.Prestamos)
@@ -122,6 +139,8 @@ namespace SIGEBI.API.Controllers
                 .Where(m => m.FechaGeneracion >= desde && m.FechaGeneracion <= hasta)
                 .DistinctBy(m => m.Id)
                 .ToArray();
+            var usuarios = (await _usuarioService.GetAllAsync())
+                .ToDictionary(usuario => usuario.Id);
             return Ok(new ReporteMultasDto
             {
                 Desde = desde,
@@ -130,7 +149,17 @@ namespace SIGEBI.API.Controllers
                 Pendientes = multas.Count(m => m.Estado == "Pendiente"),
                 Pagadas = multas.Count(m => m.Estado == "Pagada"),
                 Resueltas = multas.Count(m => m.Estado == "Resuelta"),
-                MontoTotal = multas.Sum(m => m.Monto)
+                MontoTotal = multas.Sum(m => m.Monto),
+                PorTipoUsuario = multas
+                    .GroupBy(m => usuarios.TryGetValue(m.UsuarioId, out var usuario)
+                        ? usuario.TipoUsuario
+                        : "Desconocido")
+                    .Select(g => new MultasPorTipoUsuarioDto(
+                        g.Key,
+                        g.Count(),
+                        g.Sum(m => m.Monto)))
+                    .OrderByDescending(g => g.Monto)
+                    .ToArray()
             });
         }
 

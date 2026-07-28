@@ -84,6 +84,8 @@ public class SigebiContext : DbContext
         usuario.Property(u => u.Email).HasColumnName("email").HasMaxLength(100).IsRequired();
         usuario.Property(u => u.TipoUsuario).HasColumnName("tipo_usuario").HasConversion<string>().HasMaxLength(50);
         usuario.Property(u => u.Estado).HasColumnName("estado").HasConversion<string>().HasMaxLength(20);
+        usuario.Property(u => u.IntentosAccesoFallidos).HasColumnName("intentos_acceso_fallidos");
+        usuario.Property(u => u.BloqueadoHasta).HasColumnName("bloqueado_hasta");
         usuario.Property(u => u.FechaCreacion).HasColumnName("fecha_registro");
         usuario.Ignore(u => u.FechaModificacion);
         usuario.Property(u => u.ContrasenaHash)
@@ -278,12 +280,12 @@ public class SigebiContext : DbContext
         multa.Property(m => m.UsuarioId).HasColumnName("id_usuario");
         multa.Property(m => m.Monto).HasColumnName("monto").HasPrecision(10, 2);
         multa.Property(m => m.Motivo).HasColumnName("motivo").HasMaxLength(255).IsRequired();
+        multa.Property(m => m.Tipo).HasColumnName("tipo").HasConversion<string>().HasMaxLength(50).IsRequired();
         multa.Property(m => m.Estado).HasColumnName("estado").HasConversion<string>().HasMaxLength(50);
         multa.Property(m => m.FechaGeneracion).HasColumnName("fecha_generacion");
         multa.Property(m => m.FechaResolucion).HasColumnName("fecha_resolucion");
         multa.Property(m => m.EmpleadoResolucionId).HasColumnName("id_empleado_resuelve");
         multa.Property(m => m.ObservacionResolucion).HasColumnName("observacion_resolucion").HasMaxLength(255);
-        multa.Ignore(m => m.Tipo);
         multa.Ignore(m => m.FechaCreacion);
         multa.Ignore(m => m.FechaModificacion);
         multa.HasOne<Usuario>().WithMany().HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.Restrict);
@@ -301,10 +303,10 @@ public class SigebiContext : DbContext
         inventario.Property(i => i.CantidadTotal).HasColumnName("cantidad_total");
         inventario.Property(i => i.CantidadDisponible).HasColumnName("cantidad_disponible").IsConcurrencyToken();
         inventario.Property(i => i.CantidadPrestada).HasColumnName("cantidad_prestada").IsConcurrencyToken();
-        inventario.Ignore(i => i.CantidadReservada);
-        inventario.Ignore(i => i.CantidadFueraServicio);
-        inventario.Ignore(i => i.CantidadPerdida);
-        inventario.Ignore(i => i.CantidadDanada);
+        inventario.Property(i => i.CantidadReservada).HasColumnName("cantidad_reservada").IsConcurrencyToken();
+        inventario.Property(i => i.CantidadFueraServicio).HasColumnName("cantidad_fuera_servicio").IsConcurrencyToken();
+        inventario.Property(i => i.CantidadPerdida).HasColumnName("cantidad_perdida").IsConcurrencyToken();
+        inventario.Property(i => i.CantidadDanada).HasColumnName("cantidad_danada").IsConcurrencyToken();
         inventario.Ignore(i => i.TieneDisponibilidad);
         inventario.Ignore(i => i.FechaCreacion);
         inventario.Ignore(i => i.FechaModificacion);

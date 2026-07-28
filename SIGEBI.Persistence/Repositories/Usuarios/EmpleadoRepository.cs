@@ -25,5 +25,16 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
             try { _logger.LogInformation("Consultando empleado del usuario {UsuarioId}", usuarioId); return await _dbSet.Include(e => e.Usuario).SingleOrDefaultAsync(e => e.UsuarioId == usuarioId, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error Empleado UsuarioID {Id}", usuarioId); throw; }
         }
+
+        public async Task<bool> TieneOperacionesAsync(
+            int empleadoId,
+            CancellationToken ct = default)
+            => await _context.Prestamos.AnyAsync(
+                    p => p.EmpleadoPrestamoId == empleadoId ||
+                         p.EmpleadoDevolucionId == empleadoId,
+                    ct)
+                || await _context.Multas.AnyAsync(
+                    m => m.EmpleadoResolucionId == empleadoId,
+                    ct);
     }
 }

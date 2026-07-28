@@ -11,7 +11,7 @@ public static class DependencyInjection
     {
         services.AddApplicationDependencies();
         services.AddPersistenceDependencies(connectionString);
-        services.AddInfrastructureDependencies();
+        services.AddInfrastructureDependencies(connectionString);
 
         return services;
     }

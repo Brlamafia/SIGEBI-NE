@@ -7,6 +7,14 @@ public sealed record RecursoSolicitadoDto(
     int Solicitudes);
 
 public sealed record DemandaCategoriaDto(string Categoria, int Prestamos);
+public sealed record InventarioReporteDto(
+    int LibroId,
+    string Titulo,
+    string Categoria,
+    int CantidadTotal,
+    int CantidadDisponible,
+    int CantidadPrestada);
+public sealed record MultasPorTipoUsuarioDto(string TipoUsuario, int Cantidad, decimal Monto);
 
 public sealed class ReporteCatalogoDto
 {
@@ -36,4 +44,5 @@ public sealed class ReporteMultasDto
     public int Pagadas { get; init; }
     public int Resueltas { get; init; }
     public decimal MontoTotal { get; init; }
+    public IReadOnlyCollection<MultasPorTipoUsuarioDto> PorTipoUsuario { get; init; } = [];
 }

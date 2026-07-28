@@ -19,7 +19,7 @@ public sealed class PrestamosVencidosBackgroundService(
             throw new InvalidOperationException("La configuración del trabajo de préstamos vencidos no es válida.");
 
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(configuracion.IntervaloMinutos));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        do
         {
             try
             {
@@ -50,5 +50,6 @@ public sealed class PrestamosVencidosBackgroundService(
                 logger.LogError(exception, "No fue posible actualizar automáticamente los préstamos vencidos.");
             }
         }
+        while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 }

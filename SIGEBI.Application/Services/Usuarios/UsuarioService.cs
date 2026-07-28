@@ -11,6 +11,10 @@ using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Application.Security;
 using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.Notificaciones;
+using SIGEBI.Application.Interfaces.Auditoria;
+using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Domain.Interfaces;
+using SIGEBI.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +31,9 @@ namespace SIGEBI.Application.Services.Usuarios
         private readonly IPrestamoService _prestamos;
         private readonly IMultaService _multas;
         private readonly INotificacionService _notificaciones;
+        private readonly IAuditoriaWriter? _auditoria;
+        private readonly IUsuarioActual? _usuarioActual;
+        private readonly IUnitOfWork? _unitOfWork;
 
         public UsuarioService(
             IRepository<Usuario> repository,
@@ -36,7 +43,10 @@ namespace SIGEBI.Application.Services.Usuarios
             IMultaService multas,
             INotificacionService notificaciones,
             IMapper mapper,
-            ILogger<UsuarioService> logger) // B.R: Inyección
+            ILogger<UsuarioService> logger,
+            IAuditoriaWriter? auditoria = null,
+            IUsuarioActual? usuarioActual = null,
+            IUnitOfWork? unitOfWork = null)
             : base(repository, mapper)
         {
             _usuarioRepository = repository;
@@ -46,6 +56,9 @@ namespace SIGEBI.Application.Services.Usuarios
             _multas = multas;
             _notificaciones = notificaciones;
             _logger = logger;
+            _auditoria = auditoria;
+            _usuarioActual = usuarioActual;
+            _unitOfWork = unitOfWork;
         }
 
         public override async Task<UsuarioDto> AddAsync<TSaveDto>(TSaveDto dto)
@@ -67,7 +80,11 @@ namespace SIGEBI.Application.Services.Usuarios
             else
                 throw new BusinessRuleException("Debe asignar una contraseña inicial al usuario.");
 
-            await _usuarios.AgregarAsync(entity, cancellationToken);
+            await EjecutarAtomicoAsync(async ct =>
+            {
+                await _usuarios.AgregarAsync(entity, ct);
+                await AuditarAsync(AccionAuditoria.Registrar, $"Usuario {entity.Id} creado.", ct);
+            }, cancellationToken);
             _logger.LogInformation("Usuario {UsuarioId} creado correctamente.", entity.Id);
             return _mapper.Map<UsuarioDto>(entity);
         }
@@ -102,7 +119,11 @@ namespace SIGEBI.Application.Services.Usuarios
                 dto.Email,
                 dto.TipoUsuario,
                 dto.Estado);
-            await _usuarioRepository.ActualizarAsync(usuario);
+            await EjecutarAtomicoAsync(async ct =>
+            {
+                await _usuarioRepository.ActualizarAsync(usuario);
+                await AuditarAsync(AccionAuditoria.Editar, $"Usuario {usuarioId} actualizado.", ct);
+            }, cancellationToken);
             _logger.LogInformation("Usuario {UsuarioId} actualizado correctamente.", usuarioId);
             return _mapper.Map<UsuarioDto>(usuario);
         }
@@ -113,12 +134,16 @@ namespace SIGEBI.Application.Services.Usuarios
         {
             var usuario = await _usuarios.ObtenerPorIdAsync(usuarioId, cancellationToken)
                 ?? throw new NotFoundException(nameof(Usuario), usuarioId);
-            if (await _usuarios.TieneRelacionesAsync(usuarioId, cancellationToken))
-                throw new BusinessRuleException(
-                    "El usuario no puede eliminarse porque posee préstamos, solicitudes, multas, notificaciones, auditorías o perfiles asociados. Puede cambiar su estado a Inactivo.");
-
-            await _usuarioRepository.EliminarAsync(usuario);
-            _logger.LogInformation("Usuario {UsuarioId} eliminado correctamente.", usuarioId);
+            usuario.CambiarEstado(EstadoUsuario.Inactivo);
+            await EjecutarAtomicoAsync(async ct =>
+            {
+                await _usuarioRepository.ActualizarAsync(usuario);
+                await AuditarAsync(
+                    AccionAuditoria.ActualizarEstado,
+                    $"Usuario {usuarioId} desactivado conservando su historial.",
+                    ct);
+            }, cancellationToken);
+            _logger.LogInformation("Usuario {UsuarioId} desactivado correctamente.", usuarioId);
         }
 
         private async Task ValidarUnicidadAsync(
@@ -189,7 +214,43 @@ namespace SIGEBI.Application.Services.Usuarios
             if (!PasswordHasher.Verify(passwordActual, usuario.ContrasenaHash))
                 throw new BusinessRuleException("La contraseña actual no es correcta.");
             usuario.EstablecerContrasenaHash(PasswordHasher.Hash(passwordNueva));
-            await _usuarioRepository.ActualizarAsync(usuario);
+            await EjecutarAtomicoAsync(async ct =>
+            {
+                await _usuarioRepository.ActualizarAsync(usuario);
+                await AuditarAsync(
+                    AccionAuditoria.Editar,
+                    $"Contraseña del usuario {usuarioId} actualizada.",
+                    ct);
+            }, cancellationToken);
+        }
+
+        private async Task EjecutarAtomicoAsync(
+            Func<CancellationToken, Task> operacion,
+            CancellationToken cancellationToken)
+        {
+            if (_unitOfWork is null)
+            {
+                await operacion(cancellationToken);
+                return;
+            }
+
+            await _unitOfWork.EjecutarEnTransaccionAsync(operacion, cancellationToken);
+        }
+
+        private async Task AuditarAsync(
+            AccionAuditoria accion,
+            string descripcion,
+            CancellationToken cancellationToken)
+        {
+            if (_auditoria is null || _usuarioActual?.EstaAutenticado != true)
+                return;
+
+            await _auditoria.RegistrarAsync(
+                _usuarioActual.UsuarioId,
+                ModuloAuditoria.Usuarios,
+                accion,
+                descripcion,
+                cancellationToken: cancellationToken);
         }
     }
 }

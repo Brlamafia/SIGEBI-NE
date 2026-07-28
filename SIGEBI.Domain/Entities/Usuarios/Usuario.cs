@@ -17,7 +17,11 @@ namespace SIGEBI.Domain.Entities.Usuarios
         public string ContrasenaHash { get; private set; } = string.Empty;
         public TipoUsuario TipoUsuario { get; private set; }
         public EstadoUsuario Estado { get; private set; }
+        public int IntentosAccesoFallidos { get; private set; }
+        public DateTime? BloqueadoHasta { get; private set; }
         public IReadOnlyCollection<Rol> Roles => _roles;
+        public bool EstaBloqueado(DateTime fechaUtc) =>
+            BloqueadoHasta.HasValue && BloqueadoHasta.Value > fechaUtc;
 
         private Usuario() { }
 
@@ -79,6 +83,24 @@ namespace SIGEBI.Domain.Entities.Usuarios
             if (string.IsNullOrWhiteSpace(contrasenaHash))
                 throw new ArgumentException("La contraseña cifrada es obligatoria.", nameof(contrasenaHash));
             ContrasenaHash = contrasenaHash;
+            MarcarComoModificada();
+        }
+
+        public void RegistrarIntentoFallido(int maximoIntentos, TimeSpan duracionBloqueo)
+        {
+            if (maximoIntentos <= 0 || duracionBloqueo <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(maximoIntentos));
+
+            IntentosAccesoFallidos++;
+            if (IntentosAccesoFallidos >= maximoIntentos)
+                BloqueadoHasta = DateTime.UtcNow.Add(duracionBloqueo);
+            MarcarComoModificada();
+        }
+
+        public void RegistrarAccesoExitoso()
+        {
+            IntentosAccesoFallidos = 0;
+            BloqueadoHasta = null;
             MarcarComoModificada();
         }
 

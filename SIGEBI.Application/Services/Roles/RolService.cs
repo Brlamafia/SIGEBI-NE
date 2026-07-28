@@ -5,6 +5,10 @@ using SIGEBI.Application.Interfaces.Roles;
 using SIGEBI.Domain.Entities.Usuarios; // Ajusta si tu entidad Rol está en otro namespace
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Application.Exceptions;
+using SIGEBI.Application.Interfaces.Auditoria;
+using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Domain.Enums;
+using SIGEBI.Domain.Interfaces;
 
 namespace SIGEBI.Application.Services.Roles
 {
@@ -14,6 +18,9 @@ namespace SIGEBI.Application.Services.Roles
         private readonly IRepository<Usuario> _usuarioRepository;
         private readonly IUsuarioRepository _usuarios;
         private readonly IRepository<Permiso> _permisos;
+        private readonly IAuditoriaWriter _auditoria;
+        private readonly IUsuarioActual _usuarioActual;
+        private readonly IUnitOfWork _unitOfWork;
 
         // Inyectamos el repositorio y el mapper para pasarlos a la clase base
         public RolService(
@@ -21,6 +28,9 @@ namespace SIGEBI.Application.Services.Roles
             IRepository<Usuario> usuarioRepository,
             IUsuarioRepository usuarios,
             IRepository<Permiso> permisos,
+            IAuditoriaWriter auditoria,
+            IUsuarioActual usuarioActual,
+            IUnitOfWork unitOfWork,
             IMapper mapper)
             : base(rolRepository, mapper)
         {
@@ -28,6 +38,28 @@ namespace SIGEBI.Application.Services.Roles
             _usuarioRepository = usuarioRepository;
             _usuarios = usuarios;
             _permisos = permisos;
+            _auditoria = auditoria;
+            _usuarioActual = usuarioActual;
+            _unitOfWork = unitOfWork;
+        }
+
+        public override async Task<RolDto> AddAsync<TSaveDto>(TSaveDto dto)
+        {
+            var creado = await base.AddAsync(dto);
+            await AuditarAsync(AccionAuditoria.Registrar, $"Rol {creado.Nombre} creado.");
+            return creado;
+        }
+
+        public override async Task UpdateAsync<TUpdateDto>(int id, TUpdateDto dto)
+        {
+            await base.UpdateAsync(id, dto);
+            await AuditarAsync(AccionAuditoria.Editar, $"Rol {id} actualizado.");
+        }
+
+        public override async Task DeleteAsync(int id)
+        {
+            await base.DeleteAsync(id);
+            await AuditarAsync(AccionAuditoria.Eliminar, $"Rol {id} eliminado.");
         }
 
         public async Task AsignarAUsuarioAsync(AsignarRolDto dto, CancellationToken ct = default)
@@ -38,6 +70,7 @@ namespace SIGEBI.Application.Services.Roles
                 ?? throw new NotFoundException(nameof(Rol), dto.RolId);
             usuario.AsignarRol(rol);
             await _usuarioRepository.ActualizarAsync(usuario);
+            await AuditarAsync(AccionAuditoria.Editar, $"Rol {dto.RolId} asignado al usuario {dto.UsuarioId}.", ct);
         }
 
         public async Task RemoverDeUsuarioAsync(AsignarRolDto dto, CancellationToken ct = default)
@@ -48,6 +81,7 @@ namespace SIGEBI.Application.Services.Roles
                 ?? throw new BusinessRuleException("El usuario no posee ese rol.");
             usuario.RemoverRol(rol);
             await _usuarioRepository.ActualizarAsync(usuario);
+            await AuditarAsync(AccionAuditoria.Editar, $"Rol {dto.RolId} removido del usuario {dto.UsuarioId}.", ct);
         }
 
         public async Task<PermisoDto> CrearPermisoAsync(
@@ -56,6 +90,7 @@ namespace SIGEBI.Application.Services.Roles
         {
             var permiso = new Permiso(dto.Nombre, dto.Codigo);
             await _permisos.AgregarAsync(permiso, ct);
+            await AuditarAsync(AccionAuditoria.Registrar, $"Permiso {permiso.Codigo} creado.", ct);
             return _mapper.Map<PermisoDto>(permiso);
         }
 
@@ -67,6 +102,7 @@ namespace SIGEBI.Application.Services.Roles
                 ?? throw new NotFoundException(nameof(Permiso), dto.PermisoId);
             rol.AsignarPermiso(permiso);
             await _rolRepository.ActualizarAsync(rol);
+            await AuditarAsync(AccionAuditoria.Editar, $"Permiso {permiso.Codigo} asignado al rol {rol.Id}.", ct);
         }
 
         public async Task RemoverPermisoAsync(AsignarPermisoDto dto, CancellationToken ct = default)
@@ -77,6 +113,23 @@ namespace SIGEBI.Application.Services.Roles
                 ?? throw new BusinessRuleException("El rol no posee ese permiso.");
             rol.RemoverPermiso(permiso);
             await _rolRepository.ActualizarAsync(rol);
+            await AuditarAsync(AccionAuditoria.Editar, $"Permiso {permiso.Codigo} removido del rol {rol.Id}.", ct);
+        }
+
+        private async Task AuditarAsync(
+            AccionAuditoria accion,
+            string descripcion,
+            CancellationToken cancellationToken = default)
+        {
+            if (!_usuarioActual.EstaAutenticado)
+                throw new BusinessRuleException("No se pudo determinar el usuario responsable.");
+            await _auditoria.RegistrarAsync(
+                _usuarioActual.UsuarioId,
+                ModuloAuditoria.Administracion,
+                accion,
+                descripcion,
+                cancellationToken: cancellationToken);
+            await _unitOfWork.GuardarCambiosAsync(cancellationToken);
         }
     }
 }
