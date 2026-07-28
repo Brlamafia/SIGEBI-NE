@@ -5,12 +5,19 @@
   const state = {
     token: sessionStorage.getItem("sigebi.token"),
     user: JSON.parse(sessionStorage.getItem("sigebi.user") || "null"),
-    role: sessionStorage.getItem("sigebi.role") || "Usuario",
+    roles: JSON.parse(sessionStorage.getItem("sigebi.roles") || "[]"),
     books: [],
     summary: null,
     requests: [],
     notifications: []
   };
+  if (!state.roles.length) {
+    state.roles = [sessionStorage.getItem("sigebi.role") || "Usuario"];
+  }
+  const primaryRole = () =>
+    ["Administrador", "Bibliotecario", "Auditor", "Usuario"]
+      .find(role => state.roles.includes(role)) || state.roles[0] || "Usuario";
+  const hasRole = (...roles) => roles.some(role => state.roles.includes(role));
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -76,9 +83,9 @@
     $("#app-view").hidden = false;
     const fullName = `${state.user?.nombre || ""} ${state.user?.apellido || ""}`.trim() || "Usuario";
     $("#user-name").textContent = fullName;
-    $("#user-role").textContent = state.role;
+    $("#user-role").textContent = state.roles.join(", ");
     $("#user-initials").textContent = fullName.split(/\s+/).slice(0, 2).map(x => x[0]).join("").toUpperCase();
-    const canReport = ["Administrador", "Auditor"].includes(state.role);
+    const canReport = hasRole("Administrador", "Auditor");
     $(".report-link").hidden = !canReport;
   }
 
@@ -98,10 +105,13 @@
       });
       state.token = response.token;
       state.user = response.usuario;
-      state.role = response.rol || "Usuario";
+      state.roles = Array.isArray(response.roles) && response.roles.length
+        ? response.roles
+        : [response.rol || "Usuario"];
       sessionStorage.setItem("sigebi.token", state.token);
       sessionStorage.setItem("sigebi.user", JSON.stringify(state.user));
-      sessionStorage.setItem("sigebi.role", state.role);
+      sessionStorage.setItem("sigebi.roles", JSON.stringify(state.roles));
+      sessionStorage.setItem("sigebi.role", primaryRole());
       showApp();
       await navigate("inicio");
     } catch (exception) {
@@ -116,6 +126,7 @@
     sessionStorage.removeItem("sigebi.token");
     sessionStorage.removeItem("sigebi.user");
     sessionStorage.removeItem("sigebi.role");
+    sessionStorage.removeItem("sigebi.roles");
     state.token = null;
     state.user = null;
     $("#app-view").hidden = true;
@@ -123,7 +134,12 @@
   }
 
   async function refreshSummary() {
-    state.summary = await api("Usuarios/me/resumen");
+    const [summary, requests] = await Promise.all([
+      api("Usuarios/me/resumen"),
+      api("SolicitudesPrestamo/mias")
+    ]);
+    state.summary = summary;
+    state.requests = requests;
     state.user = state.summary.usuario;
     state.notifications = state.summary.notificaciones || [];
     sessionStorage.setItem("sigebi.user", JSON.stringify(state.user));
@@ -151,7 +167,7 @@
         <div class="hero-stat"><strong>${active.length}</strong><small>préstamos activos</small></div>
       </div>
       <div class="stats-grid">
-        <article class="stat-card"><span>Solicitudes registradas</span><strong>${(state.requests || []).length || "—"}</strong></article>
+        <article class="stat-card"><span>Solicitudes registradas</span><strong>${state.requests.length}</strong></article>
         <article class="stat-card"><span>Multas pendientes</span><strong>${pendingFines.length}</strong></article>
         <article class="stat-card"><span>Notificaciones nuevas</span><strong>${unread.length}</strong></article>
       </div>
@@ -231,8 +247,25 @@
       <div class="list">${state.requests.length ? state.requests.map(item => `
         <article class="list-card">
           <div><h4>Solicitud #${item.id}</h4><p>Libro ${item.libroId} · Solicitada ${date(item.fechaSolicitud)}</p></div>
-          <span class="pill ${escapeHtml(item.estado)}">${escapeHtml(item.estado)}</span>
+          <div>
+            <span class="pill ${escapeHtml(item.estado)}">${escapeHtml(item.estado)}</span>
+            ${item.estado === "Pendiente"
+              ? `<button class="card-button cancel-request" data-request-id="${item.id}">Cancelar</button>`
+              : ""}
+          </div>
         </article>`).join("") : empty("Todavía no has solicitado libros", "Explora el catálogo para comenzar.")}</div>`;
+  }
+
+  async function cancelRequest(id, button) {
+    button.disabled = true;
+    try {
+      await api(`SolicitudesPrestamo/${id}`, { method: "DELETE" });
+      toast("Solicitud cancelada correctamente.");
+      await renderRequests();
+    } catch (exception) {
+      toast(exception.message, true);
+      button.disabled = false;
+    }
   }
 
   async function renderLoans() {
@@ -333,7 +366,7 @@
   }
 
   async function renderReports() {
-    if (!["Administrador", "Auditor"].includes(state.role)) return navigate("inicio");
+    if (!hasRole("Administrador", "Auditor")) return navigate("inicio");
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()).toISOString();
     const to = now.toISOString();
@@ -390,6 +423,8 @@
     if (request) requestBook(request.dataset.bookId, request);
     const mark = event.target.closest(".mark-read");
     if (mark) markRead(mark.dataset.notificationId, mark);
+    const cancellation = event.target.closest(".cancel-request");
+    if (cancellation) cancelRequest(cancellation.dataset.requestId, cancellation);
   });
   document.addEventListener("submit", event => {
     if (event.target.id === "password-form") changePassword(event);
