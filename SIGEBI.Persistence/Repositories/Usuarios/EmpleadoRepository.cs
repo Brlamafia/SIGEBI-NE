@@ -29,12 +29,33 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
         public async Task<bool> TieneOperacionesAsync(
             int empleadoId,
             CancellationToken ct = default)
-            => await _context.Prestamos.AnyAsync(
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Verificando operaciones asociadas al empleado {EmpleadoId}",
+                    empleadoId);
+                var tieneOperaciones = await _context.Prestamos.AnyAsync(
                     p => p.EmpleadoPrestamoId == empleadoId ||
                          p.EmpleadoDevolucionId == empleadoId,
                     ct)
-                || await _context.Multas.AnyAsync(
+                    || await _context.Multas.AnyAsync(
                     m => m.EmpleadoResolucionId == empleadoId,
                     ct);
+                _logger.LogInformation(
+                    "Verificación del empleado {EmpleadoId} completada. Tiene operaciones: {TieneOperaciones}",
+                    empleadoId,
+                    tieneOperaciones);
+                return tieneOperaciones;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error al verificar operaciones del empleado {EmpleadoId}",
+                    empleadoId);
+                throw;
+            }
+        }
     }
 }

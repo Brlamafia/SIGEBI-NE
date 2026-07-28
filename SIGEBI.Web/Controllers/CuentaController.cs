@@ -1,22 +1,18 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Exceptions;
-using SIGEBI.Application.Interfaces.Seguridad;
-using SIGEBI.Application.Interfaces.Usuarios;
 using SIGEBI.Web.Models;
+using SIGEBI.Web.Services;
 
 namespace SIGEBI.Web.Controllers;
 
 [Authorize]
-public sealed class CuentaController(
-    IUsuarioService usuarios,
-    IUsuarioActual usuarioActual) : Controller
+public sealed class CuentaController(ISigebiApiClient api) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index() =>
+    public async Task<IActionResult> Index(CancellationToken cancellationToken) =>
         View(new CuentaViewModel
         {
-            Usuario = await usuarios.GetByIdAsync(usuarioActual.UsuarioId)
+            Usuario = await api.GetMeAsync(cancellationToken)
         });
 
     [HttpPost]
@@ -27,32 +23,23 @@ public sealed class CuentaController(
     {
         if (!ModelState.IsValid)
         {
-            model = new CuentaViewModel
-            {
-                Usuario = await usuarios.GetByIdAsync(usuarioActual.UsuarioId),
-                Password = model.Password
-            };
+            model.Usuario = await api.GetMeAsync(cancellationToken);
             return View("Index", model);
         }
 
         try
         {
-            await usuarios.CambiarPasswordAsync(
-                usuarioActual.UsuarioId,
+            await api.ChangeMyPasswordAsync(
                 model.Password.PasswordActual,
                 model.Password.PasswordNueva,
                 cancellationToken);
             TempData["Success"] = "La contraseña fue actualizada.";
             return RedirectToAction(nameof(Index));
         }
-        catch (BusinessRuleException ex)
+        catch (SigebiApiException exception)
         {
-            ModelState.AddModelError(string.Empty, ex.Message);
-            model = new CuentaViewModel
-            {
-                Usuario = await usuarios.GetByIdAsync(usuarioActual.UsuarioId),
-                Password = model.Password
-            };
+            ModelState.AddModelError(string.Empty, exception.Message);
+            model.Usuario = await api.GetMeAsync(cancellationToken);
             return View("Index", model);
         }
     }

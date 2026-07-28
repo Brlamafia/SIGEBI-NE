@@ -1,13 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.DataProtection;
-using SIGEBI.Application.Interfaces.Seguridad;
-using SIGEBI.Application.Options;
-using SIGEBI.Application.Services.Seguridad;
-using SIGEBI.IOC.Injection;
-using SIGEBI.Persistence;
-using SIGEBI.Web.Data;
-using SIGEBI.Web.Security;
+using SIGEBI.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,32 +36,18 @@ if (!string.IsNullOrWhiteSpace(googleClientId) &&
     });
 }
 builder.Services.AddAuthorization();
-builder.Services.AddDataProtection().SetApplicationName("SIGEBI.Web");
-builder.Services.Configure<SmtpOptions>(
-    builder.Configuration.GetSection(SmtpOptions.SectionName));
-
-var connectionString = builder.Configuration.GetConnectionString("Supabase")
-    ?? throw new InvalidOperationException(
-        "Debe configurar ConnectionStrings:Supabase mediante User Secrets.");
-builder.Services.AddSigebiDependencies(connectionString);
-builder.Services.AddSingleton(new AuthenticationOptions
-{
-    MaxFailedAttempts = builder.Configuration.GetValue(
-        "Authentication:MaxFailedAttempts",
-        5),
-    LockoutMinutes = builder.Configuration.GetValue(
-        "Authentication:LockoutMinutes",
-        15)
-});
-builder.Services.AddScoped<IUsuarioActual, WebUsuarioActual>();
-builder.Services.AddSingleton<IPasswordResetTokenProtector,
-    DataProtectionPasswordResetTokenProtector>();
-builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
+builder.Services.AddTransient<ApiAuthenticationHandler>();
+builder.Services.AddHttpClient<ISigebiApiClient, SigebiApiClient>((services, client) =>
+    {
+        var configuration = services.GetRequiredService<IConfiguration>();
+        var baseUrl = configuration["Api:BaseUrl"]
+            ?? throw new InvalidOperationException("Debe configurar Api:BaseUrl.");
+        client.BaseAddress = new Uri(baseUrl, UriKind.Absolute);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    })
+    .AddHttpMessageHandler<ApiAuthenticationHandler>();
 
 var app = builder.Build();
-
-await LegacySchemaCompatibility.EnsureAsync(app.Services);
-await CatalogDataSeeder.SeedAsync(app.Services);
 
 if (!app.Environment.IsDevelopment())
 {

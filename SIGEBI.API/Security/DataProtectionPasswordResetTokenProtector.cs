@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.DataProtection;
 using SIGEBI.Application.Dtos.Auth;
 using SIGEBI.Application.Interfaces.Seguridad;
 
-namespace SIGEBI.Web.Security;
+namespace SIGEBI.API.Security;
 
 public sealed class DataProtectionPasswordResetTokenProtector(
     IDataProtectionProvider provider) : IPasswordResetTokenProtector
@@ -12,9 +12,7 @@ public sealed class DataProtectionPasswordResetTokenProtector(
         .ToTimeLimitedDataProtector();
 
     public string Protect(PasswordResetTokenData data, TimeSpan lifetime) =>
-        _protector.Protect(
-            $"{data.UsuarioId}|{data.PasswordFingerprint}",
-            lifetime);
+        _protector.Protect($"{data.UsuarioId}|{data.PasswordFingerprint}", lifetime);
 
     public PasswordResetTokenData Unprotect(string token)
     {
@@ -22,7 +20,6 @@ public sealed class DataProtectionPasswordResetTokenProtector(
         var parts = value.Split('|', 2);
         if (parts.Length != 2 || !int.TryParse(parts[0], out var userId))
             throw new InvalidOperationException("Invalid password reset token.");
-
         return new PasswordResetTokenData(userId, parts[1]);
     }
 }

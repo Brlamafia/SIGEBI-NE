@@ -1,79 +1,75 @@
 # SIGEBI - Biblioteca Nueva Era
 
 SIGEBI está compuesto por una API central en ASP.NET Core, un portal web para
-usuarios y una aplicación Windows Forms para el personal bibliotecario.
+lectores y una aplicación Windows Forms para el personal bibliotecario.
 
-## Desarrollo local
+## Arquitectura
 
-1. Configure `ConnectionStrings:Supabase` en User Secrets del proyecto
-   `SIGEBI.API`.
-2. Configure `Jwt:Key` con una clave privada de al menos 32 caracteres. El
-   emisor y la audiencia locales ya están definidos en `appsettings.json`.
-3. Ejecute `dotnet run --project SIGEBI.API --launch-profile https`.
-4. Ejecute `dotnet run --project SIGEBI.Web --launch-profile https`.
-5. Abra `https://localhost:7030`.
+La API es el único componente autorizado para conectarse a Supabase. Tanto el
+portal Web como Desktop consumen la API REST; ningún proyecto de presentación
+referencia Persistence ni IOC.
 
-El portal web integra la capa de aplicación mediante interfaces e inyección de
-dependencias, siguiendo el ejercicio de integración entre Presentación y
-Aplicación. La aplicación de escritorio consume la API REST central.
-Las reglas de negocio permanecen en las capas Application y Domain.
-Los orígenes permitidos para los clientes de la API se configuran en
-`SIGEBI.API/appsettings*.json`.
-Las consultas de catálogo, usuarios y notificaciones aceptan `pagina` y
-`tamanoPagina`; el tamaño predeterminado es 50 y el máximo permitido es 200.
+El proyecto trabaja con **cero migraciones de Entity Framework**. La aplicación
+no crea tablas, no ejecuta `ALTER TABLE` y no inserta datos de demostración al
+iniciar. El esquema y los datos iniciales se administran explícitamente en
+Supabase mediante el SQL aprobado por el equipo.
 
-## Base de datos
+`GET /health/ready` comprueba la conexión y verifica, en modo de solo lectura,
+que Supabase tenga las tablas y columnas requeridas.
 
-La implementación actual utiliza PostgreSQL mediante Npgsql. Las migraciones
-se generan en `SIGEBI.Persistence/Migrations`. Para aplicar cambios:
+## Configuración local
+
+Configure la API sin guardar secretos en archivos versionados:
 
 ```powershell
-dotnet ef database update --project SIGEBI.Persistence --startup-project SIGEBI.API
+dotnet user-secrets set "ConnectionStrings:Supabase" "CONEXION-SUPABASE" --project SIGEBI.API
+dotnet user-secrets set "Jwt:Key" "CLAVE-ALEATORIA-DE-AL-MENOS-32-CARACTERES" --project SIGEBI.API
 ```
 
-También se incluye el script idempotente
-`SIGEBI.Persistence/Migrations/Scripts/SIGEBI_PostgreSQL_Upgrade.sql` para
-entornos donde las migraciones se aplican mediante una consola administrativa.
+La API usa `https://localhost:7279` y el portal
+`https://localhost:7030`. El portal tiene `Api:BaseUrl` configurado para esa
+dirección.
 
-La carga de datos de demostración está deshabilitada por defecto. Puede
-activarse con `Database:SeedDevelopmentData=true` en un entorno de desarrollo
-vacío. Las credenciales de demostración son `admin@sigebi.local / Admin123` y
-`usuario@sigebi.local / Usuario123`.
-
-Al iniciar la API o el portal web se armonizan de forma idempotente las tablas
-heredadas de personal con el modelo actual de cargos y administradores. Al
-iniciar la API también se garantiza de forma idempotente la existencia del rol
-`Administrador`, el permiso `SIGEBI.ADMIN` y su asignación a los usuarios con
-perfil administrativo. Esto evita que una base existente quede sin acceso a la
-administración de roles y permisos.
-
-## Recuperación de contraseña por SMTP
-
-El portal genera un enlace protegido de un solo uso, válido durante 30 minutos,
-y lo envía mediante el servicio SMTP implementado en Infrastructure. Las
-credenciales deben configurarse únicamente mediante User Secrets.
-
-Ejemplo para Gmail:
+Para habilitar Google, configure las credenciales OAuth en Web y la misma clave
+privada de comunicación en ambos proyectos:
 
 ```powershell
-dotnet user-secrets set "Smtp:Enabled" "true" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:Port" "587" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:Security" "StartTls" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:Username" "correo@gmail.com" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:Password" "CONTRASENA-DE-APLICACION" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:FromEmail" "correo@gmail.com" --project SIGEBI.Web
-dotnet user-secrets set "Smtp:FromName" "SIGEBI Nueva Era" --project SIGEBI.Web
+dotnet user-secrets set "Authentication:Google:ClientId" "CLIENT-ID" --project SIGEBI.Web
+dotnet user-secrets set "Authentication:Google:ClientSecret" "CLIENT-SECRET" --project SIGEBI.Web
+dotnet user-secrets set "Authentication:WebClientSecret" "CLAVE-ALEATORIA" --project SIGEBI.Web
+dotnet user-secrets set "Authentication:WebClientSecret" "CLAVE-ALEATORIA" --project SIGEBI.API
 ```
 
-En Gmail se debe utilizar una contraseña de aplicación, no la contraseña normal
-de la cuenta. Si SMTP permanece deshabilitado, Development conserva un enlace
-local para probar el resto del flujo.
+La recuperación de contraseña y el envío SMTP son responsabilidad de la API.
+Las credenciales SMTP también deben configurarse mediante User Secrets en
+`SIGEBI.API`.
+
+## Ejecución
+
+En dos terminales:
+
+```powershell
+dotnet run --project SIGEBI.API --launch-profile https
+dotnet run --project SIGEBI.Web --launch-profile https
+```
+
+Abra `https://localhost:7030`.
+
+La aplicación del personal se ejecuta en una tercera terminal:
+
+```powershell
+$env:SIGEBI_API_URL = "https://localhost:7279"
+dotnet run --project SIGEBI.Desktop
+```
+
+Desktop autentica contra la API y conserva el token únicamente durante la
+sesión actual. Solo permite el acceso a usuarios con rol `Administrador`,
+`Bibliotecario` o `Auditor`; las opciones visibles se ajustan al rol. No
+contiene credenciales predeterminadas ni se conecta directamente a Supabase.
 
 ## Verificación
 
 ```powershell
 dotnet build SIGEBI.slnx -c Release
 dotnet test SIGEBI.Tests/SIGEBI.Tests.csproj -c Release
-dotnet ef migrations has-pending-model-changes --project SIGEBI.Persistence --startup-project SIGEBI.API
 ```

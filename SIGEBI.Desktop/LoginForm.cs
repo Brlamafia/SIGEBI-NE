@@ -3,9 +3,14 @@ namespace SIGEBI.Desktop;
 public sealed class LoginForm : Form
 {
     private readonly ApiClient _apiClient;
-    private readonly TextBox _url = new() { Text = "http://localhost:5297", Dock = DockStyle.Fill };
-    private readonly TextBox _email = new() { Text = "admin@sigebi.local", Dock = DockStyle.Fill };
-    private readonly TextBox _password = new() { Text = "Admin123", UseSystemPasswordChar = true, Dock = DockStyle.Fill };
+    private readonly TextBox _url = new()
+    {
+        Text = Environment.GetEnvironmentVariable("SIGEBI_API_URL")
+            ?? "http://localhost:5297",
+        Dock = DockStyle.Fill
+    };
+    private readonly TextBox _email = new() { Dock = DockStyle.Fill };
+    private readonly TextBox _password = new() { UseSystemPasswordChar = true, Dock = DockStyle.Fill };
     private readonly Button _login = new() { Text = "Entrar a SIGEBI", Dock = DockStyle.Fill, Height = 38 };
 
     public LoginForm(ApiClient apiClient)
@@ -48,6 +53,7 @@ public sealed class LoginForm : Form
     }
 
     public bool Autenticado { get; private set; }
+    public DesktopSession? Session { get; private set; }
 
     private async void LoginAsync(object? sender, EventArgs e)
     {
@@ -56,7 +62,16 @@ public sealed class LoginForm : Form
             _login.Enabled = false;
             _login.Text = "Conectando...";
             _apiClient.ConfigurarBaseUrl(_url.Text);
-            await _apiClient.IniciarSesionAsync(_email.Text, _password.Text);
+            var session = await _apiClient.IniciarSesionAsync(
+                _email.Text,
+                _password.Text);
+            if (!session.PuedeUsarDesktop)
+            {
+                _apiClient.CerrarSesion();
+                throw new UnauthorizedAccessException(
+                    "Esta aplicación es exclusiva para administradores, bibliotecarios y auditores.");
+            }
+            Session = session;
             Autenticado = true;
             DialogResult = DialogResult.OK;
             Close();

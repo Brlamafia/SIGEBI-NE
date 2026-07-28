@@ -2,6 +2,7 @@
 {
     public class EmpleadoDto : DtoBase
     {
+        public int Id { get; set; }
         public int UsuarioId { get; set; }
         public int CargoId { get; set; }
     }

@@ -167,6 +167,9 @@ namespace SIGEBI.Application.Services.Prestamos
                     var ejemplar = await _ejemplares.ObtenerDisponiblePorLibroAsync(solicitud.LibroId, c) ?? throw new BusinessRuleException("No hay ejemplares disponibles.");
                     if (solicitud.Estado == EstadoSolicitud.Pendiente)
                         solicitud.Aprobar();
+                    else if (solicitud.Estado != EstadoSolicitud.Aprobada)
+                        throw new BusinessRuleException(
+                            "Solo una solicitud pendiente o aprobada puede convertirse en préstamo.");
                     _solicitudes.Actualizar(solicitud);
                     prestamoRegistrado = _prestamoDomainService.RegistrarPrestamo(usuario.Id, usuario.Estado == EstadoUsuario.Activo, _multaDomainService.TieneMultasPendientes(await _multas.ObtenerPorUsuarioAsync(usuario.Id, c)), await _prestamos.TieneVencidosPorUsuarioAsync(usuario.Id, c), await _prestamos.ContarActivosPorUsuarioAsync(usuario.Id, c), _politicaPrestamos.ObtenerCondiciones(usuario.TipoUsuario).LimitePrestamos, solicitud, empleado.Id, dto.FechaPrestamo, _politicaPrestamos.CalcularFechaLimite(usuario.TipoUsuario, dto.FechaPrestamo), inventario, ejemplar);
                     await _prestamos.AgregarAsync(prestamoRegistrado, c);

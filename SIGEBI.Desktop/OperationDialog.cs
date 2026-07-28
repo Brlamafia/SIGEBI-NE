@@ -5,6 +5,7 @@ namespace SIGEBI.Desktop;
 public enum InputKind
 {
     Text,
+    Password,
     Integer,
     Decimal,
     DateTime
@@ -49,7 +50,8 @@ public sealed class OperationDialog : Form
             var input = new TextBox
             {
                 Dock = DockStyle.Fill,
-                Text = field.DefaultValue
+                Text = field.DefaultValue,
+                UseSystemPasswordChar = field.Kind == InputKind.Password
             };
             _inputs[field.Name] = input;
             layout.Controls.Add(new Label
@@ -105,6 +107,7 @@ public sealed class OperationDialog : Form
                     CultureInfo.InvariantCulture,
                     out var value) => value,
                 InputKind.DateTime when DateTime.TryParse(text, out var value) => value,
+                InputKind.Password when !string.IsNullOrWhiteSpace(text) => text,
                 InputKind.Text => text,
                 _ => throw new ArgumentException($"El valor de «{field.Label}» no es válido.")
             };

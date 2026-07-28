@@ -83,13 +83,34 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             }
         }
 
-        public Task<decimal> ObtenerMontoPendientePorUsuarioAsync(
+        public async Task<decimal> ObtenerMontoPendientePorUsuarioAsync(
             int usuarioId,
-            CancellationToken ct = default) =>
-            _dbSet
-                .Where(multa =>
-                    multa.UsuarioId == usuarioId &&
-                    multa.Estado == EstadoMulta.Pendiente)
-                .SumAsync(multa => multa.Monto, ct);
+            CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Calculando monto pendiente del usuario {UsuarioId}",
+                    usuarioId);
+                var monto = await _dbSet
+                    .Where(multa =>
+                        multa.UsuarioId == usuarioId &&
+                        multa.Estado == EstadoMulta.Pendiente)
+                    .SumAsync(multa => multa.Monto, ct);
+                _logger.LogInformation(
+                    "Monto pendiente del usuario {UsuarioId}: {Monto}",
+                    usuarioId,
+                    monto);
+                return monto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Error al calcular monto pendiente del usuario {UsuarioId}",
+                    usuarioId);
+                throw;
+            }
+        }
     }
 }

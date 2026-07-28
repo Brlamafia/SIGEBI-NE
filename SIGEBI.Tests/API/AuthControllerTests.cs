@@ -3,12 +3,14 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using SIGEBI.API.Controllers;
 using SIGEBI.Application.Dtos.Auth;
 using SIGEBI.Application.Dtos.Usuarios;
 using SIGEBI.Application.Exceptions;
 using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Application.Interfaces.Usuarios;
 
 namespace SIGEBI.Tests.API;
 
@@ -80,7 +82,14 @@ public sealed class AuthControllerTests
                 ["Jwt:Audience"] = "SIGEBI.Clients"
             })
             .Build();
-        return new AuthController(configuration, authentication)
+        return new AuthController(
+            configuration,
+            authentication,
+            Mock.Of<IUsuarioService>(),
+            Mock.Of<IPasswordRecoveryService>(),
+            Mock.Of<IPasswordResetEmailSender>(),
+            Mock.Of<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(),
+            NullLogger<AuthController>.Instance)
         {
             ControllerContext = new ControllerContext
             {

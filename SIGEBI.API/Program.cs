@@ -6,15 +6,15 @@ using SIGEBI.API.Filters;
 using SIGEBI.API.Jobs;
 using SIGEBI.API.Logging;
 using SIGEBI.API.Security;
-using SIGEBI.API.Data;
 using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Application.Options;
+using SIGEBI.Application.Services.Seguridad;
 using SIGEBI.Domain.Policies;
 using SIGEBI.IOC.Injection;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using SIGEBI.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +32,10 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.Configure<PrestamosVencidosOptions>(
     builder.Configuration.GetSection(PrestamosVencidosOptions.SectionName));
+builder.Services.Configure<SmtpOptions>(
+    builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddHostedService<PrestamosVencidosBackgroundService>();
+builder.Services.AddDataProtection().SetApplicationName("SIGEBI.API");
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Debe configurar Jwt:Key.");
@@ -68,7 +71,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "SIGEBI API",
         Version = "v1",
-        Description = "API central del Sistema de Gestión Bibliotecaria SIGEBI. En desarrollo use POST /api/Auth/login con admin@sigebi.local / Admin123 y copie el token en Authorize."
+        Description = "API central del Sistema de Gestión Bibliotecaria SIGEBI. Obtenga un JWT mediante POST /api/Auth/login."
     });
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
@@ -101,6 +104,9 @@ builder.Services.AddSingleton(new AuthenticationOptions
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
+builder.Services.AddSingleton<IPasswordResetTokenProtector,
+    DataProtectionPasswordResetTokenProtector>();
+builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
 builder.Services.AddCors(options =>
     options.AddPolicy("WebClient", policy =>
         policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
@@ -114,13 +120,6 @@ var politicaPrestamos = builder.Configuration
 builder.Services.AddSingleton(new PoliticaPrestamos(politicaPrestamos));
 
 var app = builder.Build();
-
-await LegacySchemaCompatibility.EnsureAsync(app.Services);
-if (app.Environment.IsDevelopment() &&
-    builder.Configuration.GetValue("Database:SeedDevelopmentData", false))
-    await DevelopmentDataSeeder.SeedAsync(app.Services);
-
-await SecurityDataSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {

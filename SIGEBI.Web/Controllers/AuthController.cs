@@ -5,30 +5,21 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Dtos.Auth;
 using SIGEBI.Application.Dtos.Usuarios;
-using SIGEBI.Application.Exceptions;
-using SIGEBI.Application.Interfaces.Seguridad;
-using SIGEBI.Application.Interfaces.Usuarios;
-using SIGEBI.Domain.Enums;
 using SIGEBI.Web.Models;
-using ApplicationAuthenticationException = SIGEBI.Application.Exceptions.AuthenticationException;
-using ApplicationAuthenticationService = SIGEBI.Application.Interfaces.Seguridad.IAuthenticationService;
+using SIGEBI.Web.Services;
 
 namespace SIGEBI.Web.Controllers;
 
 public sealed class AuthController(
-    ApplicationAuthenticationService authenticationService,
-    IUsuarioService users,
-    IPasswordRecoveryService passwordRecovery,
-    IPasswordResetEmailSender passwordResetEmails,
+    ISigebiApiClient api,
     IConfiguration configuration,
-    IWebHostEnvironment environment,
     ILogger<AuthController> logger) : Controller
 {
     private bool GoogleEnabled =>
         !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientId"]) &&
-        !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientSecret"]);
+        !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientSecret"]) &&
+        !string.IsNullOrWhiteSpace(configuration["Authentication:WebClientSecret"]);
 
     [AllowAnonymous]
     [HttpGet]
@@ -60,14 +51,14 @@ public sealed class AuthController(
 
         try
         {
-            var authenticated = await authenticationService.AuthenticateAsync(
+            var session = await api.LoginAsync(
                 model.Email,
                 model.Password,
                 cancellationToken);
-            await SignInAsync(authenticated, model.Recordarme);
+            await SignInAsync(session, model.Recordarme);
             return RedirectAfterLogin(returnUrl);
         }
-        catch (ApplicationAuthenticationException exception)
+        catch (SigebiApiException exception)
         {
             ModelState.AddModelError(string.Empty, exception.Message);
             return View(model);
@@ -91,21 +82,11 @@ public sealed class AuthController(
 
         try
         {
-            await users.CrearAsync(new SaveUsuarioDto
-            {
-                Nombre = model.Nombre,
-                Apellido = model.Apellido,
-                Cedula = model.Cedula,
-                Telefono = model.Telefono,
-                Email = model.Email,
-                Password = model.Password,
-                TipoUsuario = model.TipoUsuario!.Value
-            }, cancellationToken);
+            await api.RegisterAsync(ToSaveUser(model), cancellationToken);
             TempData["Success"] = "Tu cuenta fue creada. Ya puedes iniciar sesión.";
             return RedirectToAction(nameof(Login));
         }
-        catch (Exception exception) when (
-            exception is BusinessRuleException or ArgumentException)
+        catch (SigebiApiException exception)
         {
             ModelState.AddModelError(string.Empty, exception.Message);
             return View(model);
@@ -126,40 +107,23 @@ public sealed class AuthController(
         if (!ModelState.IsValid)
             return View(model);
 
-        var token = await passwordRecovery.CreateTokenAsync(
-            model.Email,
-            cancellationToken);
-        if (token is not null)
+        var resetUrlBase = Url.Action(
+            nameof(ResetPassword),
+            "Auth",
+            values: null,
+            protocol: Request.Scheme)
+            ?? throw new InvalidOperationException("No se pudo crear la URL de recuperación.");
+        try
         {
-            var resetUrl = Url.Action(
-                nameof(ResetPassword),
-                "Auth",
-                new { token },
-                Request.Scheme);
-
-            if (passwordResetEmails.IsConfigured &&
-                !string.IsNullOrWhiteSpace(resetUrl))
-            {
-                try
-                {
-                    await passwordResetEmails.SendAsync(
-                        model.Email,
-                        resetUrl,
-                        cancellationToken);
-                }
-                catch (Exception exception)
-                {
-                    logger.LogError(
-                        exception,
-                        "No fue posible enviar el correo de recuperación mediante SMTP.");
-                    if (environment.IsDevelopment())
-                        ViewData["DevelopmentResetUrl"] = resetUrl;
-                }
-            }
-            else if (environment.IsDevelopment())
-            {
-                ViewData["DevelopmentResetUrl"] = resetUrl;
-            }
+            ViewData["DevelopmentResetUrl"] =
+                await api.RequestPasswordResetAsync(
+                    model.Email,
+                    resetUrlBase,
+                    cancellationToken);
+        }
+        catch (SigebiApiException exception)
+        {
+            logger.LogError(exception, "La API no pudo procesar la recuperación.");
         }
 
         return View("ForgotPasswordConfirmation");
@@ -182,14 +146,11 @@ public sealed class AuthController(
 
         try
         {
-            await passwordRecovery.ResetPasswordAsync(
-                model.Token,
-                model.Password,
-                cancellationToken);
+            await api.ResetPasswordAsync(model.Token, model.Password, cancellationToken);
             TempData["Success"] = "La contraseña fue restablecida.";
             return RedirectToAction(nameof(Login));
         }
-        catch (BusinessRuleException exception)
+        catch (SigebiApiException exception)
         {
             ModelState.AddModelError(string.Empty, exception.Message);
             return View(model);
@@ -203,13 +164,11 @@ public sealed class AuthController(
         if (!GoogleEnabled)
         {
             TempData["Error"] =
-                "El acceso con Google requiere configurar el Client ID y el Client Secret.";
+                "El acceso con Google requiere configurar sus credenciales y la clave privada entre Web y API.";
             return RedirectToAction(nameof(Login));
         }
 
-        var redirectUrl = Url.Action(
-            nameof(GoogleCallback),
-            new { returnUrl });
+        var redirectUrl = Url.Action(nameof(GoogleCallback), new { returnUrl });
         return Challenge(
             new AuthenticationProperties { RedirectUri = redirectUrl },
             GoogleDefaults.AuthenticationScheme);
@@ -231,14 +190,12 @@ public sealed class AuthController(
 
         try
         {
-            var authenticated = await authenticationService.AuthenticateExternalAsync(
-                email,
-                cancellationToken);
-            await SignInAsync(authenticated, true);
+            var session = await api.ExternalLoginAsync(email, cancellationToken);
+            await SignInAsync(session, true);
             await HttpContext.SignOutAsync("External");
             return RedirectAfterLogin(returnUrl);
         }
-        catch (ApplicationAuthenticationException exception)
+        catch (SigebiApiException exception)
         {
             TempData["Error"] = exception.Message;
             return RedirectToAction(nameof(CompleteGoogleRegistration));
@@ -286,7 +243,7 @@ public sealed class AuthController(
 
         try
         {
-            await users.CrearAsync(new SaveUsuarioDto
+            var session = await api.ExternalRegisterAsync(new SaveUsuarioDto
             {
                 Nombre = model.Nombre,
                 Apellido = model.Apellido,
@@ -296,17 +253,12 @@ public sealed class AuthController(
                 Password = $"Google1a{Convert.ToBase64String(RandomNumberGenerator.GetBytes(24))}",
                 TipoUsuario = model.TipoUsuario!.Value
             }, cancellationToken);
-
-            var authenticated = await authenticationService.AuthenticateExternalAsync(
-                email,
-                cancellationToken);
-            await SignInAsync(authenticated, true);
+            await SignInAsync(session, true);
             await HttpContext.SignOutAsync("External");
             TempData["Success"] = "Tu cuenta fue vinculada con Google.";
             return RedirectToAction("Index", "Home");
         }
-        catch (Exception exception) when (
-            exception is BusinessRuleException or ArgumentException)
+        catch (SigebiApiException exception)
         {
             ModelState.AddModelError(string.Empty, exception.Message);
             return View(model);
@@ -325,34 +277,48 @@ public sealed class AuthController(
     [AllowAnonymous]
     public IActionResult AccesoDenegado() => View();
 
-    private async Task SignInAsync(
-        AuthenticatedUserDto authenticated,
-        bool persistent)
+    private async Task SignInAsync(ApiSession session, bool persistent)
     {
         var claims = new List<Claim>
         {
-            new(ClaimTypes.NameIdentifier, authenticated.Usuario.Id.ToString()),
-            new(
-                ClaimTypes.Name,
-                $"{authenticated.Usuario.Nombre} {authenticated.Usuario.Apellido}"),
-            new(ClaimTypes.Email, authenticated.Usuario.Email)
+            new(ClaimTypes.NameIdentifier, session.Usuario.Id.ToString()),
+            new(ClaimTypes.Name, $"{session.Usuario.Nombre} {session.Usuario.Apellido}"),
+            new(ClaimTypes.Email, session.Usuario.Email)
         };
-        claims.AddRange(authenticated.Roles.Select(
-            role => new Claim(ClaimTypes.Role, role)));
-        claims.AddRange(authenticated.Permisos.Select(
-            permission => new Claim("permission", permission)));
+        claims.AddRange(session.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(session.Permisos.Select(permission => new Claim("permission", permission)));
 
+        var properties = new AuthenticationProperties
+        {
+            IsPersistent = persistent,
+            AllowRefresh = true
+        };
+        properties.StoreTokens([
+            new AuthenticationToken
+            {
+                Name = "access_token",
+                Value = session.Token
+            }
+        ]);
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(new ClaimsIdentity(
                 claims,
                 CookieAuthenticationDefaults.AuthenticationScheme)),
-            new AuthenticationProperties
-            {
-                IsPersistent = persistent,
-                AllowRefresh = true
-            });
+            properties);
     }
+
+    private static SaveUsuarioDto ToSaveUser(RegisterViewModel model) =>
+        new()
+        {
+            Nombre = model.Nombre,
+            Apellido = model.Apellido,
+            Cedula = model.Cedula,
+            Telefono = model.Telefono,
+            Email = model.Email,
+            Password = model.Password,
+            TipoUsuario = model.TipoUsuario!.Value
+        };
 
     private IActionResult RedirectAfterLogin(string? returnUrl) =>
         Url.IsLocalUrl(returnUrl)

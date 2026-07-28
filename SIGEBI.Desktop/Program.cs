@@ -10,9 +10,20 @@ namespace SIGEBI.Desktop
         {
             ApplicationConfiguration.Initialize();
             using var apiClient = new ApiClient();
-            using var login = new LoginForm(apiClient);
-            if (login.ShowDialog() == DialogResult.OK && login.Autenticado)
-                Application.Run(new MainForm(apiClient));
+            while (true)
+            {
+                using var login = new LoginForm(apiClient);
+                if (login.ShowDialog() != DialogResult.OK ||
+                    !login.Autenticado ||
+                    login.Session is null)
+                    break;
+
+                using var main = new MainForm(apiClient, login.Session);
+                Application.Run(main);
+                apiClient.CerrarSesion();
+                if (!main.CerrarSesionSolicitado)
+                    break;
+            }
         }
     }
 }

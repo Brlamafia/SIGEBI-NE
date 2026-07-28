@@ -1,22 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Dtos.SolicitudesPrestamo;
-using SIGEBI.Application.Exceptions;
-using SIGEBI.Application.Interfaces.Catalogo;
-using SIGEBI.Application.Interfaces.Prestamos;
-using SIGEBI.Application.Interfaces.Seguridad;
-using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
 using SIGEBI.Web.Models;
+using SIGEBI.Web.Services;
 
 namespace SIGEBI.Web.Controllers;
 
 [Authorize]
 public sealed class CatalogoController(
-    ILibroService libros,
-    ISolicitudPrestamoService solicitudes,
-    IMultaService multas,
-    IPrestamoService prestamos,
-    IUsuarioActual usuarioActual,
+    ISigebiApiClient api,
     ILogger<CatalogoController> logger) : Controller
 {
     [HttpGet]
@@ -29,90 +20,68 @@ public sealed class CatalogoController(
         CancellationToken cancellationToken = default)
     {
         pagina = Math.Max(1, pagina);
-        var resultado = await libros.BuscarLibrosAsync(
-            termino,
-            genero,
-            editorial,
-            disponible,
-            (pagina - 1) * 12,
-            12,
-            cancellationToken);
-        var solicitudesUsuario =
-            await solicitudes.ObtenerPorUsuarioAsync(usuarioActual.UsuarioId)
-            ?? [];
-        var montoPendiente = await multas.ObtenerMontoPendientePorUsuarioAsync(
-            usuarioActual.UsuarioId,
-            cancellationToken);
-        var prestamosUsuario =
-            await prestamos.ObtenerPorUsuarioAsync(
-                usuarioActual.UsuarioId,
-                cancellationToken)
-            ?? [];
-        var prestamoVencido = prestamosUsuario.Any(item =>
+        var books = await api.SearchBooksAsync(
+            termino, genero, editorial, disponible, pagina, 12, cancellationToken);
+        var requests = await api.GetMyRequestsAsync(cancellationToken);
+        var summary = await api.GetMySummaryAsync(cancellationToken);
+        var overdue = summary.Prestamos.Any(item =>
             item.Estado == "Vencido" ||
             item.Estado == "Activo" &&
             item.FechaEsperadaDevolucion < DateTime.UtcNow);
-        var restriccionSolicitud = montoPendiente > 0
-            ? $"Tienes {montoPendiente:C} en multas pendientes. Regulariza tu cuenta para solicitar otro préstamo."
-            : prestamoVencido
+        var pendingAmount = summary.Multas
+            .Where(item => item.Estado == "Pendiente")
+            .Sum(item => item.Monto);
+        var restriction = pendingAmount > 0
+            ? $"Tienes {pendingAmount:C} en multas pendientes. Regulariza tu cuenta para solicitar otro préstamo."
+            : overdue
                 ? "Tienes un préstamo vencido. Debes devolverlo antes de realizar otra solicitud."
                 : null;
-        var catalogoCompleto = (await libros.GetAllAsync()).ToArray();
-        var librosPendientes = solicitudesUsuario
-            .Where(item => item.Estado == "Pendiente")
-            .Select(item => item.LibroId)
-            .ToHashSet();
+        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
 
         return View(new CatalogoViewModel
         {
-            Libros = resultado.ToArray(),
+            Libros = books,
             Termino = termino,
             Genero = genero,
             Editorial = editorial,
             Disponible = disponible,
             Pagina = pagina,
-            LibrosConSolicitudPendiente = librosPendientes,
-            GenerosDisponibles = catalogoCompleto
-                .Select(item => item.Genero)
+            LibrosConSolicitudPendiente = requests
+                .Where(item => item.Estado == "Pendiente")
+                .Select(item => item.LibroId)
+                .ToHashSet(),
+            GenerosDisponibles = catalog.Select(item => item.Genero)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(item => item)
-                .ToArray(),
-            EditorialesDisponibles = catalogoCompleto
-                .Select(item => item.Editorial)
+                .ToArray()!,
+            EditorialesDisponibles = catalog.Select(item => item.Editorial)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(item => item)
-                .ToArray(),
-            RestriccionSolicitud = restriccionSolicitud
+                .ToArray()!,
+            RestriccionSolicitud = restriction
         });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Solicitar(int libroId)
+    public async Task<IActionResult> Solicitar(
+        int libroId,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await solicitudes.RegistrarSolicitudAsync(new SaveSolicitudPrestamoDto
-            {
-                UsuarioId = usuarioActual.UsuarioId,
-                LibroId = libroId
-            });
+            await api.CreateRequestAsync(libroId, cancellationToken);
             TempData["Success"] = "La solicitud de préstamo fue registrada.";
         }
-        catch (BusinessRuleException ex)
+        catch (SigebiApiException exception)
         {
-            TempData["Error"] = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "No se pudo registrar la solicitud del libro {LibroId}.",
+            logger.LogWarning(
+                exception,
+                "La API rechazó la solicitud del libro {LibroId}.",
                 libroId);
-            TempData["Error"] =
-                "No pudimos registrar la solicitud en este momento. Inténtalo nuevamente.";
+            TempData["Error"] = exception.Message;
         }
 
         return RedirectToAction(nameof(Index));

@@ -1,29 +1,23 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Exceptions;
-using SIGEBI.Application.Interfaces.Catalogo;
-using SIGEBI.Application.Interfaces.Seguridad;
-using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
+using SIGEBI.Web.Models;
+using SIGEBI.Web.Services;
 
 namespace SIGEBI.Web.Controllers;
 
 [Authorize]
 public sealed class SolicitudesController(
-    ISolicitudPrestamoService solicitudes,
-    IUsuarioActual usuarioActual,
-    ILibroService libros,
+    ISigebiApiClient api,
     ILogger<SolicitudesController> logger) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var catalogo = (await libros.GetAllAsync()).ToArray();
-        return View(new SIGEBI.Web.Models.SolicitudesViewModel
+        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
+        return View(new SolicitudesViewModel
         {
-            Solicitudes =
-                (await solicitudes.ObtenerPorUsuarioAsync(usuarioActual.UsuarioId))
-                .ToArray(),
-            TitulosLibros = catalogo.ToDictionary(item => item.Id, item => item.Titulo)
+            Solicitudes = await api.GetMyRequestsAsync(cancellationToken),
+            TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
         });
     }
 
@@ -35,21 +29,16 @@ public sealed class SolicitudesController(
     {
         try
         {
-            await solicitudes.CancelarAsync(id, usuarioActual.UsuarioId, cancellationToken);
+            await api.CancelRequestAsync(id, cancellationToken);
             TempData["Success"] = "La solicitud fue cancelada.";
         }
-        catch (BusinessRuleException ex)
+        catch (SigebiApiException exception)
         {
-            TempData["Error"] = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "No se pudo cancelar la solicitud {SolicitudId}.",
+            logger.LogWarning(
+                exception,
+                "La API rechazó la cancelación de la solicitud {SolicitudId}.",
                 id);
-            TempData["Error"] =
-                "No pudimos cancelar la solicitud en este momento. Inténtalo nuevamente.";
+            TempData["Error"] = exception.Message;
         }
 
         return RedirectToAction(nameof(Index));

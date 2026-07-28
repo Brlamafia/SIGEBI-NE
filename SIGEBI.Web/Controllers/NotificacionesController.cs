@@ -1,14 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Interfaces.Notificaciones;
-using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Web.Services;
 
 namespace SIGEBI.Web.Controllers;
 
 [Authorize]
-public sealed class NotificacionesController(
-    INotificacionService notificaciones,
-    IUsuarioActual usuarioActual) : Controller
+public sealed class NotificacionesController(ISigebiApiClient api) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index(
@@ -17,8 +14,7 @@ public sealed class NotificacionesController(
     {
         pagina = Math.Max(1, pagina);
         ViewData["Pagina"] = pagina;
-        return View(await notificaciones.ObtenerPorUsuarioAsync(
-            usuarioActual.UsuarioId,
+        return View(await api.GetMyNotificationsAsync(
             pagina,
             20,
             cancellationToken));
@@ -30,11 +26,7 @@ public sealed class NotificacionesController(
         int id,
         CancellationToken cancellationToken = default)
     {
-        var notificacion = await notificaciones.GetByIdAsync(id);
-        if (notificacion.UsuarioId != usuarioActual.UsuarioId)
-            return Forbid();
-
-        await notificaciones.MarcarComoLeidaAsync(id, cancellationToken);
+        await api.MarkNotificationReadAsync(id, cancellationToken);
         TempData["Success"] = "La notificación fue marcada como leída.";
         return RedirectToAction(nameof(Index));
     }

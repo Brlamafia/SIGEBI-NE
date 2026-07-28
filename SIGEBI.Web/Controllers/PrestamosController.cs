@@ -1,27 +1,22 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Interfaces.Catalogo;
-using SIGEBI.Application.Interfaces.Prestamos;
-using SIGEBI.Application.Interfaces.Seguridad;
+using SIGEBI.Web.Models;
+using SIGEBI.Web.Services;
 
 namespace SIGEBI.Web.Controllers;
 
 [Authorize]
-public sealed class PrestamosController(
-    IPrestamoService prestamos,
-    IUsuarioActual usuarioActual,
-    ILibroService libros) : Controller
+public sealed class PrestamosController(ISigebiApiClient api) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var catalogo = (await libros.GetAllAsync()).ToArray();
-        return View(new SIGEBI.Web.Models.PrestamosViewModel
+        var summary = await api.GetMySummaryAsync(cancellationToken);
+        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
+        return View(new PrestamosViewModel
         {
-            Prestamos = await prestamos.ObtenerPorUsuarioAsync(
-                usuarioActual.UsuarioId,
-                cancellationToken),
-            TitulosLibros = catalogo.ToDictionary(item => item.Id, item => item.Titulo)
+            Prestamos = summary.Prestamos,
+            TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
         });
     }
 }

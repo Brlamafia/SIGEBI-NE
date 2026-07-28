@@ -56,6 +56,9 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
 
             try
             {
+                _logger.LogInformation(
+                    "Consultando inventarios para {Cantidad} libros",
+                    libroIds.Count);
                 return await _dbSet
                     .Where(inventario => libroIds.Contains(inventario.LibroId))
                     .OrderBy(inventario => inventario.LibroId)
