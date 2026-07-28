@@ -13,8 +13,12 @@ usuarios y una aplicación Windows Forms para el personal bibliotecario.
 4. Ejecute `dotnet run --project SIGEBI.Web --launch-profile https`.
 5. Abra `https://localhost:7030`.
 
-El portal web consume la URL configurada en `SIGEBI.Web/appsettings*.json`.
-Los orígenes permitidos se configuran en `SIGEBI.API/appsettings*.json`.
+El portal web integra la capa de aplicación mediante interfaces e inyección de
+dependencias, siguiendo el ejercicio de integración entre Presentación y
+Aplicación. La aplicación de escritorio consume la API REST central.
+Las reglas de negocio permanecen en las capas Application y Domain.
+Los orígenes permitidos para los clientes de la API se configuran en
+`SIGEBI.API/appsettings*.json`.
 Las consultas de catálogo, usuarios y notificaciones aceptan `pagina` y
 `tamanoPagina`; el tamaño predeterminado es 50 y el máximo permitido es 200.
 
@@ -36,10 +40,35 @@ activarse con `Database:SeedDevelopmentData=true` en un entorno de desarrollo
 vacío. Las credenciales de demostración son `admin@sigebi.local / Admin123` y
 `usuario@sigebi.local / Usuario123`.
 
-Al iniciar la API se garantiza de forma idempotente la existencia del rol
+Al iniciar la API o el portal web se armonizan de forma idempotente las tablas
+heredadas de personal con el modelo actual de cargos y administradores. Al
+iniciar la API también se garantiza de forma idempotente la existencia del rol
 `Administrador`, el permiso `SIGEBI.ADMIN` y su asignación a los usuarios con
 perfil administrativo. Esto evita que una base existente quede sin acceso a la
 administración de roles y permisos.
+
+## Recuperación de contraseña por SMTP
+
+El portal genera un enlace protegido de un solo uso, válido durante 30 minutos,
+y lo envía mediante el servicio SMTP implementado en Infrastructure. Las
+credenciales deben configurarse únicamente mediante User Secrets.
+
+Ejemplo para Gmail:
+
+```powershell
+dotnet user-secrets set "Smtp:Enabled" "true" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:Host" "smtp.gmail.com" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:Port" "587" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:Security" "StartTls" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:Username" "correo@gmail.com" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:Password" "CONTRASENA-DE-APLICACION" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:FromEmail" "correo@gmail.com" --project SIGEBI.Web
+dotnet user-secrets set "Smtp:FromName" "SIGEBI Nueva Era" --project SIGEBI.Web
+```
+
+En Gmail se debe utilizar una contraseña de aplicación, no la contraseña normal
+de la cuenta. Si SMTP permanece deshabilitado, Development conserva un enlace
+local para probar el resto del flujo.
 
 ## Verificación
 

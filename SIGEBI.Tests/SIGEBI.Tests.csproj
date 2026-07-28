@@ -23,5 +23,6 @@
     <ProjectReference Include="..\SIGEBI.Application\SIGEBI.Application.csproj" />
     <ProjectReference Include="..\SIGEBI.Persistence\SIGEBI.Persistence.csproj" />
     <ProjectReference Include="..\SIGEBI.API\SIGEBI.API.csproj" />
+    <ProjectReference Include="..\SIGEBI.Web\SIGEBI.Web.csproj" />
   </ItemGroup>
 </Project>
