@@ -7,9 +7,11 @@ usuarios y una aplicación Windows Forms para el personal bibliotecario.
 
 1. Configure `ConnectionStrings:Supabase` en User Secrets del proyecto
    `SIGEBI.API`.
-2. Ejecute `dotnet run --project SIGEBI.API --launch-profile https`.
-3. Ejecute `dotnet run --project SIGEBI.Web --launch-profile https`.
-4. Abra `https://localhost:7030`.
+2. Configure `Jwt:Key` con una clave privada de al menos 32 caracteres. El
+   emisor y la audiencia locales ya están definidos en `appsettings.json`.
+3. Ejecute `dotnet run --project SIGEBI.API --launch-profile https`.
+4. Ejecute `dotnet run --project SIGEBI.Web --launch-profile https`.
+5. Abra `https://localhost:7030`.
 
 El portal web consume la URL configurada en `SIGEBI.Web/appsettings*.json`.
 Los orígenes permitidos se configuran en `SIGEBI.API/appsettings*.json`.
@@ -23,7 +25,19 @@ se generan en `SIGEBI.Persistence/Migrations`. Para aplicar cambios:
 dotnet ef database update --project SIGEBI.Persistence --startup-project SIGEBI.API
 ```
 
+También se incluye el script idempotente
+`SIGEBI.Persistence/Migrations/Scripts/SIGEBI_PostgreSQL_Upgrade.sql` para
+entornos donde las migraciones se aplican mediante una consola administrativa.
+
 La carga de datos de demostración está deshabilitada por defecto. Puede
 activarse con `Database:SeedDevelopmentData=true` en un entorno de desarrollo
 vacío. Las credenciales de demostración son `admin@sigebi.local / Admin123` y
 `usuario@sigebi.local / Usuario123`.
+
+## Verificación
+
+```powershell
+dotnet build SIGEBI.slnx -c Release
+dotnet test SIGEBI.Tests/SIGEBI.Tests.csproj -c Release
+dotnet ef migrations has-pending-model-changes --project SIGEBI.Persistence --startup-project SIGEBI.API
+```

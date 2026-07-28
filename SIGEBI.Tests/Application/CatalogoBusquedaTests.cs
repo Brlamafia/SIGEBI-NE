@@ -8,6 +8,7 @@ using SIGEBI.Application.Services.Catalogo;
 using SIGEBI.Domain.Entities.Catalogo;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Interfaces.Repositories;
+using SIGEBI.Domain.Interfaces;
 
 namespace SIGEBI.Tests.Application;
 
@@ -46,10 +47,11 @@ public class CatalogoBusquedaTests
             });
         var service = new LibroService(
             repository.Object,
-            Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<IPrestamoRepository>(),
             inventario.Object,
             Mock.Of<IAuditoriaWriter>(),
             Mock.Of<IUsuarioActual>(),
+            Mock.Of<IUnitOfWork>(),
             mapper.Object);
 
         var resultado = (await service.BuscarLibrosAsync(
