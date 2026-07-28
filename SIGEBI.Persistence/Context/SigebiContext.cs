@@ -5,6 +5,7 @@ using SIGEBI.Domain.Entities.Notificaciones;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Enums;
+using SIGEBI.Persistence.Models;
 
 namespace SIGEBI.Persistence.Context;
 
@@ -27,6 +28,7 @@ public class SigebiContext : DbContext
     public DbSet<Cargo> Cargos => Set<Cargo>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<Permiso> Permisos => Set<Permiso>();
+    public DbSet<PrestamoEjemplarRelacion> PrestamoEjemplares => Set<PrestamoEjemplarRelacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +44,7 @@ public class SigebiContext : DbContext
         ConfigurarEmpleado(modelBuilder);
         ConfigurarAdministrador(modelBuilder);
         ConfigurarPrestamo(modelBuilder);
+        ConfigurarPrestamoEjemplar(modelBuilder);
         ConfigurarMulta(modelBuilder);
         ConfigurarInventario(modelBuilder);
         ConfigurarEjemplar(modelBuilder);
@@ -251,7 +254,7 @@ public class SigebiContext : DbContext
         prestamo.Property(p => p.Id).HasColumnName("id_prestamo");
         prestamo.Property(p => p.UsuarioId).HasColumnName("id_usuario");
         prestamo.Property(p => p.LibroId).HasColumnName("id_libro");
-        prestamo.Property(p => p.EjemplarId).HasColumnName("id_ejemplar");
+        prestamo.Ignore(p => p.EjemplarId);
         prestamo.Property(p => p.SolicitudPrestamoId).HasColumnName("id_solicitud");
         prestamo.Property(p => p.EmpleadoPrestamoId).HasColumnName("id_empleado_prestamo");
         prestamo.Property(p => p.EmpleadoDevolucionId).HasColumnName("id_empleado_devolucion");
@@ -259,15 +262,32 @@ public class SigebiContext : DbContext
         prestamo.Property(p => p.FechaEsperadaDevolucion).HasColumnName("fecha_devolucion_esperada");
         prestamo.Property(p => p.FechaRealDevolucion).HasColumnName("fecha_devolucion");
         prestamo.Property(p => p.Estado).HasColumnName("estado");
-        prestamo.Property(p => p.FechaCreacion).HasColumnName("fecha_registro");
+        prestamo.Ignore(p => p.FechaCreacion);
         prestamo.Property(p => p.Estado).HasConversion<string>().HasMaxLength(50);
         prestamo.HasIndex(p => p.SolicitudPrestamoId).IsUnique();
         prestamo.HasOne<Usuario>().WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<Libro>().WithMany().HasForeignKey(p => p.LibroId).OnDelete(DeleteBehavior.Restrict);
-        prestamo.HasOne<Ejemplar>().WithMany().HasForeignKey(p => p.EjemplarId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<SolicitudPrestamo>().WithOne().HasForeignKey<Prestamo>(p => p.SolicitudPrestamoId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<Empleado>().WithMany().HasForeignKey(p => p.EmpleadoPrestamoId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<Empleado>().WithMany().HasForeignKey(p => p.EmpleadoDevolucionId).OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigurarPrestamoEjemplar(ModelBuilder modelBuilder)
+    {
+        var relacion = modelBuilder.Entity<PrestamoEjemplarRelacion>();
+        relacion.ToTable("PrestamoEjemplar");
+        relacion.HasKey(item => new { item.PrestamoId, item.EjemplarId });
+        relacion.Property(item => item.PrestamoId).HasColumnName("id_prestamo");
+        relacion.Property(item => item.EjemplarId).HasColumnName("id_ejemplar");
+        relacion.Property(item => item.FechaAsignacion).HasColumnName("fecha_asignacion");
+        relacion.HasOne<Prestamo>()
+            .WithMany()
+            .HasForeignKey(item => item.PrestamoId)
+            .OnDelete(DeleteBehavior.Cascade);
+        relacion.HasOne<Ejemplar>()
+            .WithMany()
+            .HasForeignKey(item => item.EjemplarId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigurarMulta(ModelBuilder modelBuilder)

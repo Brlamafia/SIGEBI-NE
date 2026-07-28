@@ -19,6 +19,9 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<bool> TienePendientesPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);
+        Task<decimal> ObtenerMontoPendientePorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
         Task AgregarAsync(Multa multa, CancellationToken cancellationToken = default);
         void Actualizar(Multa multa);
     }

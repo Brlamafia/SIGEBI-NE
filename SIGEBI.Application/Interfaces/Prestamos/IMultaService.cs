@@ -19,6 +19,9 @@ namespace SIGEBI.Application.Interfaces.Prestamos
         Task<bool> TienePendientesPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);
+        Task<decimal> ObtenerMontoPendientePorUsuarioAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
 
         Task MarcarComoPagadaAsync(
             PagarMultaDto dto,

@@ -5,105 +5,193 @@ using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Persistence.Base;
 using SIGEBI.Persistence.Context;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using SIGEBI.Persistence.Models;
 
-namespace SIGEBI.Persistence.Repositories.Prestamos
+namespace SIGEBI.Persistence.Repositories.Prestamos;
+
+public class PrestamoRepository(
+    SigebiContext context,
+    ILogger<PrestamoRepository> logger)
+    : MutableRepository<Prestamo>(context, logger), IPrestamoRepository
 {
-    public class PrestamoRepository : MutableRepository<Prestamo>, IPrestamoRepository
+    public async Task<Prestamo?> ObtenerPorIdAsync(
+        int id,
+        CancellationToken ct = default)
     {
-        public PrestamoRepository(SigebiContext context, ILogger<PrestamoRepository> logger)
-            : base(context, logger) { }
-
-        public async Task<Prestamo?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
+        try
         {
-            try { _logger.LogInformation("Consultando préstamo {PrestamoId}", id); return await _dbSet.FindAsync(new object[] { id }, ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al obtener préstamo ID {Id}", id); throw; }
+            _logger.LogInformation("Consultando préstamo {PrestamoId}", id);
+            var prestamo = await _dbSet.FindAsync([id], ct);
+            if (prestamo is not null)
+                await CargarEjemplarAsync(prestamo, ct);
+            return prestamo;
         }
-
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
+        catch (Exception exception)
         {
-            try { _logger.LogInformation("Consultando préstamos del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(p => p.UsuarioId == usuarioId).OrderByDescending(p => p.FechaPrestamo).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al listar préstamos usuario {Id}", usuarioId); throw; }
+            _logger.LogError(exception, "Error al obtener préstamo ID {Id}", id);
+            throw;
         }
+    }
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorLibroAsync(int libroId, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando préstamos del libro {LibroId}", libroId); return await _dbSet.Where(p => p.LibroId == libroId).OrderByDescending(p => p.FechaPrestamo).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al listar préstamos del libro {LibroId}", libroId); throw; }
-        }
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerPorUsuarioAsync(
+        int usuarioId,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item => item.UsuarioId == usuarioId)
+                .OrderByDescending(item => item.FechaPrestamo),
+            ct);
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorEjemplarAsync(int ejemplarId, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando préstamos del ejemplar {EjemplarId}", ejemplarId); return await _dbSet.Where(p => p.EjemplarId == ejemplarId).OrderByDescending(p => p.FechaPrestamo).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al listar préstamos del ejemplar {EjemplarId}", ejemplarId); throw; }
-        }
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerPorLibroAsync(
+        int libroId,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item => item.LibroId == libroId)
+                .OrderByDescending(item => item.FechaPrestamo),
+            ct);
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerDevolucionesPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando devoluciones del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(p => p.UsuarioId == usuarioId && p.FechaRealDevolucion != null).OrderByDescending(p => p.FechaRealDevolucion).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al listar devoluciones del usuario {UsuarioId}", usuarioId); throw; }
-        }
+    public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorEjemplarAsync(
+        int ejemplarId,
+        CancellationToken ct = default)
+    {
+        var ids = await _context.PrestamoEjemplares
+            .Where(item => item.EjemplarId == ejemplarId)
+            .Select(item => item.PrestamoId)
+            .ToArrayAsync(ct);
+        return await ConsultarAsync(
+            _dbSet.Where(item => ids.Contains(item.Id))
+                .OrderByDescending(item => item.FechaPrestamo),
+            ct);
+    }
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerDevolucionesPorLibroAsync(int libroId, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando devoluciones del libro {LibroId}", libroId); return await _dbSet.Where(p => p.LibroId == libroId && p.FechaRealDevolucion != null).OrderByDescending(p => p.FechaRealDevolucion).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al listar devoluciones del libro {LibroId}", libroId); throw; }
-        }
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerDevolucionesPorUsuarioAsync(
+        int usuarioId,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item =>
+                    item.UsuarioId == usuarioId &&
+                    item.FechaRealDevolucion != null)
+                .OrderByDescending(item => item.FechaRealDevolucion),
+            ct);
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorEstadoAsync(EstadoPrestamo estado, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando préstamos en estado {Estado}", estado); return await _dbSet.Where(p => p.Estado == estado).OrderByDescending(p => p.FechaPrestamo).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error al listar préstamos estado {Estado}", estado); throw; }
-        }
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerDevolucionesPorLibroAsync(
+        int libroId,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item =>
+                    item.LibroId == libroId &&
+                    item.FechaRealDevolucion != null)
+                .OrderByDescending(item => item.FechaRealDevolucion),
+            ct);
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorRangoAsync(DateTime desde, DateTime hasta, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando préstamos entre {Desde} y {Hasta}", desde, hasta); return await _dbSet.Where(p => p.FechaPrestamo >= desde && p.FechaPrestamo <= hasta).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error en rango fechas"); throw; }
-        }
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerPorEstadoAsync(
+        EstadoPrestamo estado,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item => item.Estado == estado)
+                .OrderByDescending(item => item.FechaPrestamo),
+            ct);
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(DateTime fechaReferencia, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Consultando préstamos vencidos a {Fecha}", fechaReferencia); return await _dbSet.Where(p => p.Estado == EstadoPrestamo.Activo && p.FechaEsperadaDevolucion < fechaReferencia).ToListAsync(ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error obteniendo vencidos"); throw; }
-        }
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerPorRangoAsync(
+        DateTime desde,
+        DateTime hasta,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item =>
+                item.FechaPrestamo >= desde &&
+                item.FechaPrestamo <= hasta),
+            ct);
 
-        public async Task<IReadOnlyCollection<Prestamo>> ObtenerActivosProximosAVencerAsync(
-            DateTime desde,
-            DateTime hasta,
-            CancellationToken ct = default)
-        {
-            try
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerActivosVencidosAsync(
+        DateTime fechaReferencia,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item =>
+                item.Estado == EstadoPrestamo.Activo &&
+                item.FechaEsperadaDevolucion < fechaReferencia),
+            ct);
+
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerActivosProximosAVencerAsync(
+        DateTime desde,
+        DateTime hasta,
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            _dbSet.Where(item =>
+                    item.Estado == EstadoPrestamo.Activo &&
+                    item.FechaEsperadaDevolucion >= desde &&
+                    item.FechaEsperadaDevolucion <= hasta)
+                .OrderBy(item => item.FechaEsperadaDevolucion),
+            ct);
+
+    public Task<bool> TieneVencidosPorUsuarioAsync(
+        int usuarioId,
+        CancellationToken ct = default) =>
+        _dbSet.AnyAsync(
+            item =>
+                item.UsuarioId == usuarioId &&
+                (item.Estado == EstadoPrestamo.Vencido ||
+                 item.Estado == EstadoPrestamo.Activo &&
+                 item.FechaEsperadaDevolucion < DateTime.UtcNow),
+            ct);
+
+    public Task<int> ContarActivosPorUsuarioAsync(
+        int usuarioId,
+        CancellationToken ct = default) =>
+        _dbSet.CountAsync(
+            item =>
+                item.UsuarioId == usuarioId &&
+                item.Estado == EstadoPrestamo.Activo,
+            ct);
+
+    public override async Task AgregarAsync(
+        Prestamo prestamo,
+        CancellationToken ct = default)
+    {
+        var ejemplarId = prestamo.EjemplarId;
+        await base.AgregarAsync(prestamo, ct);
+        await _context.PrestamoEjemplares.AddAsync(
+            new PrestamoEjemplarRelacion
             {
-                _logger.LogInformation("Consultando préstamos próximos a vencer entre {Desde} y {Hasta}", desde, hasta);
-                return await _dbSet
-                    .Where(p => p.Estado == EstadoPrestamo.Activo &&
-                                p.FechaEsperadaDevolucion >= desde &&
-                                p.FechaEsperadaDevolucion <= hasta)
-                    .OrderBy(p => p.FechaEsperadaDevolucion)
-                    .ToListAsync(ct);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error obteniendo préstamos próximos a vencer");
-                throw;
-            }
+                PrestamoId = prestamo.Id,
+                EjemplarId = ejemplarId,
+                FechaAsignacion = DateTime.UtcNow
+            },
+            ct);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    private async Task<IReadOnlyCollection<Prestamo>> ConsultarAsync(
+        IQueryable<Prestamo> consulta,
+        CancellationToken ct)
+    {
+        var prestamos = await consulta.ToListAsync(ct);
+        if (prestamos.Count == 0)
+            return prestamos;
+
+        var ids = prestamos.Select(item => item.Id).ToArray();
+        var relaciones = await _context.PrestamoEjemplares
+            .AsNoTracking()
+            .Where(item => ids.Contains(item.PrestamoId))
+            .ToListAsync(ct);
+        var ejemplares = relaciones
+            .GroupBy(item => item.PrestamoId)
+            .ToDictionary(group => group.Key, group => group.First().EjemplarId);
+        foreach (var prestamo in prestamos)
+        {
+            if (ejemplares.TryGetValue(prestamo.Id, out var ejemplarId))
+                prestamo.CargarEjemplarPersistido(ejemplarId);
         }
 
-        public async Task<bool> TieneVencidosPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Verificando préstamos vencidos del usuario {UsuarioId}", usuarioId); return await _dbSet.AnyAsync(p => p.UsuarioId == usuarioId && (p.Estado == EstadoPrestamo.Vencido || (p.Estado == EstadoPrestamo.Activo && p.FechaEsperadaDevolucion < DateTime.UtcNow)), ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error verificando vencidos usuario {Id}", usuarioId); throw; }
-        }
+        return prestamos;
+    }
 
-        public async Task<int> ContarActivosPorUsuarioAsync(int usuarioId, CancellationToken ct = default)
-        {
-            try { _logger.LogInformation("Contando préstamos activos del usuario {UsuarioId}", usuarioId); return await _dbSet.CountAsync(p => p.UsuarioId == usuarioId && p.Estado == EstadoPrestamo.Activo, ct); }
-            catch (Exception ex) { _logger.LogError(ex, "Error contando activos usuario {Id}", usuarioId); throw; }
-        }
+    private async Task CargarEjemplarAsync(
+        Prestamo prestamo,
+        CancellationToken ct)
+    {
+        var relacion = await _context.PrestamoEjemplares
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.PrestamoId == prestamo.Id, ct);
+        if (relacion is not null)
+            prestamo.CargarEjemplarPersistido(relacion.EjemplarId);
     }
 }
