@@ -7,9 +7,6 @@ namespace SIGEBI.Application.Validations
     {
         public SaveSolicitudPrestamoValidator()
         {
-            RuleFor(x => x.UsuarioId)
-                .GreaterThan(0).WithMessage("Se requiere un identificador de usuario válido.");
-
             RuleFor(x => x.LibroId)
                 .GreaterThan(0).WithMessage("Se requiere un identificador de libro válido.");
         }

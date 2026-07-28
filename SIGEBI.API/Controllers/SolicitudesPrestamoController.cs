@@ -32,6 +32,11 @@ namespace SIGEBI.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id) => Ok(await _solicitudService.GetByIdAsync(id));
 
+        [Authorize(Roles = "Administrador,Bibliotecario")]
+        [HttpGet("estado/{estado}")]
+        public async Task<IActionResult> GetByEstado(string estado) =>
+            Ok(await _solicitudService.ObtenerPorEstadoAsync(estado));
+
         [HttpGet("mias")]
         public async Task<IActionResult> GetMias() =>
             Ok(await _solicitudService.ObtenerPorUsuarioAsync(_usuarioActual.UsuarioId));

@@ -62,6 +62,9 @@ public sealed class ZeroMigrationsArchitectureTests
             "LoginForm.cs"));
         Assert.DoesNotContain("admin@sigebi.local", login);
         Assert.DoesNotContain("Admin123", login);
+        Assert.DoesNotContain("URL de la API", login);
+        Assert.DoesNotContain("usuario personal", login.ToLowerInvariant());
+        Assert.Contains("credenciales institucionales de empleado", login);
 
         var client = File.ReadAllText(Path.Combine(
             RepositoryRoot,
@@ -69,6 +72,13 @@ public sealed class ZeroMigrationsArchitectureTests
             "ApiClient.cs"));
         Assert.Contains("AuthenticationHeaderValue(\"Bearer\"", client);
         Assert.Contains("DesktopSessionExpiredException", client);
+
+        var main = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Desktop",
+            "MainForm.cs"));
+        Assert.Contains("\"numeroEjemplares\"", main);
+        Assert.Contains("_api.PostAsync(\"api/Libros\"", main);
     }
 
     [Fact]

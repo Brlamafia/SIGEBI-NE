@@ -34,6 +34,13 @@ public sealed class ApiClient : IDisposable
         if (!Uri.TryCreate(baseUrl.TrimEnd('/') + "/", UriKind.Absolute, out var uri) ||
             uri.Scheme is not ("http" or "https"))
             throw new ArgumentException("La URL de la API no es válida.");
+        if (_httpClient.BaseAddress is not null)
+        {
+            if (_httpClient.BaseAddress == uri)
+                return;
+            throw new InvalidOperationException(
+                "La dirección de la API ya fue configurada para esta sesión.");
+        }
         _httpClient.BaseAddress = uri;
     }
 
@@ -123,7 +130,22 @@ public sealed class ApiClient : IDisposable
         try
         {
             using var problem = JsonDocument.Parse(detail);
-            if (problem.RootElement.TryGetProperty("detail", out var property))
+            if (problem.RootElement.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Object)
+            {
+                var messages = errors
+                    .EnumerateObject()
+                    .SelectMany(item => item.Value.ValueKind == JsonValueKind.Array
+                        ? item.Value.EnumerateArray()
+                            .Select(value => value.GetString())
+                        : [])
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (messages.Length > 0)
+                    detail = string.Join(Environment.NewLine, messages);
+            }
+            else if (problem.RootElement.TryGetProperty("detail", out var property))
                 detail = property.GetString() ?? detail;
             else if (problem.RootElement.TryGetProperty("title", out property))
                 detail = property.GetString() ?? detail;
@@ -140,8 +162,32 @@ public sealed class ApiClient : IDisposable
                     ? "La sesión expiró o no es válida."
                     : detail);
 
-        throw new HttpRequestException(
-            $"La API respondió {(int)response.StatusCode} ({response.ReasonPhrase}). {detail}");
+        var message = response.StatusCode switch
+        {
+            HttpStatusCode.BadRequest =>
+                $"Revisa los datos enviados.{AgregarDetalle(detail)}",
+            HttpStatusCode.Forbidden =>
+                "Tu cuenta no tiene permiso para realizar esta acción.",
+            HttpStatusCode.NotFound =>
+                "La información solicitada ya no existe o fue modificada.",
+            HttpStatusCode.Conflict =>
+                $"No se pudo guardar porque existe un conflicto con la información actual.{AgregarDetalle(detail)}",
+            HttpStatusCode.InternalServerError =>
+                "El servidor encontró un problema al procesar la solicitud. " +
+                "Inténtalo nuevamente; si continúa, revisa el registro de la API.",
+            _ =>
+                $"No se pudo completar la solicitud.{AgregarDetalle(detail)}"
+        };
+        throw new HttpRequestException(message);
+    }
+
+    private static string AgregarDetalle(string detail)
+    {
+        if (string.IsNullOrWhiteSpace(detail) ||
+            detail.Equals("One or more validation errors occurred.",
+                StringComparison.OrdinalIgnoreCase))
+            return string.Empty;
+        return $"{Environment.NewLine}{Environment.NewLine}{detail.Trim()}";
     }
 
     public void Dispose()

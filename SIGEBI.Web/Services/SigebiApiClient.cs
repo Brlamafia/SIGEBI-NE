@@ -214,7 +214,29 @@ public sealed class SigebiApiClient(
                 if (root.ValueKind == JsonValueKind.Object &&
                     root.TryGetProperty(property, out var value) &&
                     value.ValueKind == JsonValueKind.String)
-                    return value.GetString();
+                {
+                    var simpleMessage = value.GetString();
+                    if (property != "title" ||
+                        !root.TryGetProperty("errors", out _))
+                        return simpleMessage;
+                }
+            }
+            if (root.ValueKind == JsonValueKind.Object &&
+                root.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Object)
+            {
+                var validationMessages = errors
+                    .EnumerateObject()
+                    .SelectMany(error => error.Value.ValueKind == JsonValueKind.Array
+                        ? error.Value.EnumerateArray()
+                            .Where(item => item.ValueKind == JsonValueKind.String)
+                            .Select(item => item.GetString())
+                        : [])
+                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                    .Distinct()
+                    .ToArray();
+                if (validationMessages.Length > 0)
+                    return string.Join(" ", validationMessages);
             }
             return root.ValueKind == JsonValueKind.String ? root.GetString() : raw;
         }

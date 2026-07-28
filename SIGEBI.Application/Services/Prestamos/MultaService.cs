@@ -121,7 +121,10 @@ namespace SIGEBI.Application.Services.Prestamos
                         ?? throw new NotFoundException(nameof(Multa), dto.MultaId);
                     var empleado = await ResolverEmpleadoAsync(dto.EmpleadoResolucionId, c);
 
-                    multa.Resolver(empleado.Id, dto.FechaResolucion, dto.Observacion);
+                    multa.Resolver(
+                        empleado.Id,
+                        DateTimeNormalizer.ToUtc(dto.FechaResolucion),
+                        dto.Observacion);
                     _multas.Actualizar(multa);
                     await _auditoria.RegistrarAsync(empleado.UsuarioId, ModuloAuditoria.Multas, AccionAuditoria.Resolver, $"Resolución de la multa {multa.Id}.", cancellationToken: c);
                     await _notificaciones.EnviarNotificacionAsync(

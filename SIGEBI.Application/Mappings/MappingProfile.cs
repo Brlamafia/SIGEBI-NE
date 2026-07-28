@@ -55,7 +55,10 @@ namespace SIGEBI.Application.Mappings
                     src.Estado));
 
             // DTO Pattern: Solicitudes de préstamo viajan como datos planos entre capas.
-            CreateMap<SolicitudPrestamo, SolicitudPrestamoDto>().ReverseMap();
+            CreateMap<SolicitudPrestamo, SolicitudPrestamoDto>()
+                .ForMember(dest => dest.UsuarioNombre, opt => opt.Ignore())
+                .ForMember(dest => dest.LibroTitulo, opt => opt.Ignore());
+            CreateMap<SolicitudPrestamoDto, SolicitudPrestamo>();
             CreateMap<SaveSolicitudPrestamoDto, SolicitudPrestamo>()
                 .ConstructUsing(src => new SolicitudPrestamo(src.UsuarioId, src.LibroId));
 

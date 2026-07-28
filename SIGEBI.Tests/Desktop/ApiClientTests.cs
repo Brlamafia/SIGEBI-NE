@@ -7,6 +7,21 @@ namespace SIGEBI.Tests.Desktop;
 public sealed class ApiClientTests
 {
     [Fact]
+    public async Task ConfigurarBaseUrl_PermiteReutilizarLaMismaUrlDespuesDeUnaSolicitud()
+    {
+        var handler = new StubHandler(_ => JsonResponse("""{"items":[]}"""));
+        using var httpClient = new HttpClient(handler);
+        using var client = new ApiClient(httpClient);
+        client.ConfigurarBaseUrl("https://api.sigebi.test");
+
+        await client.GetAsync("api/prueba");
+
+        var exception = Record.Exception(
+            () => client.ConfigurarBaseUrl("https://api.sigebi.test"));
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public async Task IniciarSesion_ConfiguraTokenYPermiteConsumirLaApi()
     {
         string? authorization = null;

@@ -6,7 +6,9 @@ namespace SIGEBI.Application.Dtos.SolicitudesPrestamo
     {
         public int Id { get; set; }
         public int UsuarioId { get; set; }
+        public string UsuarioNombre { get; set; } = string.Empty;
         public int LibroId { get; set; }
+        public string LibroTitulo { get; set; } = string.Empty;
         public DateTime FechaSolicitud { get; set; }
         public string Estado { get; set; } = string.Empty; // Ej: Pendiente, Aprobada, Rechazada
         public string? MotivoRechazo { get; set; }

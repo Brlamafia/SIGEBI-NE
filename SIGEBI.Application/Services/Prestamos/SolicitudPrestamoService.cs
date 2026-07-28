@@ -69,7 +69,7 @@ namespace SIGEBI.Application.Services.Prestamos
         public async Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorUsuarioAsync(int usuarioId)
         {
             var solicitudes = await _solicitudRepository.ObtenerPorUsuarioAsync(usuarioId);
-            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(solicitudes);
+            return await EnriquecerAsync(solicitudes);
         }
 
         public async Task<IEnumerable<SolicitudPrestamoDto>> ObtenerPorEstadoAsync(string estado)
@@ -81,11 +81,60 @@ namespace SIGEBI.Application.Services.Prestamos
             }
 
             var solicitudes = await _solicitudRepository.ObtenerPorEstadoAsync(parsed);
-            return _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(solicitudes);
+            return await EnriquecerAsync(solicitudes);
+        }
+
+        public override async Task<IEnumerable<SolicitudPrestamoDto>> GetAllAsync()
+        {
+            var solicitudes = await _solicitudRepository.GetAllAsync();
+            return await EnriquecerAsync(solicitudes);
+        }
+
+        public override async Task<SolicitudPrestamoDto> GetByIdAsync(int id)
+        {
+            var solicitud = await _solicitudRepository.GetByIdAsync(id)
+                ?? throw new BusinessRuleException("La solicitud especificada no existe.");
+            return (await EnriquecerAsync([solicitud])).Single();
+        }
+
+        private async Task<IReadOnlyCollection<SolicitudPrestamoDto>> EnriquecerAsync(
+            IEnumerable<SolicitudPrestamo> solicitudes)
+        {
+            var entities = solicitudes.ToArray();
+            var usuarios = new Dictionary<int, Usuario>();
+            var libros = new Dictionary<int, Libro>();
+
+            foreach (var usuarioId in entities.Select(item => item.UsuarioId).Distinct())
+            {
+                var usuario = await _usuarioRepository.GetByIdAsync(usuarioId);
+                if (usuario is not null)
+                    usuarios[usuarioId] = usuario;
+            }
+
+            foreach (var libroId in entities.Select(item => item.LibroId).Distinct())
+            {
+                var libro = await _libroRepository.GetByIdAsync(libroId);
+                if (libro is not null)
+                    libros[libroId] = libro;
+            }
+
+            return entities.Select(entity =>
+            {
+                var dto = _mapper.Map<SolicitudPrestamoDto>(entity);
+                if (usuarios.TryGetValue(entity.UsuarioId, out var usuario))
+                    dto.UsuarioNombre = $"{usuario.Nombre} {usuario.Apellido}".Trim();
+                if (libros.TryGetValue(entity.LibroId, out var libro))
+                    dto.LibroTitulo = libro.Titulo;
+                return dto;
+            }).ToArray();
         }
 
         public async Task<bool> RegistrarSolicitudAsync(SaveSolicitudPrestamoDto dto)
         {
+            if (dto.UsuarioId <= 0)
+                throw new BusinessRuleException(
+                    "No se pudo identificar al usuario autenticado.");
+
             try
             {
                 await _unitOfWork.EjecutarEnTransaccionAsync(async cancellationToken =>

@@ -26,9 +26,11 @@ dotnet user-secrets set "ConnectionStrings:Supabase" "CONEXION-SUPABASE" --proje
 dotnet user-secrets set "Jwt:Key" "CLAVE-ALEATORIA-DE-AL-MENOS-32-CARACTERES" --project SIGEBI.API
 ```
 
-La API usa `https://localhost:7279` y el portal
-`https://localhost:7030`. El portal tiene `Api:BaseUrl` configurado para esa
-dirección.
+La API usa `https://localhost:7279` y `http://localhost:5297`; el portal usa
+`https://localhost:7030`. En Development, la comunicación interna Web → API
+usa `http://localhost:5297` para no depender de la confianza del certificado
+HTTPS local. En producción se debe configurar `Api:BaseUrl` con la dirección
+HTTPS publicada.
 
 Para habilitar Google, configure las credenciales OAuth en Web y la misma clave
 privada de comunicación en ambos proyectos:

@@ -171,7 +171,8 @@ namespace SIGEBI.Application.Services.Prestamos
                         throw new BusinessRuleException(
                             "Solo una solicitud pendiente o aprobada puede convertirse en préstamo.");
                     _solicitudes.Actualizar(solicitud);
-                    prestamoRegistrado = _prestamoDomainService.RegistrarPrestamo(usuario.Id, usuario.Estado == EstadoUsuario.Activo, _multaDomainService.TieneMultasPendientes(await _multas.ObtenerPorUsuarioAsync(usuario.Id, c)), await _prestamos.TieneVencidosPorUsuarioAsync(usuario.Id, c), await _prestamos.ContarActivosPorUsuarioAsync(usuario.Id, c), _politicaPrestamos.ObtenerCondiciones(usuario.TipoUsuario).LimitePrestamos, solicitud, empleado.Id, dto.FechaPrestamo, _politicaPrestamos.CalcularFechaLimite(usuario.TipoUsuario, dto.FechaPrestamo), inventario, ejemplar);
+                    var fechaPrestamo = DateTimeNormalizer.ToUtc(dto.FechaPrestamo);
+                    prestamoRegistrado = _prestamoDomainService.RegistrarPrestamo(usuario.Id, usuario.Estado == EstadoUsuario.Activo, _multaDomainService.TieneMultasPendientes(await _multas.ObtenerPorUsuarioAsync(usuario.Id, c)), await _prestamos.TieneVencidosPorUsuarioAsync(usuario.Id, c), await _prestamos.ContarActivosPorUsuarioAsync(usuario.Id, c), _politicaPrestamos.ObtenerCondiciones(usuario.TipoUsuario).LimitePrestamos, solicitud, empleado.Id, fechaPrestamo, _politicaPrestamos.CalcularFechaLimite(usuario.TipoUsuario, fechaPrestamo), inventario, ejemplar);
                     await _prestamos.AgregarAsync(prestamoRegistrado, c);
                     _inventarios.Actualizar(inventario); _ejemplares.Actualizar(ejemplar);
                     await _auditoria.RegistrarAsync(
@@ -226,7 +227,12 @@ namespace SIGEBI.Application.Services.Prestamos
                     var em = await ResolverEmpleadoAsync(dto.EmpleadoDevolucionId, c);
                     var i = await _inventarios.ObtenerPorLibroIdAsync(p.LibroId, c) ?? throw new BusinessRuleException("Inventario no encontrado.");
                     var e = await _ejemplares.ObtenerPorIdAsync(p.EjemplarId, c) ?? throw new NotFoundException("Ejemplar", p.EjemplarId);
-                    if (_prestamoDomainService.RegistrarDevolucion(p, i, e, em.Id, dto.FechaRealDevolucion))
+                    if (_prestamoDomainService.RegistrarDevolucion(
+                            p,
+                            i,
+                            e,
+                            em.Id,
+                            DateTimeNormalizer.ToUtc(dto.FechaRealDevolucion)))
                         multa = _multaDomainService.GenerarMultaPorRetraso(p, _politicaPrestamos.MontoMultaPorDia, await _multas.ObtenerPorUsuarioAsync(p.UsuarioId, c));
                     _prestamos.Actualizar(p); _inventarios.Actualizar(i); _ejemplares.Actualizar(e);
                     if (multa != null) await _multas.AgregarAsync(multa, c);
@@ -286,8 +292,9 @@ namespace SIGEBI.Application.Services.Prestamos
                     var em = await ResolverEmpleadoAsync(empId, c);
                     var i = await _inventarios.ObtenerPorLibroIdAsync(p.LibroId, c) ?? throw new BusinessRuleException("Inventario no encontrado.");
                     var e = await _ejemplares.ObtenerPorIdAsync(p.EjemplarId, c) ?? throw new NotFoundException("Ejemplar", p.EjemplarId);
-                    if (esPerdida) { _prestamoDomainService.RegistrarPerdida(p, i, e, em.Id, fecha); multa = _multaDomainService.GenerarMultaPorPerdida(p, monto, motivo, await _multas.ObtenerPorUsuarioAsync(p.UsuarioId, c)); }
-                    else { _prestamoDomainService.RegistrarDevolucionConDanio(p, i, e, em.Id, fecha); multa = _multaDomainService.GenerarMultaPorDanio(p, monto, motivo, await _multas.ObtenerPorUsuarioAsync(p.UsuarioId, c)); }
+                    var fechaUtc = DateTimeNormalizer.ToUtc(fecha);
+                    if (esPerdida) { _prestamoDomainService.RegistrarPerdida(p, i, e, em.Id, fechaUtc); multa = _multaDomainService.GenerarMultaPorPerdida(p, monto, motivo, await _multas.ObtenerPorUsuarioAsync(p.UsuarioId, c)); }
+                    else { _prestamoDomainService.RegistrarDevolucionConDanio(p, i, e, em.Id, fechaUtc); multa = _multaDomainService.GenerarMultaPorDanio(p, monto, motivo, await _multas.ObtenerPorUsuarioAsync(p.UsuarioId, c)); }
                     _prestamos.Actualizar(p); _inventarios.Actualizar(i); _ejemplares.Actualizar(e);
                     if (multa != null) await _multas.AgregarAsync(multa, c);
                     await _auditoria.RegistrarAsync(
@@ -344,5 +351,6 @@ namespace SIGEBI.Application.Services.Prestamos
                 ct);
 
         private static EstadoPrestamo ConvertirEstadoPrestamo(string e) => EnumParser.ParseDefined<EstadoPrestamo>(e, "estado");
+
     }
 }
