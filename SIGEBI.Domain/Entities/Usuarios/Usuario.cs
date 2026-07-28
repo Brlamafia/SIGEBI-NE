@@ -14,6 +14,7 @@ namespace SIGEBI.Domain.Entities.Usuarios
         public string Cedula { get; private set; } = string.Empty;
         public string Telefono { get; private set; } = string.Empty;
         public string Email { get; private set; } = string.Empty;
+        public string ContrasenaHash { get; private set; } = string.Empty;
         public TipoUsuario TipoUsuario { get; private set; }
         public EstadoUsuario Estado { get; private set; }
         public IReadOnlyCollection<Rol> Roles => _roles;
@@ -70,6 +71,14 @@ namespace SIGEBI.Domain.Entities.Usuarios
         public void CambiarEstado(EstadoUsuario nuevoEstado)
         {
             Estado = nuevoEstado;
+            MarcarComoModificada();
+        }
+
+        public void EstablecerContrasenaHash(string contrasenaHash)
+        {
+            if (string.IsNullOrWhiteSpace(contrasenaHash))
+                throw new ArgumentException("La contraseña cifrada es obligatoria.", nameof(contrasenaHash));
+            ContrasenaHash = contrasenaHash;
             MarcarComoModificada();
         }
 

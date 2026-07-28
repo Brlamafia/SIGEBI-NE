@@ -16,5 +16,10 @@ namespace SIGEBI.Application.Interfaces.Usuarios
             int usuarioId,
             CancellationToken cancellationToken = default);
         Task<object> ConsultarHistorialCompletoAsync(int usuarioId);
+        Task CambiarPasswordAsync(
+            int usuarioId,
+            string passwordActual,
+            string passwordNueva,
+            CancellationToken cancellationToken = default);
     }
 }

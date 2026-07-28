@@ -9,6 +9,8 @@ using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces.Repositories;
+using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Application.Interfaces.Notificaciones;
 
 namespace SIGEBI.Tests.Application;
 
@@ -51,6 +53,9 @@ public class UsuarioServiceCrudTests
             genericRepository.Object,
             users.Object,
             Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<IPrestamoService>(),
+            Mock.Of<IMultaService>(),
+            Mock.Of<INotificacionService>(),
             mapper.Object,
             NullLogger<UsuarioService>.Instance);
 
@@ -61,6 +66,7 @@ public class UsuarioServiceCrudTests
             Cedula = "TEST-001",
             Telefono = "8090000000",
             Email = "inicial@sigebi.test",
+            Password = "Segura123",
             TipoUsuario = TipoUsuario.Estudiante
         });
         var updated = await service.ActualizarAsync(77, new UpdateUsuarioDto
@@ -107,6 +113,9 @@ public class UsuarioServiceCrudTests
             genericRepository.Object,
             users.Object,
             Mock.Of<IRepository<SolicitudPrestamo>>(),
+            Mock.Of<IPrestamoService>(),
+            Mock.Of<IMultaService>(),
+            Mock.Of<INotificacionService>(),
             Mock.Of<IMapper>(),
             NullLogger<UsuarioService>.Instance);
 

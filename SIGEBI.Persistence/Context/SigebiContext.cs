@@ -63,20 +63,6 @@ public class SigebiContext : DbContext
 
     private void PrepararColumnasObligatoriasLegadas()
     {
-        foreach (var entry in ChangeTracker.Entries<Usuario>()
-                     .Where(e => e.State == EntityState.Added))
-        {
-            entry.Property("ContrasenaHash").CurrentValue =
-                "GESTIONADA_POR_AUTENTICACION";
-        }
-
-        foreach (var entry in ChangeTracker.Entries<Empleado>()
-                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
-        {
-            entry.Property("CargoLegacy").CurrentValue =
-                entry.Entity.Cargo?.Nombre ?? $"Cargo {entry.Entity.CargoId}";
-        }
-
         foreach (var entry in ChangeTracker.Entries<Notificacion>()
                      .Where(e => e.State == EntityState.Added))
         {
@@ -100,7 +86,7 @@ public class SigebiContext : DbContext
         usuario.Property(u => u.Estado).HasColumnName("estado").HasConversion<string>().HasMaxLength(20);
         usuario.Property(u => u.FechaCreacion).HasColumnName("fecha_registro");
         usuario.Ignore(u => u.FechaModificacion);
-        usuario.Property<string>("ContrasenaHash")
+        usuario.Property(u => u.ContrasenaHash)
             .HasColumnName("contrasena_hash")
             .HasMaxLength(255)
             .IsRequired();
@@ -227,21 +213,13 @@ public class SigebiContext : DbContext
     private static void ConfigurarEmpleado(ModelBuilder modelBuilder)
     {
         var empleado = modelBuilder.Entity<Empleado>();
+        empleado.ToTable("Empleados");
         empleado.HasKey(e => e.Id);
         empleado.Ignore(e => e.FechaModificacion);
-        empleado.Property<string>("CargoLegacy").HasMaxLength(100).IsRequired();
-        empleado.ToTable("Empleados", tabla =>
-        {
-            tabla.Property(e => e.Id).HasColumnName("id_empleado");
-            tabla.Property(e => e.UsuarioId).HasColumnName("id_usuario");
-            tabla.Property<string>("CargoLegacy").HasColumnName("cargo");
-        });
-        empleado.SplitToTable("EmpleadoCargo", tabla =>
-        {
-            tabla.Property(e => e.Id).HasColumnName("id_empleado");
-            tabla.Property(e => e.CargoId).HasColumnName("id_cargo");
-            tabla.Property(e => e.FechaCreacion).HasColumnName("fecha_asignacion");
-        });
+        empleado.Property(e => e.Id).HasColumnName("id_empleado");
+        empleado.Property(e => e.UsuarioId).HasColumnName("id_usuario");
+        empleado.Property(e => e.CargoId).HasColumnName("id_cargo");
+        empleado.Property(e => e.FechaCreacion).HasColumnName("fecha_registro");
         empleado.HasIndex(e => e.UsuarioId).IsUnique();
         empleado.HasOne(e => e.Usuario).WithOne().HasForeignKey<Empleado>(e => e.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         empleado.HasOne(e => e.Cargo).WithMany().HasForeignKey(e => e.CargoId).OnDelete(DeleteBehavior.Restrict);
@@ -250,19 +228,13 @@ public class SigebiContext : DbContext
     private static void ConfigurarAdministrador(ModelBuilder modelBuilder)
     {
         var administrador = modelBuilder.Entity<Administrador>();
+        administrador.ToTable("Administradores");
         administrador.HasKey(a => a.Id);
         administrador.Ignore(a => a.FechaModificacion);
-        administrador.ToTable("Administrador", tabla =>
-        {
-            tabla.Property(a => a.Id).HasColumnName("id_administrador");
-            tabla.Property(a => a.UsuarioId).HasColumnName("id_usuario");
-        });
-        administrador.SplitToTable("AdministradorCargo", tabla =>
-        {
-            tabla.Property(a => a.Id).HasColumnName("id_administrador");
-            tabla.Property(a => a.CargoId).HasColumnName("id_cargo");
-            tabla.Property(a => a.FechaCreacion).HasColumnName("fecha_asignacion");
-        });
+        administrador.Property(a => a.Id).HasColumnName("id_administrador");
+        administrador.Property(a => a.UsuarioId).HasColumnName("id_usuario");
+        administrador.Property(a => a.CargoId).HasColumnName("id_cargo");
+        administrador.Property(a => a.FechaCreacion).HasColumnName("fecha_registro");
         administrador.HasIndex(a => a.UsuarioId).IsUnique();
         administrador.HasOne(a => a.Usuario).WithOne().HasForeignKey<Administrador>(a => a.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         administrador.HasOne(a => a.Cargo).WithMany().HasForeignKey(a => a.CargoId).OnDelete(DeleteBehavior.Restrict);
@@ -271,28 +243,22 @@ public class SigebiContext : DbContext
     private static void ConfigurarPrestamo(ModelBuilder modelBuilder)
     {
         var prestamo = modelBuilder.Entity<Prestamo>();
+        prestamo.ToTable("Prestamos");
         prestamo.HasKey(p => p.Id);
         prestamo.Ignore(p => p.FechaModificacion);
-        prestamo.ToTable("Prestamos", tabla =>
-        {
-            tabla.Property(p => p.Id).HasColumnName("id_prestamo");
-            tabla.Property(p => p.UsuarioId).HasColumnName("id_usuario");
-            tabla.Property(p => p.LibroId).HasColumnName("id_libro");
-            tabla.Property(p => p.SolicitudPrestamoId).HasColumnName("id_solicitud");
-            tabla.Property(p => p.EmpleadoPrestamoId).HasColumnName("id_empleado_prestamo");
-            tabla.Property(p => p.EmpleadoDevolucionId).HasColumnName("id_empleado_devolucion");
-            tabla.Property(p => p.FechaPrestamo).HasColumnName("fecha_prestamo");
-            tabla.Property(p => p.FechaEsperadaDevolucion).HasColumnName("fecha_devolucion_esperada");
-            tabla.Property(p => p.FechaRealDevolucion).HasColumnName("fecha_devolucion");
-            tabla.Property(p => p.Estado).HasColumnName("estado");
-        });
+        prestamo.Property(p => p.Id).HasColumnName("id_prestamo");
+        prestamo.Property(p => p.UsuarioId).HasColumnName("id_usuario");
+        prestamo.Property(p => p.LibroId).HasColumnName("id_libro");
+        prestamo.Property(p => p.EjemplarId).HasColumnName("id_ejemplar");
+        prestamo.Property(p => p.SolicitudPrestamoId).HasColumnName("id_solicitud");
+        prestamo.Property(p => p.EmpleadoPrestamoId).HasColumnName("id_empleado_prestamo");
+        prestamo.Property(p => p.EmpleadoDevolucionId).HasColumnName("id_empleado_devolucion");
+        prestamo.Property(p => p.FechaPrestamo).HasColumnName("fecha_prestamo");
+        prestamo.Property(p => p.FechaEsperadaDevolucion).HasColumnName("fecha_devolucion_esperada");
+        prestamo.Property(p => p.FechaRealDevolucion).HasColumnName("fecha_devolucion");
+        prestamo.Property(p => p.Estado).HasColumnName("estado");
+        prestamo.Property(p => p.FechaCreacion).HasColumnName("fecha_registro");
         prestamo.Property(p => p.Estado).HasConversion<string>().HasMaxLength(50);
-        prestamo.SplitToTable("PrestamoEjemplar", tabla =>
-        {
-            tabla.Property(p => p.Id).HasColumnName("id_prestamo");
-            tabla.Property(p => p.EjemplarId).HasColumnName("id_ejemplar");
-            tabla.Property(p => p.FechaCreacion).HasColumnName("fecha_asignacion");
-        });
         prestamo.HasIndex(p => p.SolicitudPrestamoId).IsUnique();
         prestamo.HasOne<Usuario>().WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<Libro>().WithMany().HasForeignKey(p => p.LibroId).OnDelete(DeleteBehavior.Restrict);

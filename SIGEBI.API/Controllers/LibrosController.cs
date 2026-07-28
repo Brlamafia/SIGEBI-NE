@@ -19,9 +19,9 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
         {
-            var libros = await _libroService.GetAllAsync();
+            var libros = await _libroService.BuscarLibrosAsync(cancellationToken: cancellationToken);
             return Ok(libros);
         }
 
@@ -33,11 +33,18 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet("buscar")]
-        public async Task<IActionResult> BuscarLibros([FromQuery] string termino)
+        public async Task<IActionResult> BuscarLibros(
+            [FromQuery] string? termino,
+            [FromQuery] string? genero,
+            [FromQuery] string? editorial,
+            [FromQuery] bool? disponible,
+            CancellationToken cancellationToken)
         {
-            return Ok(await _libroService.BuscarLibrosAsync(termino));
+            return Ok(await _libroService.BuscarLibrosAsync(
+                termino, genero, editorial, disponible, cancellationToken));
         }
 
+        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] SaveLibroDto dto)
         {
@@ -45,6 +52,7 @@ namespace SIGEBI.API.Controllers
             return StatusCode(201, result);
         }
 
+        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Put(int id, [FromBody] UpdateLibroDto dto)
         {
@@ -52,6 +60,7 @@ namespace SIGEBI.API.Controllers
             return NoContent();
         }
 
+        [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

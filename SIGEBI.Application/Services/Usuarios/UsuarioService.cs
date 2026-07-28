@@ -8,6 +8,9 @@ using SIGEBI.Application.Interfaces.Usuarios;
 using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Interfaces.Repositories;
+using SIGEBI.Application.Security;
+using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Application.Interfaces.Notificaciones;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,11 +24,17 @@ namespace SIGEBI.Application.Services.Usuarios
         private readonly IUsuarioRepository _usuarios;
         private readonly IRepository<SolicitudPrestamo> _solicitudesRepository;
         private readonly ILogger<UsuarioService> _logger; // B.R: Logger
+        private readonly IPrestamoService _prestamos;
+        private readonly IMultaService _multas;
+        private readonly INotificacionService _notificaciones;
 
         public UsuarioService(
             IRepository<Usuario> repository,
             IUsuarioRepository usuarios,
             IRepository<SolicitudPrestamo> solicitudesRepository,
+            IPrestamoService prestamos,
+            IMultaService multas,
+            INotificacionService notificaciones,
             IMapper mapper,
             ILogger<UsuarioService> logger) // B.R: Inyección
             : base(repository, mapper)
@@ -33,6 +42,9 @@ namespace SIGEBI.Application.Services.Usuarios
             _usuarioRepository = repository;
             _usuarios = usuarios;
             _solicitudesRepository = solicitudesRepository;
+            _prestamos = prestamos;
+            _multas = multas;
+            _notificaciones = notificaciones;
             _logger = logger;
         }
 
@@ -50,6 +62,10 @@ namespace SIGEBI.Application.Services.Usuarios
             ArgumentNullException.ThrowIfNull(dto);
             await ValidarUnicidadAsync(dto.Email, dto.Cedula, null, cancellationToken);
             var entity = _mapper.Map<Usuario>(dto);
+            if (!string.IsNullOrWhiteSpace(dto.Password))
+                entity.EstablecerContrasenaHash(PasswordHasher.Hash(dto.Password));
+            else
+                throw new BusinessRuleException("Debe asignar una contraseña inicial al usuario.");
 
             await _usuarios.AgregarAsync(entity, cancellationToken);
             _logger.LogInformation("Usuario {UsuarioId} creado correctamente.", entity.Id);
@@ -138,14 +154,21 @@ namespace SIGEBI.Application.Services.Usuarios
                 }
 
                 var todasLasSolicitudes = await _solicitudesRepository.GetAllAsync();
-                var misPrestamos = todasLasSolicitudes.Where(s => s.UsuarioId == usuarioId).ToList();
+                var solicitudes = todasLasSolicitudes.Where(s => s.UsuarioId == usuarioId).ToList();
+                var prestamos = await _prestamos.ObtenerPorUsuarioAsync(usuarioId);
+                var multas = await _multas.ObtenerPorUsuarioAsync(usuarioId);
+                var notificaciones = await _notificaciones.ObtenerPorUsuarioAsync(usuarioId);
 
                 return new
                 {
                     Usuario = _mapper.Map<UsuarioDto>(usuario),
-                    TotalPrestamosActivos = misPrestamos.Count(s => s.Estado.ToString() == "Aprobada"),
-                    TotalSolicitudes = misPrestamos.Count,
-                    Historial = _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(misPrestamos)
+                    TotalPrestamosActivos = prestamos.Count(p =>
+                        p.Estado is "Activo" or "Vencido"),
+                    TotalSolicitudes = solicitudes.Count,
+                    Solicitudes = _mapper.Map<IEnumerable<SolicitudPrestamoDto>>(solicitudes),
+                    Prestamos = prestamos,
+                    Multas = multas,
+                    Notificaciones = notificaciones
                 };
             }
             catch (Exception ex) when (ex is not BusinessRuleException)
@@ -153,6 +176,20 @@ namespace SIGEBI.Application.Services.Usuarios
                 _logger.LogError(ex, "Error crítico consultando historial del usuario {Id}", usuarioId);
                 throw;
             }
+        }
+
+        public async Task CambiarPasswordAsync(
+            int usuarioId,
+            string passwordActual,
+            string passwordNueva,
+            CancellationToken cancellationToken = default)
+        {
+            var usuario = await _usuarios.ObtenerPorIdAsync(usuarioId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Usuario), usuarioId);
+            if (!PasswordHasher.Verify(passwordActual, usuario.ContrasenaHash))
+                throw new BusinessRuleException("La contraseña actual no es correcta.");
+            usuario.EstablecerContrasenaHash(PasswordHasher.Hash(passwordNueva));
+            await _usuarioRepository.ActualizarAsync(usuario);
         }
     }
 }

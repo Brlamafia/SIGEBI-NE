@@ -61,12 +61,5 @@ namespace SIGEBI.API.Controllers
             return StatusCode(201);
         }
 
-        [Authorize(Roles = "Administrador")]
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            await _notificacionService.DeleteAsync(id);
-            return NoContent();
-        }
     }
 }

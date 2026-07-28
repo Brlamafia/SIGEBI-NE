@@ -4,6 +4,7 @@ using SIGEBI.Application.Dtos.Catalogo;
 using SIGEBI.Application.Dtos.Empleados;
 using SIGEBI.Application.Dtos.Notificaciones;
 using SIGEBI.Application.Dtos.Usuarios;
+using SIGEBI.Application.Dtos.Auth;
 
 namespace SIGEBI.Application.Validations;
 
@@ -16,6 +17,7 @@ public sealed class SaveLibroValidator : AbstractValidator<SaveLibroDto>
         RuleFor(x => x.ISBN).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Genero).MaximumLength(100);
         RuleFor(x => x.Editorial).MaximumLength(150);
+        RuleFor(x => x.NumeroEjemplares).GreaterThan(0).LessThanOrEqualTo(500);
     }
 }
 
@@ -40,6 +42,26 @@ public sealed class SaveUsuarioValidator : AbstractValidator<SaveUsuarioDto>
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(150);
         RuleFor(x => x.Telefono).MaximumLength(20);
         RuleFor(x => x.TipoUsuario).IsInEnum();
+        RuleFor(x => x.Password)
+            .NotEmpty()
+            .MinimumLength(8)
+            .Matches("[A-Z]").WithMessage("La contraseña debe contener una mayúscula.")
+            .Matches("[a-z]").WithMessage("La contraseña debe contener una minúscula.")
+            .Matches("[0-9]").WithMessage("La contraseña debe contener un número.");
+    }
+}
+
+public sealed class CambiarPasswordValidator : AbstractValidator<CambiarPasswordDto>
+{
+    public CambiarPasswordValidator()
+    {
+        RuleFor(x => x.PasswordActual).NotEmpty();
+        RuleFor(x => x.PasswordNueva)
+            .NotEmpty()
+            .MinimumLength(8)
+            .Matches("[A-Z]").WithMessage("La contraseña debe contener una mayúscula.")
+            .Matches("[a-z]").WithMessage("La contraseña debe contener una minúscula.")
+            .Matches("[0-9]").WithMessage("La contraseña debe contener un número.");
     }
 }
 

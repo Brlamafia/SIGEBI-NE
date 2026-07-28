@@ -10,6 +10,7 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<Usuario?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Usuario?> ObtenerPorCedulaAsync(string cedula, CancellationToken cancellationToken = default);
         Task<Usuario?> ObtenerPorEmailAsync(string email, CancellationToken cancellationToken = default);
+        Task<Usuario?> ObtenerPorIdConRolesAsync(int id, CancellationToken cancellationToken = default);
         Task<bool> TieneRelacionesAsync(int usuarioId, CancellationToken cancellationToken = default);
         Task AgregarAsync(Usuario usuario, CancellationToken cancellationToken = default);
         void Actualizar(Usuario usuario);

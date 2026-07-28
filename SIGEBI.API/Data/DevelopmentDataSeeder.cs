@@ -5,6 +5,7 @@ using SIGEBI.Domain.Entities.Prestamos;
 using SIGEBI.Domain.Entities.Usuarios;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Persistence.Context;
+using SIGEBI.Application.Security;
 
 namespace SIGEBI.API.Data;
 
@@ -14,9 +15,22 @@ internal static class DevelopmentDataSeeder
     {
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<SigebiContext>();
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
         if (await context.Usuarios.AnyAsync())
+        {
+            var demoEmail = configuration["SwaggerDemo:Email"] ?? "admin@sigebi.local";
+            var demoPassword = configuration["SwaggerDemo:Password"] ?? "Admin123";
+            var administradorExistente = await context.Usuarios
+                .FirstOrDefaultAsync(u => u.Email == demoEmail);
+            if (administradorExistente is not null &&
+                !PasswordHasher.Verify(demoPassword, administradorExistente.ContrasenaHash))
+            {
+                administradorExistente.EstablecerContrasenaHash(PasswordHasher.Hash(demoPassword));
+                await context.SaveChangesAsync();
+            }
             return;
+        }
 
         var permiso = new Permiso("Administración completa", "SIGEBI.ADMIN");
         var rol = new Rol("Administrador", "Acceso de demostración para Swagger.");
@@ -29,6 +43,7 @@ internal static class DevelopmentDataSeeder
             "admin@sigebi.local",
             TipoUsuario.Administrativo);
         administrador.AsignarRol(rol);
+        administrador.EstablecerContrasenaHash(PasswordHasher.Hash("Admin123"));
 
         var estudiante = new Usuario(
             "Usuario",
@@ -36,6 +51,7 @@ internal static class DevelopmentDataSeeder
             "001-0000000-0",
             "usuario@sigebi.local",
             TipoUsuario.Estudiante);
+        estudiante.EstablecerContrasenaHash(PasswordHasher.Hash("Usuario123"));
 
         var cargo = new Cargo("Bibliotecario");
         context.AddRange(rol, administrador, estudiante, cargo);

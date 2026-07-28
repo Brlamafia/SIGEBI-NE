@@ -6,6 +6,7 @@ using SIGEBI.API.Filters;
 using SIGEBI.API.Jobs;
 using SIGEBI.API.Logging;
 using SIGEBI.API.Security;
+using SIGEBI.API.Data;
 using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Domain.Policies;
 using SIGEBI.IOC.Injection;
@@ -76,6 +77,12 @@ var connectionString = builder.Configuration.GetConnectionString("Supabase")
 builder.Services.AddSigebiDependencies(connectionString);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActualHttp>();
+builder.Services.AddCors(options =>
+    options.AddPolicy("WebClient", policy =>
+        policy.WithOrigins(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                ?? ["https://localhost:7030", "http://localhost:5065"])
+            .AllowAnyHeader()
+            .AllowAnyMethod()));
 
 var politicaPrestamos = builder.Configuration
     .GetSection("PoliticasPrestamo")
@@ -83,6 +90,10 @@ var politicaPrestamos = builder.Configuration
 builder.Services.AddSingleton(new PoliticaPrestamos(politicaPrestamos));
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue("Database:SeedDevelopmentData", false))
+    await DevelopmentDataSeeder.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
@@ -93,6 +104,7 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 app.UseExceptionHandler();
+app.UseCors("WebClient");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

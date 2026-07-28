@@ -12,6 +12,8 @@ namespace SIGEBI.Domain.Enums
         Ajustar = 8,
         RegistrarPerdida = 9,
         RegistrarDanio = 10,
-        ActualizarEstado = 11
+        ActualizarEstado = 11,
+        Editar = 12,
+        Eliminar = 13
     }
 }

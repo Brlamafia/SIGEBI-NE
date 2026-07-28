@@ -6,8 +6,16 @@ namespace SIGEBI.Web.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly IConfiguration _configuration;
+
+        public HomeController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         public IActionResult Index()
         {
+            ViewData["ApiBaseUrl"] = _configuration["ApiBaseUrl"] ?? "https://localhost:7279/api";
             return View();
         }
 

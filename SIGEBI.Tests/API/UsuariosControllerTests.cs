@@ -3,6 +3,9 @@ using Moq;
 using SIGEBI.API.Controllers;
 using SIGEBI.Application.Dtos.Usuarios;
 using SIGEBI.Application.Interfaces.Usuarios;
+using SIGEBI.Application.Interfaces.Prestamos;
+using SIGEBI.Application.Interfaces.Notificaciones;
+using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Domain.Enums;
 
 namespace SIGEBI.Tests.API;
@@ -24,7 +27,12 @@ public class UsuariosControllerTests
                 It.IsAny<UpdateUsuarioDto>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(updated);
-        var controller = new UsuariosController(service.Object);
+        var controller = new UsuariosController(
+            service.Object,
+            Mock.Of<IPrestamoService>(),
+            Mock.Of<IMultaService>(),
+            Mock.Of<INotificacionService>(),
+            Mock.Of<IUsuarioActual>());
 
         var post = await controller.Post(
             new SaveUsuarioDto { TipoUsuario = TipoUsuario.Estudiante },

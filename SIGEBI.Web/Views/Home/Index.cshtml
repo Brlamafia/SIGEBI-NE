@@ -1,8 +1,79 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    ViewData["Title"] = "Biblioteca Nueva Era";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section id="login-view" class="login-shell">
+    <div class="login-brand">
+        <div class="brand-mark" aria-hidden="true">NE</div>
+        <div>
+            <span class="eyebrow">Biblioteca Nueva Era</span>
+            <h1>Tu próxima historia<br />empieza aquí.</h1>
+            <p>Explora el catálogo, solicita tus libros y mantén cada préstamo bajo control desde un solo lugar.</p>
+        </div>
+        <div class="quote-card">
+            <span>“</span>
+            <p>Una biblioteca no es un lujo, sino una de las necesidades de la vida.</p>
+            <small>Henry Ward Beecher</small>
+        </div>
+    </div>
+    <div class="login-panel">
+        <form id="login-form" class="login-form">
+            <div class="mobile-brand"><span>NE</span> Biblioteca Nueva Era</div>
+            <span class="eyebrow">Bienvenido a SIGEBI</span>
+            <h2>Inicia sesión</h2>
+            <p>Usa las credenciales asignadas por la biblioteca.</p>
+            <label for="email">Correo electrónico</label>
+            <input id="email" name="email" type="email" autocomplete="username" placeholder="nombre@correo.com" required />
+            <label for="password">Contraseña</label>
+            <div class="password-wrap">
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required />
+                <button id="toggle-password" type="button" class="text-button">Mostrar</button>
+            </div>
+            <button class="primary-button" type="submit">
+                <span>Entrar a la biblioteca</span><span aria-hidden="true">→</span>
+            </button>
+            <p id="login-error" class="form-error" hidden></p>
+        </form>
+    </div>
+</section>
+
+<section id="app-view" class="app-shell" hidden>
+    <aside class="sidebar">
+        <div class="logo-lockup"><span class="brand-mark small">NE</span><div><strong>Nueva Era</strong><small>Biblioteca</small></div></div>
+        <nav aria-label="Navegación principal">
+            <button class="nav-item active" data-view="inicio"><span>⌂</span> Inicio</button>
+            <button class="nav-item" data-view="catalogo"><span>⌕</span> Catálogo</button>
+            <button class="nav-item" data-view="solicitudes"><span>◎</span> Mis solicitudes</button>
+            <button class="nav-item" data-view="prestamos"><span>▤</span> Mis préstamos</button>
+            <button class="nav-item" data-view="multas"><span>◇</span> Mis multas</button>
+            <button class="nav-item" data-view="notificaciones"><span>◌</span> Notificaciones <b id="notification-badge" hidden>0</b></button>
+            <button class="nav-item report-link" data-view="reportes" hidden><span>▥</span> Reportes</button>
+        </nav>
+        <div class="sidebar-bottom">
+            <button class="nav-item" data-view="cuenta"><span>○</span> Mi cuenta</button>
+            <button id="logout-button" class="nav-item danger"><span>↗</span> Cerrar sesión</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <button id="menu-button" class="menu-button" aria-label="Abrir menú">☰</button>
+            <div>
+                <span class="eyebrow">SIGEBI · Portal de usuarios</span>
+                <h2 id="page-title">Inicio</h2>
+            </div>
+            <button class="user-chip" data-view="cuenta">
+                <span id="user-initials">NE</span>
+                <span><strong id="user-name">Usuario</strong><small id="user-role">Lector</small></span>
+            </button>
+        </header>
+
+        <section id="content" class="content" aria-live="polite"></section>
+    </main>
+</section>
+
+<template id="loading-template">
+    <div class="loading-grid">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+</template>

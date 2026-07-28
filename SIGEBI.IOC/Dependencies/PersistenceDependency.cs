@@ -55,6 +55,8 @@ public static class PersistenceDependency
 
         services.AddScoped<RolRepository>();
         services.AddScoped<IRepository<Rol>>(provider => provider.GetRequiredService<RolRepository>());
+        services.AddScoped<PermisoRepository>();
+        services.AddScoped<IRepository<Permiso>>(provider => provider.GetRequiredService<PermisoRepository>());
 
         services.AddScoped<CargoRepository>();
         services.AddScoped<ICargoRepository>(provider => provider.GetRequiredService<CargoRepository>());
