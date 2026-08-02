@@ -17,6 +17,24 @@
   --shadow: 0 18px 45px rgba(11, 86, 184, .15);
 }
 
+.service-error {
+    max-width: 680px;
+    margin: 8vh auto;
+    padding: clamp(2rem, 5vw, 4rem);
+}
+
+.service-error h3 {
+    margin: .5rem 0;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+}
+
+.service-error small {
+    display: block;
+    margin-top: 1.5rem;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
 body { margin: 0; color: var(--ink); background: radial-gradient(circle at 92% 4%, rgba(32,185,215,.08), transparent 24rem), radial-gradient(circle at 8% 88%, rgba(40,108,247,.055), transparent 28rem), var(--cream); font-family: "DM Sans", sans-serif; }
@@ -30,8 +48,6 @@ button { cursor: pointer; }
 .login-brand::after { content: ""; position: absolute; width: 27rem; height: 27rem; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; right: -12rem; bottom: -10rem; box-shadow: 0 0 0 5rem rgba(255,255,255,.025), 0 0 0 10rem rgba(255,255,255,.018); }
 .login-brand > * { position: relative; z-index: 2; }
 .login-brand-logo { width: min(31rem, 88%); height: auto; object-fit: contain; border-radius: .85rem; filter: drop-shadow(0 12px 28px rgba(5,42,120,.28)); }
-.brand-mark { width: 4.2rem; height: 4.2rem; border: 1px solid rgba(255,255,255,.4); border-radius: 50% 50% 50% 12%; display: grid; place-items: center; font-family: "Libre Franklin"; font-weight: 800; color: var(--gold); letter-spacing: -.08em; }
-.brand-mark.small { width: 2.8rem; height: 2.8rem; font-size: .82rem; flex: 0 0 auto; }
 .eyebrow { display: block; text-transform: uppercase; letter-spacing: .16em; font-size: .69rem; font-weight: 700; color: var(--primary); margin-bottom: .8rem; }
 .login-brand h1 { font: 800 clamp(2.8rem, 5.5vw, 5.8rem)/.96 "Libre Franklin"; letter-spacing: -.075em; margin: 0 0 1.5rem; max-width: 12ch; }
 .login-brand > div:nth-child(2) > p { max-width: 36rem; color: rgba(255,255,255,.72); font-size: 1.06rem; line-height: 1.7; }
@@ -60,7 +76,6 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px 
 .auth-blue .login-brand::after { border-color: rgba(202,246,255,.17); box-shadow: 0 0 0 5rem rgba(183,240,250,.055), 0 0 0 10rem rgba(183,240,250,.035); }
 .auth-blue .login-brand > div:nth-child(2) > p { color: rgba(255,255,255,.82); }
 .auth-blue .login-brand-logo { border: 1px solid rgba(197,242,255,.22); box-shadow: 0 16px 38px rgba(0,40,110,.2); filter: saturate(1.04) drop-shadow(0 12px 28px rgba(0,40,110,.2)); }
-.auth-blue .brand-mark { border-color: rgba(207,247,255,.55); color: #a8f3ff; background: rgba(1,49,128,.16); }
 .auth-blue .quote-card { border-color: rgba(214,248,255,.31); }
 .auth-blue .quote-card > span, .auth-blue .eyebrow { color: #a8f3ff; }
 .auth-blue .quote-card small { color: rgba(255,255,255,.67); }
@@ -182,6 +197,21 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px 
 .book-card h4 { margin: 1rem 0 .25rem; font: 700 1rem/1.3 "Libre Franklin"; }
 .book-card p { color: var(--muted); font-size: .8rem; margin: 0; }
 .book-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 1rem; }
+.book-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .7rem; }
+.book-actions form { margin: 0; }
+.detail-toolbar { margin-bottom: 1rem; }
+.book-detail { display: grid; grid-template-columns: minmax(16rem, .72fr) 1.28fr; gap: clamp(1.5rem, 4vw, 3.5rem); padding: clamp(1.2rem, 3vw, 2.2rem); }
+.book-detail-cover { align-self: start; aspect-ratio: .82 / 1; min-height: 27rem; }
+.book-detail-content h3 { margin: 0; font: 800 clamp(2rem, 4vw, 3.6rem)/1 "Libre Franklin"; letter-spacing: -.045em; }
+.book-detail-author { margin: .8rem 0 1.8rem; color: var(--muted); font-size: 1.15rem; }
+.book-detail-grid { margin-bottom: 1.5rem; }
+.book-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.confirm-dialog { width: min(31rem, calc(100% - 2rem)); padding: 2rem; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 1.2rem; box-shadow: 0 30px 90px rgba(2,56,119,.28); }
+.confirm-dialog::backdrop { background: rgba(4,19,47,.56); backdrop-filter: blur(4px); }
+.confirm-dialog-icon { width: 3rem; height: 3rem; display: grid; place-items: center; margin-bottom: 1rem; color: #fff; background: var(--red); border-radius: 50%; font: 800 1.35rem "Libre Franklin"; }
+.confirm-dialog h3 { margin: 0 0 .65rem; font: 800 1.5rem "Libre Franklin"; }
+.confirm-dialog p { color: var(--muted); line-height: 1.55; }
+.confirm-dialog-actions { display: flex; justify-content: flex-end; gap: .65rem; margin-top: 1.5rem; }
 .pill { display: inline-flex; align-items: center; gap: .3rem; border-radius: 1rem; padding: .28rem .55rem; background: var(--primary-soft); color: var(--primary-dark); font-size: .7rem; font-weight: 700; }
 .pill.unavailable, .pill.Pendiente { background: #e9eef9; color: #4b5f8f; }
 .pill.Rechazada, .pill.Cancelada, .pill.Vencido, .pill.Cancelado { background: #ffe8e9; color: #b81420; }
@@ -226,16 +256,10 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px 
 .full-page { min-height: 100vh; }
 .primary-button { text-decoration: none; }
 .item-actions { display: flex; align-items: center; gap: .6rem; }
-.danger-button { color: var(--red); }
 .pagination { display: flex; justify-content: center; align-items: center; gap: .8rem; margin-top: 1.5rem; color: var(--muted); }
-.report-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
-.report-number { font: 800 2.4rem "Libre Franklin"; color: var(--primary); }
 .toast { position: fixed; right: 1.2rem; bottom: 1.2rem; background: var(--primary-dark); color: #fff; border-radius: .75rem; padding: .85rem 1rem; box-shadow: var(--shadow); opacity: 0; transform: translateY(1rem); pointer-events: none; transition: .25s; z-index: 30; max-width: 24rem; }
 .toast.show { opacity: 1; transform: none; }
 .toast.error { background: var(--red); }
-.loading-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-.skeleton { height: 12rem; border-radius: .8rem; background: linear-gradient(90deg, #e6edfb 25%, #f8faff 50%, #e6edfb 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
-@keyframes shimmer { to { background-position: -200% 0; } }
 .reveal-item { opacity: 0; transform: translateY(12px); }
 .reveal-item.is-visible { opacity: 1; transform: none; transition: opacity .42s ease var(--reveal-delay, 0ms), transform .42s ease var(--reveal-delay, 0ms); }
 button:active, .card-button:active { transform: translateY(0) scale(.98); }
@@ -265,7 +289,7 @@ button:active, .card-button:active { transform: translateY(0) scale(.98); }
   body.sidebar-open .sidebar-backdrop { display: block; }
   body.sidebar-open { overflow: hidden; }
   .menu-button { display: block; }
-  .stats-grid, .report-grid, .insights-grid { grid-template-columns: 1fr; }
+  .stats-grid, .insights-grid { grid-template-columns: 1fr; }
   .toolbar { grid-template-columns: 1fr 1fr; }
   .toolbar > input:first-child { grid-column: 1 / -1; }
   .toolbar .card-button { grid-column: 1 / -1; }
@@ -279,7 +303,8 @@ button:active, .card-button:active { transform: translateY(0) scale(.98); }
   .hero-stat { justify-self: start; }
   .chart-card-featured { align-items: start; flex-direction: column; }
   .donut-chart { width: 7rem; }
-  .toolbar, .account-grid, .detail-grid { grid-template-columns: 1fr; }
+  .toolbar, .account-grid, .detail-grid, .book-detail { grid-template-columns: 1fr; }
+  .book-detail-cover { min-height: 22rem; }
   .list-card { grid-template-columns: 1fr; }
   .eligibility-alert { grid-template-columns: auto 1fr; }
   .eligibility-alert .card-button { grid-column: 1 / -1; text-align: center; }

@@ -66,14 +66,18 @@
     {
         @RenderBody()
     }
-    @if (TempData["Success"] is string success)
-    {
-        <div class="toast show" role="status">@success</div>
-    }
-    @if (TempData["Error"] is string error)
-    {
-        <div class="toast show error" role="alert">@error</div>
-    }
+    <partial name="_FlashMessages" />
+    <dialog class="confirm-dialog" id="confirmationDialog" aria-labelledby="confirmationTitle">
+        <div class="confirm-dialog-icon" aria-hidden="true">?</div>
+        <span class="eyebrow">Confirmación</span>
+        <h3 id="confirmationTitle">Confirma la operación</h3>
+        <p id="confirmationMessage"></p>
+        <div class="confirm-dialog-actions">
+            <button class="card-button" id="confirmationCancel" type="button">Volver</button>
+            <button class="card-button button-danger" id="confirmationAccept" type="button">Sí, continuar</button>
+        </div>
+    </dialog>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
