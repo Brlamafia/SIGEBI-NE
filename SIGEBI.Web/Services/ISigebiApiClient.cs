@@ -20,6 +20,7 @@ public interface ISigebiApiClient
     Task ChangeMyPasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<LibroDto>> SearchBooksAsync(string? term, string? genre, string? publisher, bool? available, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<LibroDto>> GetBooksAsync(int page = 1, int pageSize = 200, CancellationToken cancellationToken = default);
+    Task<LibroDto> GetBookByIdAsync(int bookId, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<SolicitudPrestamoDto>> GetMyRequestsAsync(CancellationToken cancellationToken = default);
     Task CreateRequestAsync(int bookId, CancellationToken cancellationToken = default);
     Task CancelRequestAsync(int requestId, CancellationToken cancellationToken = default);
