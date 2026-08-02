@@ -102,7 +102,7 @@ public sealed class OperationDialog : Form
             Height = 38,
             BackColor = Color.Transparent,
             ForeColor = Color.White,
-            Font = DesktopTheme.Font(18, FontStyle.Bold)
+            Font = DesktopTheme.TitleFont(18)
         });
         return panel;
     }

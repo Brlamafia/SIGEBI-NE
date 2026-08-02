@@ -29,11 +29,11 @@ button { cursor: pointer; }
 .login-brand::before { content: ""; position: absolute; width: 23rem; height: 13rem; right: -1.5rem; top: 1rem; opacity: .52; transform: rotate(8deg); background-image: radial-gradient(circle, rgba(137,244,249,.8) 1.5px, transparent 1.9px); background-size: 17px 17px; -webkit-mask-image: linear-gradient(125deg, transparent 4%, #000 38%, #000 72%, transparent 98%); mask-image: linear-gradient(125deg, transparent 4%, #000 38%, #000 72%, transparent 98%); pointer-events: none; }
 .login-brand::after { content: ""; position: absolute; width: 27rem; height: 27rem; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; right: -12rem; bottom: -10rem; box-shadow: 0 0 0 5rem rgba(255,255,255,.025), 0 0 0 10rem rgba(255,255,255,.018); }
 .login-brand > * { position: relative; z-index: 2; }
-.login-brand-logo { width: min(31rem, 88%); height: auto; object-fit: contain; border-radius: .85rem; filter: drop-shadow(0 12px 28px rgba(5,42,120,.28)); }
+.login-brand-logo { width: min(31rem, 88%); height: auto; object-fit: contain; border-radius: 0; transform: translateX(-4.2%); filter: drop-shadow(0 12px 28px rgba(5,42,120,.28)); }
 .brand-mark { width: 4.2rem; height: 4.2rem; border: 1px solid rgba(255,255,255,.4); border-radius: 50% 50% 50% 12%; display: grid; place-items: center; font-family: "Libre Franklin"; font-weight: 800; color: var(--gold); letter-spacing: -.08em; }
 .brand-mark.small { width: 2.8rem; height: 2.8rem; font-size: .82rem; flex: 0 0 auto; }
 .eyebrow { display: block; text-transform: uppercase; letter-spacing: .16em; font-size: .69rem; font-weight: 700; color: var(--primary); margin-bottom: .8rem; }
-.login-brand h1 { font: 800 clamp(2.8rem, 5.5vw, 5.8rem)/.96 "Libre Franklin"; letter-spacing: -.075em; margin: 0 0 1.5rem; max-width: 12ch; }
+.login-brand h1 { font: 700 clamp(2.8rem, 5.5vw, 5.8rem)/.96 "Libre Franklin"; letter-spacing: -.075em; margin: 0 0 1.5rem; max-width: 12ch; }
 .login-brand > div:nth-child(2) > p { max-width: 36rem; color: rgba(255,255,255,.72); font-size: 1.06rem; line-height: 1.7; }
 .quote-card { max-width: 33rem; border-top: 1px solid rgba(255,255,255,.2); padding-top: 1.4rem; position: relative; z-index: 1; }
 .quote-card > span { color: var(--gold); font-size: 2rem; line-height: .5; }
@@ -59,7 +59,7 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px 
 .auth-blue .login-brand { color: #fff; background: radial-gradient(circle at 10% 82%, rgba(47,203,224,.27), transparent 19rem), radial-gradient(circle at 88% 8%, rgba(102,226,239,.24), transparent 16rem), linear-gradient(145deg, #064fb8 0%, #087fd5 54%, #18a9d1 100%); }
 .auth-blue .login-brand::after { border-color: rgba(202,246,255,.17); box-shadow: 0 0 0 5rem rgba(183,240,250,.055), 0 0 0 10rem rgba(183,240,250,.035); }
 .auth-blue .login-brand > div:nth-child(2) > p { color: rgba(255,255,255,.82); }
-.auth-blue .login-brand-logo { border: 1px solid rgba(197,242,255,.22); box-shadow: 0 16px 38px rgba(0,40,110,.2); filter: saturate(1.04) drop-shadow(0 12px 28px rgba(0,40,110,.2)); }
+.auth-blue .login-brand-logo { border: 0; box-shadow: none; filter: saturate(1.04) drop-shadow(0 12px 28px rgba(0,40,110,.2)); }
 .auth-blue .brand-mark { border-color: rgba(207,247,255,.55); color: #a8f3ff; background: rgba(1,49,128,.16); }
 .auth-blue .quote-card { border-color: rgba(214,248,255,.31); }
 .auth-blue .quote-card > span, .auth-blue .eyebrow { color: #a8f3ff; }
@@ -79,7 +79,7 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px 
 .label-row a, .auth-switch a, .auth-back, .development-link a { color: var(--auth-blue); font-weight: 700; text-decoration: none; }
 .auth-switch { text-align: center; margin: 1.35rem 0 0 !important; font-size: .84rem; }
 .auth-single { min-height: 100vh; display: grid; place-items: center; padding: 6.5rem 2rem 2rem; background: radial-gradient(circle at 15% 15%, rgba(255,255,255,.82), transparent 24rem), radial-gradient(circle at 88% 12%, rgba(63,216,231,.34), transparent 22rem), linear-gradient(145deg, #dceaff 0%, #bcdcff 58%, #cceff7 100%); position: relative; overflow: hidden; }
-.auth-single::before { content: ""; position: absolute; top: 1.2rem; left: 50%; transform: translateX(-50%); width: min(23rem, 78vw); height: 5.2rem; border-radius: .7rem; background: url("/images/sigebi-new-era-logo.png") center/contain no-repeat; filter: drop-shadow(0 10px 22px rgba(7,74,167,.22)); }
+.auth-single::before { content: ""; position: absolute; top: 1.2rem; left: 50%; transform: translateX(-50%); width: min(23rem, 78vw); height: 5.2rem; border-radius: .7rem; background: url("/images/ne-library-logo.png") center/contain no-repeat; filter: drop-shadow(0 10px 22px rgba(7,74,167,.22)); }
 .auth-card { width: min(30rem, 100%); position: relative; z-index: 1; background: rgba(255,255,255,.95); border: 1px solid rgba(255,255,255,.85); border-radius: 1.1rem; padding: clamp(1.6rem, 4vw, 2.8rem); box-shadow: 0 24px 70px rgba(7,74,167,.2); backdrop-filter: blur(12px); }
 .auth-card-wide { width: min(45rem, 100%); }
 .auth-card h1 { font: 800 2.1rem/1.08 "Libre Franklin"; letter-spacing: -.05em; margin: .6rem 0 .8rem; color: var(--primary-dark); }
@@ -106,8 +106,8 @@ input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px 
 
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 16rem 1fr; }
 .sidebar { background: radial-gradient(circle at 10% 8%, rgba(102,226,239,.25), transparent 11rem), radial-gradient(circle, rgba(146,238,248,.22) 1px, transparent 1.5px) 118% 4% / 17px 17px, linear-gradient(165deg, #043f9d 0%, #0875c8 58%, #1096c4 100%); color: white; padding: 1.4rem 1rem; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; z-index: 10; box-shadow: 12px 0 38px rgba(5,71,159,.2); }
-.logo-lockup { display: flex; align-items: center; margin: 0 .15rem 1.7rem; padding: .25rem; min-height: 4.5rem; background: rgba(0,24,65,.16); border: 1px solid rgba(143,186,255,.25); border-radius: .9rem; box-shadow: 0 10px 30px rgba(0,21,58,.15); overflow: hidden; }
-.sidebar-logo { width: 100%; height: 3.8rem; object-fit: contain; border-radius: .55rem; filter: saturate(1.05) drop-shadow(0 5px 12px rgba(0,0,0,.18)); }
+.logo-lockup { display: flex; align-items: center; margin: 0 .15rem 1.7rem; padding: .25rem; min-height: 4.5rem; background: transparent; border: 0; border-radius: .9rem; box-shadow: none; overflow: hidden; }
+.sidebar-logo { width: 100%; height: 3.8rem; object-fit: contain; border-radius: 0; transform: scale(1.32); filter: saturate(1.05) drop-shadow(0 5px 12px rgba(0,0,0,.18)); }
 .sidebar nav { display: grid; gap: .25rem; }
 .nav-item { width: 100%; border: 0; background: transparent; color: rgba(255,255,255,.74); border-radius: .7rem; padding: .75rem .8rem; text-align: left; text-decoration: none; display: flex; align-items: center; gap: .7rem; transition: transform .18s, background .18s, color .18s; }
 .nav-item > span { width: 1.1rem; text-align: center; font-size: 1.05rem; }

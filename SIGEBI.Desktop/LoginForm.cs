@@ -47,6 +47,7 @@ public sealed class LoginForm : Form
         MaximizeBox = true;
         WindowState = FormWindowState.Maximized;
         DesktopTheme.StyleForm(this);
+        Icon = DesktopTheme.LoadApplicationIcon() ?? Icon;
 
         _root.Dock = DockStyle.Fill;
         _root.ColumnCount = 2;
@@ -115,7 +116,7 @@ public sealed class LoginForm : Form
         var panel = new WebGradientPanel { Dock = DockStyle.Fill };
         var content = new TableLayoutPanel
         {
-            Width = 700,
+            Width = 860,
             Height = 820,
             Anchor = AnchorStyles.None,
             ColumnCount = 1,
@@ -127,46 +128,67 @@ public sealed class LoginForm : Form
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 178));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 220));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
 
-        var logoImage = DesktopTheme.LoadBrandImage();
+        var logoImage = DesktopTheme.LoadLoginLogo();
         if (logoImage is not null)
         {
+            var logoHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 0, 120, 18),
+                BackColor = Color.Transparent
+            };
             var logo = new PictureBox
             {
                 Image = logoImage,
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Dock = DockStyle.Fill,
-                Margin = new Padding(0, 0, 120, 18)
+                BackColor = Color.Transparent
             };
+            void AlignLogo()
+            {
+                var height = Math.Max(1, logoHost.ClientSize.Height);
+                var width = Math.Max(
+                    1,
+                    (int)Math.Round(height * logoImage.Width /
+                                    (double)logoImage.Height));
+                logo.Bounds = new Rectangle(
+                    -(int)Math.Round(width * 0.042),
+                    0,
+                    width,
+                    height);
+            }
+            logoHost.Controls.Add(logo);
+            logoHost.Resize += (_, _) => AlignLogo();
+            logoHost.HandleCreated += (_, _) => AlignLogo();
             logo.Disposed += (_, _) => logoImage.Dispose();
-            content.Controls.Add(logo, 0, 0);
+            content.Controls.Add(logoHost, 0, 0);
         }
-        content.Controls.Add(new Label
+        content.Controls.Add(new Label /* Brand eyebrow */
         {
             Text = "LIBRERÍA NUEVA ERA",
             ForeColor = Color.FromArgb(168, 243, 255),
-            Font = DesktopTheme.Font(9, FontStyle.Bold),
+            Font = DesktopTheme.EyebrowFont(9),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.BottomLeft
         }, 0, 2);
-        content.Controls.Add(new Label
+        content.Controls.Add(new CompactMultilineLabel
         {
             Text = "Tu próxima historia\ncomienza aquí.",
             ForeColor = Color.White,
-            Font = DesktopTheme.Font(43, FontStyle.Bold),
+            Font = DesktopTheme.HeroTitleFont(60),
             Dock = DockStyle.Fill,
-            TextAlign = ContentAlignment.MiddleLeft
+            LineHeightRatio = 0.72f
         }, 0, 3);
         content.Controls.Add(new Label
         {
             Text = "Gestiona solicitudes, préstamos, devoluciones e inventario\ndesde el espacio de trabajo del personal de SIGEBI.",
             ForeColor = Color.FromArgb(225, 245, 255),
-            Font = DesktopTheme.Font(11.5f),
+            Font = DesktopTheme.Font(12.75f),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.TopLeft
         }, 0, 4);
@@ -193,7 +215,7 @@ public sealed class LoginForm : Form
         {
             Text = "Leer es encontrar una puerta donde antes había una pared.\nSIGEBI · Nueva Era",
             ForeColor = Color.White,
-            Font = DesktopTheme.Font(9.5f, FontStyle.Bold),
+            Font = DesktopTheme.LabelFont(11.5f),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.TopLeft,
             Padding = new Padding(0, 8, 0, 0)
@@ -214,15 +236,28 @@ public sealed class LoginForm : Form
 
     private Control CreateLoginPanel()
     {
-        _email.Font = DesktopTheme.Font(11);
+        _email.Font = DesktopTheme.Font(12);
         _email.BorderStyle = BorderStyle.None;
         _email.BackColor = DesktopTheme.Surface;
         _email.ForeColor = DesktopTheme.Text;
-        _password.Font = DesktopTheme.Font(11);
+        var visiblePasswordFont = DesktopTheme.Font(12);
+        var maskedPasswordFont = DesktopTheme.Font(9.5f);
+        _password.Font = visiblePasswordFont;
         _password.BorderStyle = BorderStyle.None;
         _password.BackColor = DesktopTheme.Surface;
         _password.ForeColor = DesktopTheme.Text;
+        void UpdatePasswordFont() => _password.Font =
+            _password.UseSystemPasswordChar && _password.TextLength > 0
+                ? maskedPasswordFont
+                : visiblePasswordFont;
+        _password.TextChanged += (_, _) => UpdatePasswordFont();
+        _password.Disposed += (_, _) =>
+        {
+            visiblePasswordFont.Dispose();
+            maskedPasswordFont.Dispose();
+        };
         DesktopTheme.StylePrimaryButton(_login);
+        _login.Font = DesktopTheme.ButtonFont(12);
         _login.FlatAppearance.BorderSize = 0;
         _login.TabStop = false;
 
@@ -232,13 +267,14 @@ public sealed class LoginForm : Form
             FlatStyle = FlatStyle.Flat,
             ForeColor = DesktopTheme.Primary,
             BackColor = DesktopTheme.Surface,
-            Font = DesktopTheme.Font(9, FontStyle.Bold),
+            Font = DesktopTheme.ButtonFont(9),
             Cursor = Cursors.Hand
         };
         DesktopTheme.StyleTextButton(showPassword);
         showPassword.Click += (_, _) =>
         {
             _password.UseSystemPasswordChar = !_password.UseSystemPasswordChar;
+            UpdatePasswordFont();
             showPassword.Text = _password.UseSystemPasswordChar
                 ? "Mostrar"
                 : "Ocultar";
@@ -274,14 +310,14 @@ public sealed class LoginForm : Form
         content.Controls.Add(new Label
         {
             Text = "BIENVENIDO",
-            Font = DesktopTheme.Font(8.5f, FontStyle.Bold),
+            Font = DesktopTheme.EyebrowFont(),
             ForeColor = DesktopTheme.Cyan,
             AutoSize = true
         }, 0, 0);
         content.Controls.Add(new Label
         {
             Text = "Inicia sesión",
-            Font = DesktopTheme.Font(26, FontStyle.Bold),
+            Font = DesktopTheme.TitleFont(27),
             ForeColor = DesktopTheme.Navy,
             AutoSize = true
         }, 0, 1);
@@ -289,7 +325,7 @@ public sealed class LoginForm : Form
         {
             Text = "Accede con tus credenciales institucionales de empleado.",
             ForeColor = DesktopTheme.Muted,
-            Font = DesktopTheme.Font(10),
+            Font = DesktopTheme.Font(12),
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.TopLeft
         }, 0, 2);
@@ -302,7 +338,7 @@ public sealed class LoginForm : Form
             Text = "Acceso interno · Personal autorizado",
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.Muted,
-            Font = DesktopTheme.Font(8.5f),
+            Font = DesktopTheme.CaptionFont(),
             TextAlign = ContentAlignment.MiddleLeft
         }, 0, 8);
         _login.Text = "Iniciar sesión";
@@ -313,7 +349,7 @@ public sealed class LoginForm : Form
             Text = "Sistema Integral de Gestión Bibliotecaria · Nueva Era",
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.Muted,
-            Font = DesktopTheme.Font(8.5f),
+            Font = DesktopTheme.CaptionFont(),
             TextAlign = ContentAlignment.BottomCenter
         }, 0, 11);
 
@@ -338,7 +374,7 @@ public sealed class LoginForm : Form
     private static Label FieldLabel(string text) => new()
     {
         Text = text,
-        Font = DesktopTheme.Font(9.5f, FontStyle.Bold),
+        Font = DesktopTheme.LabelFont(),
         ForeColor = DesktopTheme.Text,
         AutoSize = true,
         Anchor = AnchorStyles.Left
@@ -401,5 +437,71 @@ public sealed class LoginForm : Form
         return string.IsNullOrWhiteSpace(exception.Message)
             ? "No pudimos iniciar sesión. Revisa tus datos e inténtalo nuevamente."
             : exception.Message.Trim();
+    }
+}
+
+internal sealed class CompactMultilineLabel : Control
+{
+    private float _lineHeightRatio = 0.96f;
+
+    public CompactMultilineLabel()
+    {
+        SetStyle(
+            ControlStyles.UserPaint |
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.SupportsTransparentBackColor,
+            true);
+        BackColor = Color.Transparent;
+    }
+
+    [System.ComponentModel.DesignerSerializationVisibility(
+        System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public float LineHeightRatio
+    {
+        get => _lineHeightRatio;
+        set
+        {
+            _lineHeightRatio = Math.Clamp(value, 0.6f, 1.4f);
+            Invalidate();
+        }
+    }
+
+    protected override void OnTextChanged(EventArgs e)
+    {
+        base.OnTextChanged(e);
+        Invalidate();
+    }
+
+    protected override void OnFontChanged(EventArgs e)
+    {
+        base.OnFontChanged(e);
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        e.Graphics.TextRenderingHint =
+            System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+
+        var lines = Text.Replace("\r", string.Empty).Split('\n');
+        var naturalLineHeight = Font.GetHeight(e.Graphics);
+        var lineAdvance = naturalLineHeight * LineHeightRatio;
+        var blockHeight = naturalLineHeight +
+                          Math.Max(0, lines.Length - 1) * lineAdvance;
+        var y = Math.Max(0, (ClientSize.Height - blockHeight) / 2f);
+
+        using var brush = new SolidBrush(ForeColor);
+        using var format = new StringFormat(StringFormat.GenericTypographic)
+        {
+            FormatFlags = StringFormatFlags.NoWrap,
+            Trimming = StringTrimming.None
+        };
+        foreach (var line in lines)
+        {
+            e.Graphics.DrawString(line, Font, brush, 0, y, format);
+            y += lineAdvance;
+        }
     }
 }

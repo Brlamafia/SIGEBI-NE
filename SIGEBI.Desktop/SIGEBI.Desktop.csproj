@@ -6,11 +6,25 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Assets\ne-library-app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\SIGEBI.Web\wwwroot\images\sigebi-new-era-logo.png"
-             Link="Assets\sigebi-new-era-logo.png">
+    <Compile Remove="IconGenerator\**\*" />
+    <EmbeddedResource Remove="IconGenerator\**\*" />
+    <None Remove="IconGenerator\**\*" />
+    <Content Include="Assets\ne-library-app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\SIGEBI.Web\wwwroot\images\ne-library-logo.png"
+             Link="Assets\ne-library-logo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\SIGEBI.Web\wwwroot\images\ne-library-mark.png"
+             Link="Assets\ne-library-mark.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Fonts\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

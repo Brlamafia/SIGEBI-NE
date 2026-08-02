@@ -32,6 +32,7 @@ public sealed class MainForm : Form
         WindowState = FormWindowState.Maximized;
         MinimumSize = new Size(1100, 700);
         DesktopTheme.StyleForm(this);
+        Icon = DesktopTheme.LoadApplicationIcon() ?? Icon;
 
         var tabs = new TabControl
         {
@@ -82,7 +83,7 @@ public sealed class MainForm : Form
             Text = tabs.TabPages.Count > 0 ? tabs.TabPages[0].Text : "SIGEBI",
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.Navy,
-            Font = DesktopTheme.Font(18, FontStyle.Bold),
+            Font = DesktopTheme.TitleFont(18),
             TextAlign = ContentAlignment.MiddleLeft
         };
         var header = CrearEncabezado(moduleTitle);
@@ -218,7 +219,7 @@ public sealed class MainForm : Form
         };
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var logoImage = DesktopTheme.LoadBrandImage();
+        var logoImage = DesktopTheme.LoadSidebarLogo();
         if (logoImage is not null)
         {
             var logo = new PictureBox
@@ -238,7 +239,7 @@ public sealed class MainForm : Form
                 Text = "SIGEBI · NEW ERA",
                 Dock = DockStyle.Fill,
                 ForeColor = Color.White,
-                Font = DesktopTheme.Font(17, FontStyle.Bold),
+            Font = DesktopTheme.TitleFont(17),
                 TextAlign = ContentAlignment.MiddleCenter
             }, 0, 0);
         }
@@ -247,7 +248,7 @@ public sealed class MainForm : Form
             Text = "GESTIÓN PARA EL PERSONAL",
             Dock = DockStyle.Fill,
             ForeColor = Color.FromArgb(205, 242, 255),
-            Font = DesktopTheme.Font(8.5f, FontStyle.Bold),
+            Font = DesktopTheme.EyebrowFont(),
             TextAlign = ContentAlignment.MiddleCenter
         }, 0, 1);
         return content;
@@ -282,7 +283,7 @@ public sealed class MainForm : Form
             Text = "SIGEBI  ·  PANEL DEL PERSONAL",
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.Primary,
-            Font = DesktopTheme.Font(8, FontStyle.Bold),
+            Font = DesktopTheme.EyebrowFont(8),
             TextAlign = ContentAlignment.BottomLeft
         }, 0, 0);
         heading.Controls.Add(moduleTitle, 0, 1);
@@ -306,7 +307,7 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             Text = $"{_session.Usuario.Nombre} {_session.Usuario.Apellido}\n{string.Join(" · ", _session.Roles)}",
             ForeColor = DesktopTheme.Text,
-            Font = DesktopTheme.Font(9.5f, FontStyle.Bold),
+            Font = DesktopTheme.LabelFont(),
             TextAlign = ContentAlignment.MiddleLeft,
             Padding = new Padding(10, 0, 0, 0)
         }, 2, 0);
@@ -354,7 +355,7 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.PrimaryDark,
             BackColor = DesktopTheme.PrimarySoft,
-            Font = DesktopTheme.Font(8, FontStyle.Bold),
+            Font = DesktopTheme.EyebrowFont(8),
             TextAlign = ContentAlignment.MiddleCenter,
             Margin = new Padding(8, 1, 0, 1)
         };
@@ -1334,7 +1335,7 @@ public sealed class MainForm : Form
             Text = "Gestiona el equipo y los accesos",
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.Navy,
-            Font = DesktopTheme.Font(14, FontStyle.Bold),
+            Font = DesktopTheme.TitleFont(14),
             TextAlign = ContentAlignment.TopLeft
         }, 0, 1);
         navigationLayout.Controls.Add(new Label
@@ -1802,7 +1803,7 @@ public sealed class MainForm : Form
         {
             Text = title,
             Dock = DockStyle.Fill,
-            Font = DesktopTheme.Font(23, FontStyle.Bold),
+            Font = DesktopTheme.TitleFont(23),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleLeft
         }, 0, 0);

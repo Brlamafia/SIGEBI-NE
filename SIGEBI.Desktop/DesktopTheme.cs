@@ -1,10 +1,19 @@
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 
 namespace SIGEBI.Desktop;
 
 internal static class DesktopTheme
 {
+    private static readonly PrivateFontCollection PrivateFonts = LoadPrivateFonts();
+    private static readonly PrivateFontCollection HeroTitleFonts =
+        LoadPrivateFonts("LibreFranklin-Bold.ttf");
+    private static readonly FontFamily BodyFontFamily = FindFontFamily("DM Sans");
+    private static readonly FontFamily HeadingFontFamily = FindFontFamily("Libre Franklin");
+    private static readonly FontFamily HeroTitleFontFamily =
+        FindFontFamily(HeroTitleFonts, "Libre Franklin");
+
     public static readonly Color Primary = Color.FromArgb(42, 104, 238);
     public static readonly Color PrimaryVivid = Color.FromArgb(0, 132, 218);
     public static readonly Color PrimaryDark = Color.FromArgb(8, 49, 108);
@@ -24,7 +33,66 @@ internal static class DesktopTheme
     public static readonly Color Success = Color.FromArgb(24, 134, 75);
 
     public static Font Font(float size = 10, FontStyle style = FontStyle.Regular) =>
-        new("Segoe UI", size, style);
+        CreateFont(BodyFontFamily, size, style);
+
+    public static Font TitleFont(float size, FontStyle style = FontStyle.Bold) =>
+        CreateFont(HeadingFontFamily, size, style);
+
+    public static Font HeroTitleFont(float size) =>
+        CreateFont(HeroTitleFontFamily, size, FontStyle.Bold);
+
+    public static Font EyebrowFont(float size = 8.5f) =>
+        CreateFont(BodyFontFamily, size, FontStyle.Bold);
+
+    public static Font ButtonFont(float size = 9.5f) =>
+        CreateFont(BodyFontFamily, size, FontStyle.Bold);
+
+    public static Font LabelFont(float size = 9.5f) =>
+        CreateFont(BodyFontFamily, size, FontStyle.Bold);
+
+    public static Font CaptionFont(float size = 8.5f) =>
+        CreateFont(BodyFontFamily, size, FontStyle.Regular);
+
+    private static PrivateFontCollection LoadPrivateFonts(params string[] requestedFiles)
+    {
+        var collection = new PrivateFontCollection();
+        var fontDirectory = Path.Combine(AppContext.BaseDirectory, "Assets", "Fonts");
+        var files = requestedFiles.Length > 0
+            ? requestedFiles
+            : new[]
+            {
+                "DMSans-Regular.ttf",
+                "DMSans-Bold.ttf",
+                "LibreFranklin-Regular.ttf",
+                "LibreFranklin-Bold.ttf"
+            };
+        foreach (var fileName in files)
+        {
+            var path = Path.Combine(fontDirectory, fileName);
+            if (File.Exists(path))
+                collection.AddFontFile(path);
+        }
+
+        return collection;
+    }
+
+    private static FontFamily FindFontFamily(string familyName) =>
+        FindFontFamily(PrivateFonts, familyName);
+
+    private static FontFamily FindFontFamily(
+        PrivateFontCollection collection,
+        string familyName) =>
+        collection.Families.FirstOrDefault(family =>
+            family.Name.Equals(familyName, StringComparison.OrdinalIgnoreCase))
+        ?? FontFamily.GenericSansSerif;
+
+    private static Font CreateFont(FontFamily family, float size, FontStyle style)
+    {
+        var availableStyle = family.IsStyleAvailable(style)
+            ? style
+            : FontStyle.Regular;
+        return new Font(family, size, availableStyle, GraphicsUnit.Point);
+    }
 
     public static void StyleForm(Form form)
     {
@@ -82,7 +150,7 @@ internal static class DesktopTheme
 
     private static void StyleButton(Button button, Color backColor, Color foreColor)
     {
-        button.Font = Font(9.5f, FontStyle.Bold);
+        button.Font = ButtonFont();
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
         button.BackColor = backColor;
@@ -169,7 +237,7 @@ internal static class DesktopTheme
         {
             BackColor = PrimaryDark,
             ForeColor = Color.White,
-            Font = Font(9.5f, FontStyle.Bold),
+            Font = ButtonFont(),
             SelectionBackColor = PrimaryDark,
             Padding = new Padding(12, 0, 12, 0)
         };
@@ -301,75 +369,84 @@ internal static class DesktopTheme
         return path;
     }
 
-    public static Image? LoadBrandImage()
+    public static Image? LoadLoginLogo() => LoadImageAsset("ne-library-logo.png");
+
+    public static Image? LoadSidebarLogo() => LoadImageAsset("ne-library-mark.png");
+
+    public static Icon? LoadApplicationIcon()
     {
-        var path = Path.Combine(
+        var iconPath = Path.Combine(
             AppContext.BaseDirectory,
             "Assets",
-            "sigebi-new-era-logo.png");
+            "ne-library-app.ico");
+        if (File.Exists(iconPath))
+            return new Icon(iconPath);
+
+        using var image = LoadSidebarLogo();
+        if (image is null)
+            return null;
+
+        using var source = new Bitmap(image);
+        var visibleBounds = FindVisibleBounds(source);
+        var scale = Math.Min(
+            52f / visibleBounds.Width,
+            52f / visibleBounds.Height);
+        var iconWidth = Math.Max(1, (int)Math.Round(visibleBounds.Width * scale));
+        var iconHeight = Math.Max(1, (int)Math.Round(visibleBounds.Height * scale));
+        var iconBounds = new Rectangle(
+            (64 - iconWidth) / 2,
+            (64 - iconHeight) / 2,
+            iconWidth,
+            iconHeight);
+        using var bitmap = new Bitmap(64, 64);
+        using (var graphics = Graphics.FromImage(bitmap))
+        {
+            graphics.Clear(PrimaryDark);
+            graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            graphics.DrawImage(
+                source,
+                iconBounds,
+                visibleBounds,
+                GraphicsUnit.Pixel);
+        }
+
+        return Icon.FromHandle(bitmap.GetHicon()).Clone() as Icon;
+    }
+
+    private static Rectangle FindVisibleBounds(Bitmap bitmap)
+    {
+        var left = bitmap.Width;
+        var top = bitmap.Height;
+        var right = -1;
+        var bottom = -1;
+
+        for (var y = 0; y < bitmap.Height; y += 2)
+        for (var x = 0; x < bitmap.Width; x += 2)
+        {
+            if (bitmap.GetPixel(x, y).A < 16)
+                continue;
+
+            left = Math.Min(left, x);
+            top = Math.Min(top, y);
+            right = Math.Max(right, x);
+            bottom = Math.Max(bottom, y);
+        }
+
+        return right >= left && bottom >= top
+            ? Rectangle.FromLTRB(left, top, right + 1, bottom + 1)
+            : new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+    }
+
+    private static Image? LoadImageAsset(string fileName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
         if (!File.Exists(path))
             return null;
         using var stream = File.OpenRead(path);
         using var original = Image.FromStream(stream);
-        const int maximumWidth = 900;
-        var targetWidth = Math.Min(maximumWidth, original.Width);
-        var targetHeight = Math.Max(
-            1,
-            (int)Math.Round(original.Height * (targetWidth / (double)original.Width)));
-        var bitmap = new Bitmap(original, new Size(targetWidth, targetHeight));
-        RemoveConnectedBlueBackground(bitmap);
-        return bitmap;
+        return new Bitmap(original);
     }
-
-    private static void RemoveConnectedBlueBackground(Bitmap bitmap)
-    {
-        var visited = new bool[bitmap.Width, bitmap.Height];
-        var queue = new Queue<Point>();
-        for (var x = 0; x < bitmap.Width; x++)
-        {
-            EnqueueIfBackground(x, 0);
-            EnqueueIfBackground(x, bitmap.Height - 1);
-        }
-        for (var y = 0; y < bitmap.Height; y++)
-        {
-            EnqueueIfBackground(0, y);
-            EnqueueIfBackground(bitmap.Width - 1, y);
-        }
-
-        while (queue.Count > 0)
-        {
-            var point = queue.Dequeue();
-            var color = bitmap.GetPixel(point.X, point.Y);
-            bitmap.SetPixel(
-                point.X,
-                point.Y,
-                Color.FromArgb(0, color.R, color.G, color.B));
-            EnqueueIfBackground(point.X - 1, point.Y);
-            EnqueueIfBackground(point.X + 1, point.Y);
-            EnqueueIfBackground(point.X, point.Y - 1);
-            EnqueueIfBackground(point.X, point.Y + 1);
-        }
-        return;
-
-        void EnqueueIfBackground(int x, int y)
-        {
-            if (x < 0 || y < 0 ||
-                x >= bitmap.Width || y >= bitmap.Height ||
-                visited[x, y])
-                return;
-            visited[x, y] = true;
-            if (!IsBlueBackground(bitmap.GetPixel(x, y)))
-                return;
-            queue.Enqueue(new Point(x, y));
-        }
-    }
-
-    private static bool IsBlueBackground(Color color) =>
-        color.A > 0 &&
-        color.G > 60 &&
-        color.B > 120 &&
-        color.B > color.R + 18 &&
-        color.G > color.R + 8;
 
     public static Panel CreateBrandMark(string initials, int size)
     {
@@ -851,7 +928,9 @@ internal sealed class OutlinedInputPanel : Panel
     {
         DoubleBuffered = true;
         BackColor = DesktopTheme.Surface;
-        Padding = new Padding(14, 10, suffix is null ? 14 : 4, 8);
+        Padding = suffix is null
+            ? new Padding(14, 10, 14, 8)
+            : new Padding(14, 10, 96, 8);
         Height = 52;
         ResizeRedraw = true;
         input.Dock = DockStyle.Fill;
@@ -862,11 +941,18 @@ internal sealed class OutlinedInputPanel : Panel
         Controls.Add(input);
         if (suffix is not null)
         {
-            suffix.Dock = DockStyle.Right;
-            suffix.Width = 82;
+            suffix.Dock = DockStyle.None;
+            suffix.MinimumSize = Size.Empty;
+            suffix.Size = new Size(72, 32);
+            suffix.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             suffix.Margin = Padding.Empty;
             Controls.Add(suffix);
             suffix.BringToFront();
+            void AlignSuffix() => suffix.Location = new Point(
+                Math.Max(0, ClientSize.Width - suffix.Width - 12),
+                Math.Max(0, (ClientSize.Height - suffix.Height) / 2));
+            Resize += (_, _) => AlignSuffix();
+            HandleCreated += (_, _) => AlignSuffix();
         }
         Resize += (_, _) => DesktopTheme.SetRoundedRegion(this, 10);
     }

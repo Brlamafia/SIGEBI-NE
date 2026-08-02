@@ -72,6 +72,18 @@ public class SigebiContext : DbContext
             if (!Enum.IsDefined(entry.Entity.TipoEvento))
                 entry.Property(n => n.TipoEvento).CurrentValue = TipoNotificacion.Informacion;
         }
+
+        foreach (var entry in ChangeTracker.Entries<Empleado>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            var nombreCargo = entry.Entity.Cargo?.Nombre
+                ?? ChangeTracker.Entries<Cargo>()
+                    .FirstOrDefault(c => c.Entity.Id == entry.Entity.CargoId)
+                    ?.Entity.Nombre;
+
+            if (!string.IsNullOrWhiteSpace(nombreCargo))
+                entry.Property<string>("cargo").CurrentValue = nombreCargo;
+        }
     }
 
     private static void ConfigurarUsuario(ModelBuilder modelBuilder)
@@ -224,6 +236,7 @@ public class SigebiContext : DbContext
         empleado.Property(e => e.Id).HasColumnName("id_empleado");
         empleado.Property(e => e.UsuarioId).HasColumnName("id_usuario");
         empleado.Property(e => e.CargoId).HasColumnName("id_cargo");
+        empleado.Property<string>("cargo").HasColumnName("cargo").HasMaxLength(100).IsRequired();
         empleado.Property(e => e.FechaCreacion).HasColumnName("fecha_registro");
         empleado.HasIndex(e => e.UsuarioId).IsUnique();
         empleado.HasOne(e => e.Usuario).WithOne().HasForeignKey<Empleado>(e => e.UsuarioId).OnDelete(DeleteBehavior.Restrict);
