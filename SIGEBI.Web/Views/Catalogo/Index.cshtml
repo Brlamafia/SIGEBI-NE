@@ -52,6 +52,11 @@
                 <span class="pill @(libro.Disponible ? "" : "unavailable")">
                     @(libro.Disponible ? $"{libro.CantidadDisponible} disponibles" : "No disponible")
                 </span>
+            </div>
+            <div class="book-actions">
+                <a class="card-button button-pending"
+                   asp-action="Details"
+                   asp-route-id="@libro.Id">Ver detalles</a>
                 @if (solicitudPendiente)
                 {
                     <a class="card-button button-pending"
@@ -61,7 +66,7 @@
                 else if (string.IsNullOrWhiteSpace(Model.RestriccionSolicitud))
                 {
                     <form asp-action="Solicitar" method="post">
-                        <input type="hidden" name="libroId" value="@libro.Id" />
+                        <input type="hidden" name="LibroId" value="@libro.Id" />
                         <button class="card-button button-request"
                                 type="submit"
                                 disabled="@(!libro.Disponible)"
@@ -97,7 +102,7 @@
         <a class="card-button" asp-route-pagina="@(Model.Pagina - 1)" asp-route-termino="@Model.Termino" asp-route-genero="@Model.Genero" asp-route-editorial="@Model.Editorial" asp-route-disponible="@Model.Disponible">Anterior</a>
     }
     <span>Página @Model.Pagina</span>
-    @if (Model.Libros.Count == 12)
+    @if (Model.HayPaginaSiguiente)
     {
         <a class="card-button" asp-route-pagina="@(Model.Pagina + 1)" asp-route-termino="@Model.Termino" asp-route-genero="@Model.Genero" asp-route-editorial="@Model.Editorial" asp-route-disponible="@Model.Disponible">Siguiente</a>
     }

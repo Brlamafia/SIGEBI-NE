@@ -1,0 +1,19 @@
+@model ApiErrorViewModel
+@{
+    ViewData["Title"] = "Servicio no disponible";
+}
+<section class="panel service-error" role="alert">
+    <span class="eyebrow">Error @Model.StatusCode</span>
+    <h3>@Model.Title</h3>
+    <p>@Model.Message</p>
+    <div class="item-actions">
+        <a class="card-button button-add" asp-controller="Home" asp-action="Index">Intentar nuevamente</a>
+        <form asp-controller="Auth" asp-action="Logout" method="post">
+            <button class="card-button" type="submit">Volver al acceso</button>
+        </form>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.RequestId))
+    {
+        <small>Referencia: @Model.RequestId</small>
+    }
+</section>

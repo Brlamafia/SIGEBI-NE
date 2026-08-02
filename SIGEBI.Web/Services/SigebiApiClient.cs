@@ -99,6 +99,11 @@ public sealed class SigebiApiClient(
             $"api/Libros?pagina={page}&tamanoPagina={pageSize}",
             cancellationToken);
 
+    public Task<LibroDto> GetBookByIdAsync(
+        int bookId,
+        CancellationToken cancellationToken = default) =>
+        GetAsync<LibroDto>($"api/Libros/{bookId}", cancellationToken);
+
     public Task<IReadOnlyCollection<SolicitudPrestamoDto>> GetMyRequestsAsync(
         CancellationToken cancellationToken = default) =>
         GetAsync<IReadOnlyCollection<SolicitudPrestamoDto>>(
@@ -154,7 +159,7 @@ public sealed class SigebiApiClient(
         CancellationToken cancellationToken)
     {
         using var request = CreateRequest(method, uri, body);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendHttpAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
     }
 
@@ -172,10 +177,47 @@ public sealed class SigebiApiClient(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendHttpAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
-        return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
-            ?? throw new SigebiApiException("La API devolvió una respuesta vacía.", (int)response.StatusCode);
+        try
+        {
+            return await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken)
+                ?? throw new SigebiApiException(
+                    "La API devolvió una respuesta vacía.",
+                    StatusCodes.Status502BadGateway);
+        }
+        catch (JsonException exception)
+        {
+            throw new SigebiApiException(
+                "La API devolvió una respuesta que no se pudo interpretar.",
+                StatusCodes.Status502BadGateway,
+                exception);
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendHttpAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (OperationCanceledException exception)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new SigebiApiException(
+                "La API tardó demasiado en responder. Inténtalo nuevamente.",
+                StatusCodes.Status504GatewayTimeout,
+                exception);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new SigebiApiException(
+                "No fue posible comunicarse con la API de SIGEBI. Verifica que el servicio esté disponible.",
+                StatusCodes.Status503ServiceUnavailable,
+                exception);
+        }
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, string uri, object? body)
@@ -194,11 +236,24 @@ public sealed class SigebiApiClient(
             return;
 
         var raw = await response.Content.ReadAsStringAsync(cancellationToken);
-        var message = ExtractMessage(raw) ??
-            (response.StatusCode == HttpStatusCode.Unauthorized
-                ? "La sesión no es válida o las credenciales son incorrectas."
-                : "La API no pudo completar la operación.");
-        throw new SigebiApiException(message, (int)response.StatusCode);
+        var detail = ExtractMessage(raw);
+        var message = response.StatusCode switch
+        {
+            HttpStatusCode.BadRequest => detail ?? "Revisa los datos enviados.",
+            HttpStatusCode.Unauthorized =>
+                "La sesión no es válida o las credenciales son incorrectas.",
+            HttpStatusCode.Forbidden =>
+                "Tu cuenta no tiene permiso para realizar esta acción.",
+            HttpStatusCode.NotFound => detail ?? "La información solicitada no existe.",
+            HttpStatusCode.Conflict => detail ?? "La operación entra en conflicto con el estado actual.",
+            >= HttpStatusCode.InternalServerError =>
+                "La API encontró un problema al procesar la solicitud. Inténtalo nuevamente.",
+            _ => detail ?? "La API no pudo completar la operación."
+        };
+        throw new SigebiApiException(
+            message,
+            (int)response.StatusCode,
+            responseDetail: detail);
     }
 
     private static string? ExtractMessage(string raw)

@@ -29,6 +29,39 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".toast.show").forEach(toast => toast.classList.remove("show"));
   }, 4500);
 
+  const confirmationDialog = document.getElementById("confirmationDialog");
+  const confirmationMessage = document.getElementById("confirmationMessage");
+  const confirmationAccept = document.getElementById("confirmationAccept");
+  const confirmationCancel = document.getElementById("confirmationCancel");
+  let pendingConfirmationForm = null;
+
+  document.querySelectorAll("form[data-confirm]").forEach(form => {
+    form.addEventListener("submit", event => {
+      if (form.dataset.confirmed === "true") {
+        delete form.dataset.confirmed;
+        return;
+      }
+      event.preventDefault();
+      pendingConfirmationForm = form;
+      if (confirmationMessage)
+        confirmationMessage.textContent = form.dataset.confirm ?? "Confirma esta operación.";
+      confirmationDialog?.showModal();
+    });
+  });
+
+  confirmationAccept?.addEventListener("click", () => {
+    if (!pendingConfirmationForm) return;
+    const form = pendingConfirmationForm;
+    pendingConfirmationForm = null;
+    confirmationDialog?.close();
+    form.dataset.confirmed = "true";
+    form.requestSubmit();
+  });
+  confirmationCancel?.addEventListener("click", () => {
+    pendingConfirmationForm = null;
+    confirmationDialog?.close();
+  });
+
   const revealItems = document.querySelectorAll(
     ".hero, .stat-card, .book-card, .list-card, .panel");
   revealItems.forEach((item, index) => {

@@ -22,6 +22,9 @@
             <label asp-for="Password.PasswordNueva"></label>
             <input asp-for="Password.PasswordNueva" autocomplete="new-password" />
             <span asp-validation-for="Password.PasswordNueva" class="field-error"></span>
+            <label asp-for="Password.ConfirmarPasswordNueva"></label>
+            <input asp-for="Password.ConfirmarPasswordNueva" autocomplete="new-password" />
+            <span asp-validation-for="Password.ConfirmarPasswordNueva" class="field-error"></span>
             <button class="primary-button" type="submit"><span>Actualizar contraseña</span><span>→</span></button>
         </form>
     </section>

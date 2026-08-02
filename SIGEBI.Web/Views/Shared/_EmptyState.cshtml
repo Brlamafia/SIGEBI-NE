@@ -1,0 +1,12 @@
+@model EmptyStateViewModel
+<div class="empty">
+    <strong>@Model.Title</strong>
+    <p>@Model.Message</p>
+    @if (!string.IsNullOrWhiteSpace(Model.ActionText) &&
+         !string.IsNullOrWhiteSpace(Model.ActionController))
+    {
+        <a class="card-button"
+           asp-controller="@Model.ActionController"
+           asp-action="@(Model.ActionName ?? "Index")">@Model.ActionText</a>
+    }
+</div>

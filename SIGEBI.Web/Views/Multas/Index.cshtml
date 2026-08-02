@@ -22,4 +22,11 @@
         </article>
     }
 </div>
-@if (Model.Multas.Count == 0) { <div class="empty"><strong>No tienes multas</strong>Tu cuenta se encuentra al día.</div> }
+@if (Model.Multas.Count == 0)
+{
+    <partial name="_EmptyState" model="@(new EmptyStateViewModel
+        {
+            Title = "No tienes multas",
+            Message = "Tu cuenta se encuentra al día."
+        })" />
+}

@@ -131,8 +131,16 @@ public sealed class AuthController(
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult ResetPassword(string token) =>
-        View(new ResetPasswordViewModel { Token = token });
+    public IActionResult ResetPassword(string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            TempData["Error"] = "El enlace de recuperación no es válido.";
+            return RedirectToAction(nameof(ForgotPassword));
+        }
+
+        return View(new ResetPasswordViewModel { Token = token });
+    }
 
     [AllowAnonymous]
     [HttpPost]
@@ -197,8 +205,20 @@ public sealed class AuthController(
         }
         catch (SigebiApiException exception)
         {
+            var accountDoesNotExist =
+                exception.StatusCode == StatusCodes.Status401Unauthorized &&
+                exception.ResponseDetail?.Contains(
+                    "No existe una cuenta activa",
+                    StringComparison.OrdinalIgnoreCase) == true;
+            if (accountDoesNotExist)
+                return RedirectToAction(nameof(CompleteGoogleRegistration));
+
+            logger.LogWarning(
+                exception,
+                "No se pudo completar el inicio de sesión externo.");
+            await HttpContext.SignOutAsync("External");
             TempData["Error"] = exception.Message;
-            return RedirectToAction(nameof(CompleteGoogleRegistration));
+            return RedirectToAction(nameof(Login));
         }
     }
 

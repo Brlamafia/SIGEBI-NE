@@ -47,6 +47,103 @@ public sealed class ZeroMigrationsArchitectureTests
     }
 
     [Fact]
+    public void Web_CargaJQueryAntesDeLaValidacionNoIntrusiva()
+    {
+        var layout = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Views",
+            "Shared",
+            "_Layout.cshtml"));
+        var validationPartial = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Views",
+            "Shared",
+            "_ValidationScriptsPartial.cshtml"));
+
+        Assert.Contains("jquery.min.js", layout);
+        Assert.Contains("jquery.validate.min.js", validationPartial);
+        Assert.Contains("jquery.validate.unobtrusive.min.js", validationPartial);
+        Assert.True(
+            layout.IndexOf("jquery.min.js", StringComparison.Ordinal) <
+            layout.IndexOf("RenderSectionAsync", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Web_ControladoresDeleganElConsumoHttpAlClienteApi()
+    {
+        var controllersDirectory = Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Controllers");
+        var controllers = Directory
+            .EnumerateFiles(controllersDirectory, "*.cs")
+            .Select(File.ReadAllText)
+            .ToArray();
+
+        Assert.NotEmpty(controllers);
+        Assert.All(controllers, controller =>
+        {
+            Assert.DoesNotContain("HttpClient", controller);
+            Assert.DoesNotContain("SIGEBI.Persistence", controller);
+            Assert.DoesNotContain("DbContext", controller);
+        });
+        Assert.Contains(controllers, controller =>
+            controller.Contains("ISigebiApiClient", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Web_ReutilizaPartialViewsParaEstadosCompartidos()
+    {
+        var sharedViews = Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Views",
+            "Shared");
+        var layout = File.ReadAllText(Path.Combine(sharedViews, "_Layout.cshtml"));
+        var solicitudes = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Views",
+            "Solicitudes",
+            "Index.cshtml"));
+
+        Assert.True(File.Exists(Path.Combine(sharedViews, "_FlashMessages.cshtml")));
+        Assert.True(File.Exists(Path.Combine(sharedViews, "_EmptyState.cshtml")));
+        Assert.Contains("_FlashMessages", layout);
+        Assert.Contains("_EmptyState", solicitudes);
+    }
+
+    [Fact]
+    public void Web_ConfirmaLaCancelacionAntesDeEnviarElFormulario()
+    {
+        var layout = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Views",
+            "Shared",
+            "_Layout.cshtml"));
+        var solicitudes = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "Views",
+            "Solicitudes",
+            "Index.cshtml"));
+        var script = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Web",
+            "wwwroot",
+            "js",
+            "site.js"));
+
+        Assert.Contains("confirmationDialog", layout);
+        Assert.Contains("data-confirm", solicitudes);
+        Assert.Contains("showModal", script);
+        Assert.Contains("requestSubmit", script);
+    }
+
+    [Fact]
     public void Desktop_ConsumeLaApiSinAccederAPersistencia()
     {
         var project = File.ReadAllText(Path.Combine(
