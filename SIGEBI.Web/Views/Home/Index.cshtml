@@ -21,7 +21,7 @@
 <div class="stats-grid">
     <article class="stat-card"><span>Solicitudes pendientes</span><strong>@pendientes</strong></article>
     <article class="stat-card"><span>Multas pendientes</span><strong>@Model.MontoMultasPendientes.ToString("C")</strong></article>
-    <article class="stat-card"><span>Notificaciones sin leer</span><strong>@Model.Notificaciones.Count(n => !n.Leida)</strong></article>
+    <article class="stat-card"><span>Notificaciones sin leer</span><strong>@Model.NotificacionesSinLeer</strong></article>
 </div>
 <section class="insights-grid" aria-label="Resumen gráfico">
     <article class="chart-card chart-card-featured">

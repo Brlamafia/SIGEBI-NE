@@ -1,0 +1,65 @@
+@model CatalogoDetalleViewModel
+@{
+    ViewData["Title"] = "Detalle del libro";
+    var libro = Model.Libro;
+}
+<div class="detail-toolbar">
+    <a class="card-button" asp-action="Index">← Volver al catálogo</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.RestriccionSolicitud))
+{
+    <div class="eligibility-alert" role="alert">
+        <span aria-hidden="true">!</span>
+        <div>
+            <strong>Solicitudes temporalmente restringidas</strong>
+            <p>@Model.RestriccionSolicitud</p>
+        </div>
+        <a class="card-button button-danger" asp-controller="Multas" asp-action="Index">Ver multas</a>
+    </div>
+}
+
+<article class="book-detail panel">
+    <div class="book-cover book-detail-cover cover-@((libro.Id - 1) % 6)"
+         role="img"
+         aria-label="Ilustración de portada de @libro.Titulo"></div>
+    <div class="book-detail-content">
+        <span class="eyebrow">Ficha bibliográfica</span>
+        <h3>@libro.Titulo</h3>
+        <p class="book-detail-author">@libro.Autor</p>
+
+        <div class="detail-grid book-detail-grid">
+            <div><small>ISBN</small><strong>@libro.ISBN</strong></div>
+            <div><small>Género</small><strong>@libro.Genero</strong></div>
+            <div><small>Editorial</small><strong>@libro.Editorial</strong></div>
+            <div><small>Estado</small><strong>@libro.Estado</strong></div>
+            <div><small>Ejemplares totales</small><strong>@libro.CantidadTotal</strong></div>
+            <div><small>Disponibles</small><strong>@libro.CantidadDisponible</strong></div>
+            <div><small>Prestados</small><strong>@libro.CantidadPrestada</strong></div>
+        </div>
+
+        <div class="book-detail-actions">
+            <span class="pill @(libro.Disponible ? "" : "unavailable")">
+                @(libro.Disponible ? "Disponible para solicitar" : "Sin disponibilidad")
+            </span>
+            @if (Model.SolicitudPendiente)
+            {
+                <a class="card-button button-pending"
+                   asp-controller="Solicitudes"
+                   asp-action="Index">Ver solicitud pendiente</a>
+            }
+            else if (string.IsNullOrWhiteSpace(Model.RestriccionSolicitud))
+            {
+                <form asp-action="Solicitar" method="post">
+                    <input type="hidden" name="LibroId" value="@libro.Id" />
+                    <input type="hidden" name="VolverAlDetalle" value="true" />
+                    <button class="card-button button-request"
+                            type="submit"
+                            disabled="@(!libro.Disponible)">
+                        @(libro.Disponible ? "Solicitar préstamo" : "No disponible")
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</article>

@@ -18,8 +18,10 @@
                 <span class="pill @item.Estado">@item.Estado</span>
                 @if (item.Estado == "Pendiente")
                 {
-                    <form asp-action="Cancelar" method="post">
-                        <input type="hidden" name="id" value="@item.Id" />
+                    <form asp-action="Cancelar"
+                          method="post"
+                          data-confirm="¿Deseas cancelar la solicitud de '@(Model.TitulosLibros.GetValueOrDefault(item.LibroId, $"Libro #{item.LibroId}"))'? Esta acción no se puede deshacer.">
+                        <input type="hidden" name="Id" value="@item.Id" />
                         <button class="card-button button-danger" type="submit">Cancelar solicitud</button>
                     </form>
                 }
@@ -29,9 +31,11 @@
 </div>
 @if (Model.Solicitudes.Count == 0)
 {
-    <div class="empty">
-        <strong>No tienes solicitudes</strong>
-        <p>Visita el catálogo para solicitar un libro.</p>
-        <a class="card-button" asp-controller="Catalogo" asp-action="Index">Explorar catálogo</a>
-    </div>
+    <partial name="_EmptyState" model="@(new EmptyStateViewModel
+        {
+            Title = "No tienes solicitudes",
+            Message = "Visita el catálogo para solicitar un libro.",
+            ActionText = "Explorar catálogo",
+            ActionController = "Catalogo"
+        })" />
 }

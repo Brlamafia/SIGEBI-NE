@@ -30,6 +30,9 @@ public sealed class RegisterViewModel : IValidatableObject
     public string Email { get; set; } = string.Empty;
 
     [Required, MinLength(8), DataType(DataType.Password)]
+    [RegularExpression(
+        @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$",
+        ErrorMessage = "La contraseña debe contener mayúscula, minúscula y número.")]
     [Display(Name = "Contraseña")]
     public string Password { get; set; } = string.Empty;
 
@@ -69,6 +72,9 @@ public sealed class ResetPasswordViewModel
     public string Token { get; set; } = string.Empty;
 
     [Required, MinLength(8), DataType(DataType.Password)]
+    [RegularExpression(
+        @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$",
+        ErrorMessage = "La contraseña debe contener mayúscula, minúscula y número.")]
     [Display(Name = "Nueva contraseña")]
     public string Password { get; set; } = string.Empty;
 

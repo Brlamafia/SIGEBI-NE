@@ -24,12 +24,18 @@ public sealed class SolicitudesController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancelar(
-        int id,
+        CancelarSolicitudViewModel model,
         CancellationToken cancellationToken = default)
     {
+        if (!ModelState.IsValid)
+        {
+            TempData["Error"] = "No se pudo identificar la solicitud.";
+            return RedirectToAction(nameof(Index));
+        }
+
         try
         {
-            await api.CancelRequestAsync(id, cancellationToken);
+            await api.CancelRequestAsync(model.Id, cancellationToken);
             TempData["Success"] = "La solicitud fue cancelada.";
         }
         catch (SigebiApiException exception)
@@ -37,7 +43,7 @@ public sealed class SolicitudesController(
             logger.LogWarning(
                 exception,
                 "La API rechazó la cancelación de la solicitud {SolicitudId}.",
-                id);
+                model.Id);
             TempData["Error"] = exception.Message;
         }
 

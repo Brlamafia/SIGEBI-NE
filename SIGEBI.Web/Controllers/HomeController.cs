@@ -21,7 +21,7 @@ public sealed class HomeController(ISigebiApiClient api) : Controller
             MontoMultasPendientes = summary.Multas
                 .Where(item => item.Estado == "Pendiente")
                 .Sum(item => item.Monto),
-            Notificaciones = summary.Notificaciones.Take(5).ToArray(),
+            NotificacionesSinLeer = summary.Notificaciones.Count(item => !item.Leida),
             Solicitudes = requests,
             TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
         });

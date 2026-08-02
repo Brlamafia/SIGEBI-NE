@@ -17,9 +17,11 @@
 </div>
 @if (Model.Prestamos.Count == 0)
 {
-    <div class="empty">
-        <strong>No tienes préstamos registrados</strong>
-        <p>Tus préstamos aparecerán aquí cuando una solicitud sea aprobada.</p>
-        <a class="card-button" asp-controller="Catalogo" asp-action="Index">Explorar catálogo</a>
-    </div>
+    <partial name="_EmptyState" model="@(new EmptyStateViewModel
+        {
+            Title = "No tienes préstamos registrados",
+            Message = "Tus préstamos aparecerán aquí cuando una solicitud sea aprobada.",
+            ActionText = "Explorar catálogo",
+            ActionController = "Catalogo"
+        })" />
 }
