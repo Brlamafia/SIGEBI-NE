@@ -53,18 +53,20 @@ public class SigebiContext : DbContext
 
     public override int SaveChanges()
     {
-        PrepararColumnasObligatoriasLegadas();
+        PrepararNotificacionesLegadas();
+        PrepararCargosLegados();
         return base.SaveChanges();
     }
 
-    public override Task<int> SaveChangesAsync(
+    public override async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
-        PrepararColumnasObligatoriasLegadas();
-        return base.SaveChangesAsync(cancellationToken);
+        PrepararNotificacionesLegadas();
+        await PrepararCargosLegadosAsync(cancellationToken);
+        return await base.SaveChangesAsync(cancellationToken);
     }
 
-    private void PrepararColumnasObligatoriasLegadas()
+    private void PrepararNotificacionesLegadas()
     {
         foreach (var entry in ChangeTracker.Entries<Notificacion>()
                      .Where(e => e.State == EntityState.Added))
@@ -72,18 +74,68 @@ public class SigebiContext : DbContext
             if (!Enum.IsDefined(entry.Entity.TipoEvento))
                 entry.Property(n => n.TipoEvento).CurrentValue = TipoNotificacion.Informacion;
         }
+    }
 
+    private void PrepararCargosLegados()
+    {
         foreach (var entry in ChangeTracker.Entries<Empleado>()
                      .Where(e => e.State is EntityState.Added or EntityState.Modified))
         {
-            var nombreCargo = entry.Entity.Cargo?.Nombre
-                ?? ChangeTracker.Entries<Cargo>()
-                    .FirstOrDefault(c => c.Entity.Id == entry.Entity.CargoId)
-                    ?.Entity.Nombre;
+            if (!RequiereResolverCargo(entry))
+                continue;
 
-            if (!string.IsNullOrWhiteSpace(nombreCargo))
-                entry.Property<string>("cargo").CurrentValue = nombreCargo;
+            var nombreCargo = ObtenerNombreCargoRastreado(entry.Entity)
+                ?? Cargos.AsNoTracking()
+                    .Where(c => c.Id == entry.Entity.CargoId)
+                    .Select(c => c.Nombre)
+                    .SingleOrDefault();
+
+            AsignarCargoLegado(entry, nombreCargo);
         }
+    }
+
+    private async Task PrepararCargosLegadosAsync(CancellationToken cancellationToken)
+    {
+        foreach (var entry in ChangeTracker.Entries<Empleado>()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            if (!RequiereResolverCargo(entry))
+                continue;
+
+            var nombreCargo = ObtenerNombreCargoRastreado(entry.Entity)
+                ?? await Cargos.AsNoTracking()
+                    .Where(c => c.Id == entry.Entity.CargoId)
+                    .Select(c => c.Nombre)
+                    .SingleOrDefaultAsync(cancellationToken);
+
+            AsignarCargoLegado(entry, nombreCargo);
+        }
+    }
+
+    private string? ObtenerNombreCargoRastreado(Empleado empleado) =>
+        empleado.Cargo?.Nombre
+        ?? ChangeTracker.Entries<Cargo>()
+            .FirstOrDefault(c => c.Entity.Id == empleado.CargoId)
+            ?.Entity.Nombre;
+
+    private static bool RequiereResolverCargo(
+        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Empleado> entry)
+    {
+        var cargoLegado = entry.Property<string>("cargo").CurrentValue;
+        return entry.State == EntityState.Added
+            || entry.Property(e => e.CargoId).IsModified
+            || string.IsNullOrWhiteSpace(cargoLegado);
+    }
+
+    private static void AsignarCargoLegado(
+        Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<Empleado> entry,
+        string? nombreCargo)
+    {
+        if (string.IsNullOrWhiteSpace(nombreCargo))
+            throw new InvalidOperationException(
+                $"No se encontró el cargo {entry.Entity.CargoId} asignado al empleado.");
+
+        entry.Property<string>("cargo").CurrentValue = nombreCargo;
     }
 
     private static void ConfigurarUsuario(ModelBuilder modelBuilder)
