@@ -25,6 +25,10 @@ public class CatalogoBusquedaTests
         AsignarId(libros[0], 1);
         AsignarId(libros[1], 2);
         var repository = new Mock<ILibroRepository>();
+        repository.Setup(r => r.ObtenerPorIdAsync(
+                1,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(libros[0]);
         repository.Setup(r => r.BuscarAsync(
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
@@ -95,6 +99,13 @@ public class CatalogoBusquedaTests
         var libro = Assert.Single(resultado);
         Assert.Equal("Clean Code", libro.Titulo);
         Assert.Equal(1, libro.CantidadDisponible);
+        Assert.NotEmpty(libro.Descripcion);
+
+        var detalle = await service.GetByIdAsync(1);
+        Assert.Equal(2, detalle.CantidadTotal);
+        Assert.Equal(1, detalle.CantidadDisponible);
+        Assert.Equal(1, detalle.CantidadPrestada);
+        Assert.Contains("Clean Code", detalle.Descripcion);
         repository.Verify(item => item.BuscarAsync(
             null,
             "tec",

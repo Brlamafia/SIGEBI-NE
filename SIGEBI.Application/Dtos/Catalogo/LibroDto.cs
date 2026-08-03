@@ -9,6 +9,7 @@
         public string Genero { get; set; } = string.Empty;
         public string Editorial { get; set; } = string.Empty;
         public string Estado { get; set; } = string.Empty;
+        public string Descripcion { get; set; } = string.Empty;
         public int CantidadTotal { get; set; }
         public int CantidadDisponible { get; set; }
         public int CantidadPrestada { get; set; }

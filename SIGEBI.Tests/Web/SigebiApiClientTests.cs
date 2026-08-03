@@ -101,6 +101,7 @@ public sealed class SigebiApiClientTests
                       "genero": "Tecnología",
                       "editorial": "Prentice Hall",
                       "estado": "Activo",
+                      "descripcion": "Explica los principios de una arquitectura de software sostenible.",
                       "cantidadTotal": 3,
                       "cantidadDisponible": 2,
                       "cantidadPrestada": 1
@@ -123,6 +124,7 @@ public sealed class SigebiApiClientTests
         Assert.Equal("/api/Libros/10", requestedPath);
         Assert.Equal("Clean Architecture", book.Titulo);
         Assert.Equal(2, book.CantidadDisponible);
+        Assert.Contains("arquitectura", book.Descripcion);
     }
 
     [Fact]

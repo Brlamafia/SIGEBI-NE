@@ -27,6 +27,10 @@
         <span class="eyebrow">Ficha bibliográfica</span>
         <h3>@libro.Titulo</h3>
         <p class="book-detail-author">@libro.Autor</p>
+        <section class="book-description" aria-labelledby="book-description-title">
+            <h4 id="book-description-title">Acerca de este libro</h4>
+            <p>@libro.Descripcion</p>
+        </section>
 
         <div class="detail-grid book-detail-grid">
             <div><small>ISBN</small><strong>@libro.ISBN</strong></div>

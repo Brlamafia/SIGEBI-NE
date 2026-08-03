@@ -15,7 +15,9 @@ using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces;
 using System.Data;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace SIGEBI.Application.Services.Catalogo
@@ -76,6 +78,16 @@ namespace SIGEBI.Application.Services.Catalogo
             if (creado is null)
                 throw new InvalidOperationException("No se pudo crear el libro.");
             return (await BuscarLibrosAsync(creado.ISBN)).Single();
+        }
+
+        public override async Task<LibroDto> GetByIdAsync(int id)
+        {
+            var libro = await _libroRepository.ObtenerPorIdAsync(id)
+                ?? throw new NotFoundException(nameof(Libro), id);
+            var inventario = (await _inventarioService.ObtenerPorLibrosAsync([id]))
+                .SingleOrDefault(item => item.LibroId == id);
+
+            return CrearDtoConInventario(libro, inventario);
         }
 
         public override async Task UpdateAsync<TUpdateDto>(int id, TUpdateDto dto)
@@ -140,18 +152,76 @@ namespace SIGEBI.Application.Services.Catalogo
 
             var resultados = libros.Select(libro =>
             {
-                var result = _mapper.Map<LibroDto>(libro);
-                if (porLibro.TryGetValue(libro.Id, out var inventario))
-                {
-                    result.CantidadTotal = inventario.CantidadTotal;
-                    result.CantidadDisponible = inventario.CantidadDisponible;
-                    result.CantidadPrestada = inventario.CantidadPrestada;
-                }
-                return result;
+                porLibro.TryGetValue(libro.Id, out var inventario);
+                return CrearDtoConInventario(libro, inventario);
             });
             if (disponible.HasValue)
                 resultados = resultados.Where(l => l.Disponible == disponible.Value);
             return resultados.OrderBy(l => l.Titulo).ToArray();
+        }
+
+        private LibroDto CrearDtoConInventario(
+            Libro libro,
+            InventarioDto? inventario)
+        {
+            var result = _mapper.Map<LibroDto>(libro);
+            result.Descripcion = ObtenerDescripcion(libro);
+            if (inventario is not null)
+            {
+                result.CantidadTotal = inventario.CantidadTotal;
+                result.CantidadDisponible = inventario.CantidadDisponible;
+                result.CantidadPrestada = inventario.CantidadPrestada;
+            }
+
+            return result;
+        }
+
+        private static string ObtenerDescripcion(Libro libro) =>
+            NormalizarTitulo(libro.Titulo) switch
+            {
+                "cien anos de soledad" =>
+                    "Relata la historia de la familia Buendía a través de varias generaciones en Macondo, explorando la soledad, el destino, el amor y la memoria.",
+                "el principito" =>
+                    "Un aviador conoce a un pequeño príncipe procedente de otro planeta y descubre, mediante sus viajes, el valor de la amistad, el amor y aquello que realmente importa.",
+                "don quijote de la mancha" =>
+                    "Narra las aventuras de Alonso Quijano, quien decide convertirse en caballero andante junto a Sancho Panza, mezclando imaginación, humor y crítica social.",
+                "1984" =>
+                    "Presenta una sociedad totalitaria vigilada por el Gran Hermano, donde Winston Smith intenta conservar su libertad de pensamiento frente al control absoluto del Estado.",
+                "la sombra del viento" =>
+                    "Daniel Sempere descubre un libro olvidado que lo conduce a investigar la vida de su autor y a desentrañar un misterio entre las calles de la Barcelona de posguerra.",
+                "breve historia del tiempo" =>
+                    "Explica de forma accesible conceptos como el origen del universo, los agujeros negros, el espacio, el tiempo y las principales preguntas de la cosmología moderna.",
+                "rayuela" =>
+                    "Sigue la búsqueda personal y amorosa de Horacio Oliveira entre París y Buenos Aires mediante una estructura experimental que permite distintas formas de lectura.",
+                "fahrenheit 451" =>
+                    "En una sociedad donde los libros están prohibidos, el bombero Guy Montag comienza a cuestionar su misión y descubre el poder transformador del conocimiento.",
+                "orgullo y prejuicio" =>
+                    "Explora la relación entre Elizabeth Bennet y el señor Darcy, marcada por primeras impresiones, diferencias sociales, orgullo y aprendizaje personal.",
+                "cronica de una muerte anunciada" =>
+                    "Reconstruye las horas previas al asesinato de Santiago Nasar, un crimen conocido por todo el pueblo que nadie consigue impedir.",
+                _ =>
+                    $"{libro.Titulo}, de {libro.Autor}, es una obra de {ObtenerGenero(libro)} que invita a conocer su historia, personajes y temas principales."
+            };
+
+        private static string ObtenerGenero(Libro libro) =>
+            string.IsNullOrWhiteSpace(libro.Genero)
+                ? "interés general"
+                : libro.Genero.ToLowerInvariant();
+
+        private static string NormalizarTitulo(string titulo)
+        {
+            var normalized = titulo.Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+            foreach (var character in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(character) !=
+                    UnicodeCategory.NonSpacingMark)
+                {
+                    builder.Append(char.ToLowerInvariant(character));
+                }
+            }
+
+            return builder.ToString().Normalize(NormalizationForm.FormC).Trim();
         }
     }
 }
