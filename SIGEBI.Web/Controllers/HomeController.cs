@@ -11,9 +11,14 @@ public sealed class HomeController(ISigebiApiClient api) : Controller
 {
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var summary = await api.GetMySummaryAsync(cancellationToken);
-        var requests = await api.GetMyRequestsAsync(cancellationToken);
-        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
+        var summaryTask = api.GetMySummaryAsync(cancellationToken);
+        var requestsTask = api.GetMyRequestsAsync(cancellationToken);
+        var catalogTask = api.GetBooksAsync(cancellationToken: cancellationToken);
+        await Task.WhenAll(summaryTask, requestsTask, catalogTask);
+
+        var summary = await summaryTask;
+        var requests = await requestsTask;
+        var catalog = await catalogTask;
         return View(new DashboardViewModel
         {
             Usuario = summary.Usuario,

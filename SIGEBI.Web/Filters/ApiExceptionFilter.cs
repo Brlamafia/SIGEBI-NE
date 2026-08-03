@@ -24,6 +24,28 @@ public sealed class ApiExceptionFilter(
         var statusCode = exception.StatusCode is >= 400 and <= 599
             ? exception.StatusCode
             : StatusCodes.Status500InternalServerError;
+
+        if (statusCode == StatusCodes.Status401Unauthorized)
+        {
+            context.HttpContext.Response.Cookies.Delete("SIGEBI.Web.Session");
+            context.Result = new RedirectToActionResult(
+                "Login",
+                "Auth",
+                new { sessionExpired = true });
+            context.ExceptionHandled = true;
+            return;
+        }
+
+        if (statusCode == StatusCodes.Status403Forbidden)
+        {
+            context.Result = new RedirectToActionResult(
+                "AccesoDenegado",
+                "Auth",
+                routeValues: null);
+            context.ExceptionHandled = true;
+            return;
+        }
+
         var viewData = new ViewDataDictionary<ApiErrorViewModel>(
             new EmptyModelMetadataProvider(),
             context.ModelState)

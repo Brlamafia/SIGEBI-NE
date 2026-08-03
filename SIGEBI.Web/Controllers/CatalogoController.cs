@@ -22,7 +22,7 @@ public sealed class CatalogoController(
         CancellationToken cancellationToken = default)
     {
         pagina = Math.Max(1, pagina);
-        var books = await api.SearchBooksAsync(
+        var booksTask = api.SearchBooksAsync(
             termino,
             genero,
             editorial,
@@ -30,6 +30,16 @@ public sealed class CatalogoController(
             pagina,
             PageSize,
             cancellationToken);
+        var requestsTask = api.GetMyRequestsAsync(cancellationToken);
+        var summaryTask = api.GetMySummaryAsync(cancellationToken);
+        var catalogTask = api.GetBooksAsync(cancellationToken: cancellationToken);
+        await Task.WhenAll(
+            booksTask,
+            requestsTask,
+            summaryTask,
+            catalogTask);
+
+        var books = await booksTask;
         var hasNextPage = books.Count == PageSize &&
             (await api.SearchBooksAsync(
                 termino,
@@ -39,10 +49,10 @@ public sealed class CatalogoController(
                 pagina + 1,
                 PageSize,
                 cancellationToken)).Count > 0;
-        var requests = await api.GetMyRequestsAsync(cancellationToken);
-        var summary = await api.GetMySummaryAsync(cancellationToken);
+        var requests = await requestsTask;
+        var summary = await summaryTask;
         var restriction = GetRequestRestriction(summary);
-        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
+        var catalog = await catalogTask;
 
         return View(new CatalogoViewModel
         {
@@ -79,9 +89,14 @@ public sealed class CatalogoController(
         if (id <= 0)
             return NotFound();
 
-        var book = await api.GetBookByIdAsync(id, cancellationToken);
-        var requests = await api.GetMyRequestsAsync(cancellationToken);
-        var summary = await api.GetMySummaryAsync(cancellationToken);
+        var bookTask = api.GetBookByIdAsync(id, cancellationToken);
+        var requestsTask = api.GetMyRequestsAsync(cancellationToken);
+        var summaryTask = api.GetMySummaryAsync(cancellationToken);
+        await Task.WhenAll(bookTask, requestsTask, summaryTask);
+
+        var book = await bookTask;
+        var requests = await requestsTask;
+        var summary = await summaryTask;
 
         return View(new CatalogoDetalleViewModel
         {

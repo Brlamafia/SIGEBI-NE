@@ -13,10 +13,14 @@ public sealed class SolicitudesController(
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
+        var catalogTask = api.GetBooksAsync(cancellationToken: cancellationToken);
+        var requestsTask = api.GetMyRequestsAsync(cancellationToken);
+        await Task.WhenAll(catalogTask, requestsTask);
+
+        var catalog = await catalogTask;
         return View(new SolicitudesViewModel
         {
-            Solicitudes = await api.GetMyRequestsAsync(cancellationToken),
+            Solicitudes = await requestsTask,
             TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
         });
     }

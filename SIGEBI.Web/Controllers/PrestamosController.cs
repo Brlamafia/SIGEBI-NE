@@ -11,8 +11,12 @@ public sealed class PrestamosController(ISigebiApiClient api) : Controller
     [HttpGet]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var summary = await api.GetMySummaryAsync(cancellationToken);
-        var catalog = await api.GetBooksAsync(cancellationToken: cancellationToken);
+        var summaryTask = api.GetMySummaryAsync(cancellationToken);
+        var catalogTask = api.GetBooksAsync(cancellationToken: cancellationToken);
+        await Task.WhenAll(summaryTask, catalogTask);
+
+        var summary = await summaryTask;
+        var catalog = await catalogTask;
         return View(new PrestamosViewModel
         {
             Prestamos = summary.Prestamos,

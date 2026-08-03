@@ -23,10 +23,19 @@ public sealed class AuthController(
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
+    public IActionResult Login(
+        string? returnUrl = null,
+        bool sessionExpired = false)
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToAction("Index", "Home");
+
+        if (sessionExpired)
+        {
+            ModelState.AddModelError(
+                string.Empty,
+                "Tu sesión expiró o dejó de ser válida. Inicia sesión nuevamente.");
+        }
 
         ViewData["ReturnUrl"] = returnUrl;
         return View(new LoginViewModel

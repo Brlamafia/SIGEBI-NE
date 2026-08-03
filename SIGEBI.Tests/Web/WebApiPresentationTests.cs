@@ -232,6 +232,8 @@ public sealed class WebApiPresentationTests
             {
                 Id = 10,
                 Titulo = "Clean Architecture",
+                Descripcion = "Presenta principios para diseñar sistemas mantenibles.",
+                CantidadTotal = 3,
                 CantidadDisponible = 2
             });
         api.Setup(client => client.GetMyRequestsAsync(
@@ -256,6 +258,8 @@ public sealed class WebApiPresentationTests
         var model = Assert.IsType<CatalogoDetalleViewModel>(result.Model);
 
         Assert.Equal("Clean Architecture", model.Libro.Titulo);
+        Assert.Equal(3, model.Libro.CantidadTotal);
+        Assert.NotEmpty(model.Libro.Descripcion);
         Assert.True(model.SolicitudPendiente);
         Assert.Null(model.RestriccionSolicitud);
     }
@@ -486,6 +490,111 @@ public sealed class WebApiPresentationTests
         Assert.Equal(StatusCodes.Status503ServiceUnavailable,
             httpContext.Response.StatusCode);
         Assert.Equal("Servicio temporalmente no disponible", model.Title);
+    }
+
+    [Fact]
+    public void SesionApiInvalida_EliminaLaCookieYRegresaAlLogin()
+    {
+        var httpContext = new DefaultHttpContext();
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor(),
+            new Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary());
+        var exceptionContext = new ExceptionContext(actionContext, [])
+        {
+            Exception = new SigebiApiException(
+                "La sesión dejó de ser válida.",
+                StatusCodes.Status401Unauthorized)
+        };
+        var filter = new ApiExceptionFilter(
+            NullLogger<ApiExceptionFilter>.Instance);
+
+        filter.OnException(exceptionContext);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(
+            exceptionContext.Result);
+        Assert.True(exceptionContext.ExceptionHandled);
+        Assert.Equal("Auth", redirect.ControllerName);
+        Assert.Equal(nameof(AuthController.Login), redirect.ActionName);
+        Assert.Equal(true, redirect.RouteValues!["sessionExpired"]);
+        Assert.Contains(
+            "SIGEBI.Web.Session=",
+            httpContext.Response.Headers.SetCookie.ToString());
+    }
+
+    [Fact]
+    public void PermisoApiDenegado_MuestraLaVistaDeAccesoDenegado()
+    {
+        var httpContext = new DefaultHttpContext();
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor(),
+            new Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary());
+        var exceptionContext = new ExceptionContext(actionContext, [])
+        {
+            Exception = new SigebiApiException(
+                "Acceso denegado.",
+                StatusCodes.Status403Forbidden)
+        };
+        var filter = new ApiExceptionFilter(
+            NullLogger<ApiExceptionFilter>.Instance);
+
+        filter.OnException(exceptionContext);
+
+        var redirect = Assert.IsType<RedirectToActionResult>(
+            exceptionContext.Result);
+        Assert.True(exceptionContext.ExceptionHandled);
+        Assert.Equal("Auth", redirect.ControllerName);
+        Assert.Equal(nameof(AuthController.AccesoDenegado), redirect.ActionName);
+    }
+
+    [Fact]
+    public async Task Inicio_IniciaLasConsultasIndependientesEnParalelo()
+    {
+        var summarySource = new TaskCompletionSource<MySummary>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var requestsSource = new TaskCompletionSource<
+            IReadOnlyCollection<SolicitudPrestamoDto>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var booksSource = new TaskCompletionSource<
+            IReadOnlyCollection<LibroDto>>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var api = new Mock<ISigebiApiClient>();
+        api.Setup(client => client.GetMySummaryAsync(
+                It.IsAny<CancellationToken>()))
+            .Returns(summarySource.Task);
+        api.Setup(client => client.GetMyRequestsAsync(
+                It.IsAny<CancellationToken>()))
+            .Returns(requestsSource.Task);
+        api.Setup(client => client.GetBooksAsync(
+                1,
+                200,
+                It.IsAny<CancellationToken>()))
+            .Returns(booksSource.Task);
+        var controller = new HomeController(api.Object);
+
+        var actionTask = controller.Index(CancellationToken.None);
+
+        api.Verify(client => client.GetMySummaryAsync(
+            It.IsAny<CancellationToken>()), Times.Once);
+        api.Verify(client => client.GetMyRequestsAsync(
+            It.IsAny<CancellationToken>()), Times.Once);
+        api.Verify(client => client.GetBooksAsync(
+            1,
+            200,
+            It.IsAny<CancellationToken>()), Times.Once);
+        Assert.False(actionTask.IsCompleted);
+
+        summarySource.SetResult(new MySummary
+        {
+            Usuario = new UsuarioDto { Nombre = "Ada" }
+        });
+        requestsSource.SetResult([]);
+        booksSource.SetResult([]);
+
+        Assert.IsType<ViewResult>(await actionTask);
     }
 
     [Theory]
