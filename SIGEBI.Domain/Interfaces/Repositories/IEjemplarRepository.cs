@@ -7,6 +7,9 @@ public interface IEjemplarRepository
 {
     Task<Ejemplar?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
     Task<Ejemplar?> ObtenerDisponiblePorLibroAsync(int libroId, CancellationToken cancellationToken = default);
+    Task<Ejemplar?> ObtenerDisponibleParaPrestamoAsync(
+        int libroId,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<Ejemplar>> ObtenerPorLibroAsync(
         int libroId,
         CancellationToken cancellationToken = default);

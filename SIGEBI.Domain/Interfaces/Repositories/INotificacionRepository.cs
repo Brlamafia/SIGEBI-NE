@@ -25,6 +25,13 @@ namespace SIGEBI.Domain.Interfaces.Repositories
             string textoIdentificador,
             DateTime desde,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Notificacion>> ObtenerPorUsuariosDesdeAsync(
+            IReadOnlyCollection<int> usuarioIds,
+            DateTime desde,
+            CancellationToken cancellationToken = default);
+        Task AgregarRangoAsync(
+            IEnumerable<Notificacion> notificaciones,
+            CancellationToken cancellationToken = default);
         void Actualizar(Notificacion notificacion);
 
         // ELIMINAMOS la línea de AgregarAsync porque ya viene heredada de IRepository

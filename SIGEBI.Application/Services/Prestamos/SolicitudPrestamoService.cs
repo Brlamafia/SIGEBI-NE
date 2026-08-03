@@ -178,7 +178,7 @@ namespace SIGEBI.Application.Services.Prestamos
                         AccionAuditoria.Registrar,
                         $"Solicitud registrada para el libro {dto.LibroId}.",
                         cancellationToken: cancellationToken);
-                }, IsolationLevel.Serializable);
+                }, IsolationLevel.ReadCommitted);
 
                 return true;
             }
@@ -229,7 +229,7 @@ namespace SIGEBI.Application.Services.Prestamos
                             : AccionAuditoria.Rechazar,
                         $"Solicitud {solicitud.Id} evaluada como {solicitud.Estado}.",
                         cancellationToken: cancellationToken);
-                }, IsolationLevel.Serializable);
+                }, IsolationLevel.ReadCommitted);
                 return true;
             }
             catch (Exception ex)
@@ -259,7 +259,7 @@ namespace SIGEBI.Application.Services.Prestamos
                     AccionAuditoria.Cancelar,
                     $"Solicitud {solicitudId} cancelada por el usuario.",
                     cancellationToken: ct);
-            }, IsolationLevel.Serializable, cancellationToken);
+            }, IsolationLevel.ReadCommitted, cancellationToken);
         }
     }
 }

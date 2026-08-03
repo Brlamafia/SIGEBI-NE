@@ -43,6 +43,17 @@ namespace SIGEBI.IOC.Dependencies
             services.AddScoped<IUsuarioService, UsuarioService>();
             services.AddScoped<ILibroService, LibroService>();
             services.AddScoped<ISolicitudPrestamoService, SolicitudPrestamoService>();
+            services.AddScoped<IPrestamoConsultaService, PrestamoConsultaService>();
+            services.AddScoped<IPrestamoRegistroService, PrestamoRegistroService>();
+            services.AddScoped<ISolicitudPrestamoDecisionService, SolicitudPrestamoDecisionService>();
+            services.AddScoped<IPrestamoCancelacionService, PrestamoCancelacionService>();
+            services.AddScoped<IPrestamoIncidenciaService, PrestamoIncidenciaService>();
+            services.AddScoped<IPrestamoMantenimientoService, PrestamoMantenimientoService>();
+            services.AddScoped<IResponsablePrestamoResolver, ResponsablePrestamoResolver>();
+            services.AddScoped<IPrestamoRegistroContextoResolver, PrestamoRegistroContextoResolver>();
+            services.AddScoped<IPrestamoOperacionContextoResolver, PrestamoOperacionContextoResolver>();
+            services.AddScoped<IPrestamoEventosService, PrestamoEventosService>();
+            services.AddScoped<IPrestamoPersistenciaOperaciones, PrestamoPersistenciaOperaciones>();
             services.AddScoped<IPrestamoService, PrestamoService>();
             services.AddScoped<IMultaService, MultaService>();
             services.AddScoped<IInventarioService, InventarioService>();

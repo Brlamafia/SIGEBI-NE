@@ -23,5 +23,8 @@ namespace SIGEBI.Domain.Interfaces.Repositories
             DateTime fechaHasta,
             CancellationToken cancellationToken = default);
         Task AgregarAsync(Auditoria auditoria, CancellationToken cancellationToken = default);
+        Task AgregarRangoAsync(
+            IEnumerable<Auditoria> auditorias,
+            CancellationToken cancellationToken = default);
     }
 }

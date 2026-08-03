@@ -65,5 +65,29 @@ namespace SIGEBI.Persistence.Repositories.Auditoria
             try { _logger.LogInformation("Registrando auditoría de {Modulo}/{Accion}", auditoria.Modulo, auditoria.Accion); await _auditorias.AddAsync(auditoria, ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error al registrar nueva auditoría"); throw; }
         }
+
+        public async Task AgregarRangoAsync(
+            IEnumerable<AuditoriaEntidad> auditorias,
+            CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(auditorias);
+            var lote = auditorias as IReadOnlyCollection<AuditoriaEntidad>
+                ?? auditorias.ToArray();
+            if (lote.Count == 0)
+                return;
+
+            try
+            {
+                _logger.LogInformation(
+                    "Registrando un lote de {Cantidad} eventos de auditoría",
+                    lote.Count);
+                await _auditorias.AddRangeAsync(lote, ct);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Error al registrar el lote de auditoría");
+                throw;
+            }
+        }
     }
 }

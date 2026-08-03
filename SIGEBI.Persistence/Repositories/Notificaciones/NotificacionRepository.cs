@@ -82,5 +82,35 @@ namespace SIGEBI.Persistence.Repositories.Notificaciones
                 throw;
             }
         }
+
+        public async Task<IReadOnlyCollection<Notificacion>> ObtenerPorUsuariosDesdeAsync(
+            IReadOnlyCollection<int> usuarioIds,
+            DateTime desde,
+            CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(usuarioIds);
+            if (usuarioIds.Count == 0)
+                return [];
+
+            return await _dbSet
+                .AsNoTracking()
+                .Where(notificacion =>
+                    usuarioIds.Contains(notificacion.UsuarioId) &&
+                    notificacion.FechaEnvio >= desde)
+                .ToListAsync(ct);
+        }
+
+        public async Task AgregarRangoAsync(
+            IEnumerable<Notificacion> notificaciones,
+            CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(notificaciones);
+            var lote = notificaciones as IReadOnlyCollection<Notificacion>
+                ?? notificaciones.ToArray();
+            if (lote.Count == 0)
+                return;
+
+            await _dbSet.AddRangeAsync(lote, ct);
+        }
     }
 }

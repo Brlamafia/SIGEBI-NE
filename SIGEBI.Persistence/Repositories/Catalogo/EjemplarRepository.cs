@@ -38,6 +38,37 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             catch (Exception ex) { _logger.LogError(ex, "Error buscando ejemplar disponible para libro {LibroId}", libroId); throw; }
         }
 
+        public async Task<Ejemplar?> ObtenerDisponibleParaPrestamoAsync(
+            int libroId,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Bloqueando un ejemplar disponible del libro {LibroId} para préstamo",
+                    libroId);
+                return await _dbSet
+                    .FromSqlInterpolated($$"""
+                        SELECT *
+                        FROM "Ejemplares"
+                        WHERE id_libro = {{libroId}}
+                          AND estado = 'Disponible'
+                        ORDER BY id_ejemplar
+                        FOR UPDATE SKIP LOCKED
+                        LIMIT 1
+                        """)
+                    .SingleOrDefaultAsync(ct);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Error bloqueando un ejemplar disponible para el libro {LibroId}",
+                    libroId);
+                throw;
+            }
+        }
+
         public async Task<IReadOnlyCollection<Ejemplar>> ObtenerPorLibroAsync(int libroId, CancellationToken ct = default)
         {
             try
