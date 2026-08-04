@@ -23,7 +23,7 @@ public sealed class ApiClient : IDisposable
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public ApiClient() : this(new HttpClient(), ownsClient: true)
+    public ApiClient() : this(CrearHttpClientOptimizado(), ownsClient: true)
     {
     }
 
@@ -31,10 +31,36 @@ public sealed class ApiClient : IDisposable
     {
         _httpClient = httpClient;
         _ownsClient = ownsClient;
-        _httpClient.Timeout = TimeSpan.FromSeconds(30);
+        _httpClient.Timeout = TimeSpan.FromSeconds(20);
     }
 
     public DesktopSession? Session { get; private set; }
+
+    public async Task PrepararConexionAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(6));
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                "health/ready");
+            using var response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                timeout.Token);
+            // La preparación es oportunista: su objetivo es reutilizar la conexión
+            // TCP/TLS y despertar el pool de base de datos antes del inicio de sesión.
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (HttpRequestException)
+        {
+        }
+    }
 
     public void ConfigurarBaseUrl(string baseUrl)
     {
@@ -59,10 +85,15 @@ public sealed class ApiClient : IDisposable
         Interlocked.Increment(ref _readGeneration);
         _readCache.Clear();
         _inflightGets.Clear();
-        using var response = await _httpClient.PostAsJsonAsync(
-            "api/Auth/login",
-            new { email, password },
-            JsonOptions,
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/Auth/login")
+        {
+            Content = JsonContent.Create(
+                new { email, password },
+                options: JsonOptions)
+        };
+        using var response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
         await AsegurarExitoAsync(response, cancellationToken);
         var session = await response.Content.ReadFromJsonAsync<DesktopSession>(
@@ -195,16 +226,43 @@ public sealed class ApiClient : IDisposable
         if (payload is not null)
             request.Content = JsonContent.Create(payload, options: JsonOptions);
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
         await AsegurarExitoAsync(response, cancellationToken);
         if (response.Content.Headers.ContentLength == 0 ||
             response.StatusCode == HttpStatusCode.NoContent)
             return JsonDocument.Parse("{}").RootElement.Clone();
 
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        return string.IsNullOrWhiteSpace(content)
-            ? JsonDocument.Parse("{}").RootElement.Clone()
-            : JsonDocument.Parse(content).RootElement.Clone();
+        await using var content = await response.Content.ReadAsStreamAsync(
+            cancellationToken);
+        if (!content.CanRead)
+            return JsonDocument.Parse("{}").RootElement.Clone();
+        using var document = await JsonDocument.ParseAsync(
+            content,
+            cancellationToken: cancellationToken);
+        return document.RootElement.Clone();
+    }
+
+    private static HttpClient CrearHttpClientOptimizado()
+    {
+        var handler = new SocketsHttpHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip |
+                                     DecompressionMethods.Deflate |
+                                     DecompressionMethods.Brotli,
+            ConnectTimeout = TimeSpan.FromSeconds(6),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+            PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+            MaxConnectionsPerServer = 8,
+            EnableMultipleHttp2Connections = true
+        };
+        return new HttpClient(handler)
+        {
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+        };
     }
 
     private static async Task AsegurarExitoAsync(

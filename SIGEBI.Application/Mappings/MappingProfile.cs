@@ -107,14 +107,30 @@ namespace SIGEBI.Application.Mappings
                 .AfterMap((src, dest) => dest.Renombrar(src.Nombre));
 
             // DTO Pattern: Empleado se adapta para la capa de aplicación.
-            CreateMap<Empleado, EmpleadoDto>();
+            CreateMap<Empleado, EmpleadoDto>()
+                .ForMember(dest => dest.NombreCompleto, opt => opt.MapFrom(src =>
+                    src.Usuario == null
+                        ? string.Empty
+                        : (src.Usuario.Nombre + " " + src.Usuario.Apellido).Trim()))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src =>
+                    src.Usuario == null ? string.Empty : src.Usuario.Email))
+                .ForMember(dest => dest.Cargo, opt => opt.MapFrom(src =>
+                    src.Cargo == null ? string.Empty : src.Cargo.Nombre));
             CreateMap<SaveEmpleadoDto, Empleado>()
                 .ConstructUsing(src => new Empleado(src.UsuarioId, src.CargoId));
             CreateMap<UpdateEmpleadoDto, Empleado>()
                 .AfterMap((src, dest) => dest.ActualizarCargo(src.CargoId));
 
             // DTO Pattern: Administrador se expone como contrato de datos.
-            CreateMap<Administrador, AdministradorDto>().ReverseMap();
+            CreateMap<Administrador, AdministradorDto>()
+                .ForMember(dest => dest.NombreCompleto, opt => opt.MapFrom(src =>
+                    src.Usuario == null
+                        ? string.Empty
+                        : (src.Usuario.Nombre + " " + src.Usuario.Apellido).Trim()))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src =>
+                    src.Usuario == null ? string.Empty : src.Usuario.Email))
+                .ForMember(dest => dest.Cargo, opt => opt.MapFrom(src =>
+                    src.Cargo == null ? string.Empty : src.Cargo.Nombre));
             CreateMap<SaveAdministradorDto, Administrador>();
             CreateMap<UpdateAdministradorDto, Administrador>();
         }

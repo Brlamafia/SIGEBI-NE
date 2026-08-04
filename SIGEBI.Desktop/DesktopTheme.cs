@@ -172,16 +172,16 @@ internal static class DesktopTheme
         button.FlatStyle = FlatStyle.Flat;
         button.FlatAppearance.BorderSize = 0;
         var normal = selected
-            ? Color.FromArgb(46, 255, 255, 255)
+            ? PrimaryVivid
             : Color.Transparent;
         var hover = selected
-            ? Color.FromArgb(64, 255, 255, 255)
+            ? Color.FromArgb(38, 118, 238)
             : Color.FromArgb(35, 255, 255, 255);
         button.BackColor = normal;
         button.ForeColor = Color.White;
-        button.Font = Font(10.5f, selected ? FontStyle.Bold : FontStyle.Regular);
+        button.Font = Font(9.75f, selected ? FontStyle.Bold : FontStyle.Regular);
         button.TextAlign = ContentAlignment.MiddleLeft;
-        button.Padding = new Padding(18, 0, 10, 0);
+        button.Padding = new Padding(14, 0, 8, 0);
         button.Height = 50;
         button.Cursor = Cursors.Hand;
         button.UseVisualStyleBackColor = false;
@@ -450,6 +450,7 @@ internal static class DesktopTheme
 
     public static Panel CreateBrandMark(string initials, int size)
     {
+        var initialsFont = Font(size * 0.26f, FontStyle.Bold);
         var panel = new Panel
         {
             Width = size,
@@ -464,11 +465,12 @@ internal static class DesktopTheme
             TextRenderer.DrawText(
                 eventArgs.Graphics,
                 initials,
-                Font(size * 0.26f, FontStyle.Bold),
+                initialsFont,
                 new Rectangle(0, 0, size, size),
                 Color.White,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         };
+        panel.Disposed += (_, _) => initialsFont.Dispose();
         return panel;
     }
 }
@@ -928,9 +930,7 @@ internal sealed class OutlinedInputPanel : Panel
     {
         DoubleBuffered = true;
         BackColor = DesktopTheme.Surface;
-        Padding = suffix is null
-            ? new Padding(14, 10, 14, 8)
-            : new Padding(14, 10, 96, 8);
+        Padding = new Padding(14, 9, 12, 8);
         Height = 52;
         ResizeRedraw = true;
         input.Dock = DockStyle.Fill;
@@ -938,21 +938,32 @@ internal sealed class OutlinedInputPanel : Panel
         input.BackColor = DesktopTheme.Surface;
         if (input is TextBox textBox)
             textBox.BorderStyle = BorderStyle.None;
-        Controls.Add(input);
-        if (suffix is not null)
+        if (suffix is null)
         {
-            suffix.Dock = DockStyle.None;
+            Controls.Add(input);
+        }
+        else
+        {
+            var layout = new BufferedTableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.Transparent,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                GrowStyle = TableLayoutPanelGrowStyle.FixedSize
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 88));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            suffix.Dock = DockStyle.Fill;
             suffix.MinimumSize = Size.Empty;
-            suffix.Size = new Size(72, 32);
-            suffix.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            suffix.Margin = Padding.Empty;
-            Controls.Add(suffix);
-            suffix.BringToFront();
-            void AlignSuffix() => suffix.Location = new Point(
-                Math.Max(0, ClientSize.Width - suffix.Width - 12),
-                Math.Max(0, (ClientSize.Height - suffix.Height) / 2));
-            Resize += (_, _) => AlignSuffix();
-            HandleCreated += (_, _) => AlignSuffix();
+            suffix.Margin = new Padding(6, 0, 0, 0);
+            input.Margin = Padding.Empty;
+            layout.Controls.Add(input, 0, 0);
+            layout.Controls.Add(suffix, 1, 0);
+            Controls.Add(layout);
         }
         Resize += (_, _) => DesktopTheme.SetRoundedRegion(this, 10);
     }

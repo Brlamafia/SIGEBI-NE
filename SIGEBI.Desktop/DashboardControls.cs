@@ -6,6 +6,8 @@ namespace SIGEBI.Desktop;
 internal sealed class DashboardDonut : Control
 {
     private int _percentage;
+    private readonly Font _valueFont = DesktopTheme.Font(20, FontStyle.Bold);
+    private readonly Font _captionFont = DesktopTheme.Font(8);
 
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -46,17 +48,27 @@ internal sealed class DashboardDonut : Control
         TextRenderer.DrawText(
             eventArgs.Graphics,
             $"{Percentage}%",
-            DesktopTheme.Font(20, FontStyle.Bold),
+            _valueFont,
             new Rectangle(0, Height / 2 - 25, Width, 34),
             Color.White,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         TextRenderer.DrawText(
             eventArgs.Graphics,
             "atendidas",
-            DesktopTheme.Font(8),
+            _captionFont,
             new Rectangle(0, Height / 2 + 8, Width, 22),
             Color.FromArgb(220, 246, 255),
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _valueFont.Dispose();
+            _captionFont.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }
 
