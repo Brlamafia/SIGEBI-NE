@@ -3,7 +3,8 @@ namespace SIGEBI.Desktop;
 public sealed class LoginForm : Form
 {
     private readonly ApiClient _apiClient;
-    private readonly TableLayoutPanel _root = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly BufferedTableLayoutPanel _root = new();
     private readonly SurfaceCard _loginCard = new();
     private Control? _brandPanel;
     private Control? _loginHost;
@@ -68,7 +69,9 @@ public sealed class LoginForm : Form
         {
             AplicarDisenoResponsivo();
             _email.Focus();
+            _ = _apiClient.PrepararConexionAsync(_lifetime.Token);
         };
+        FormClosed += (_, _) => _lifetime.Cancel();
     }
 
     public bool Autenticado { get; private set; }
@@ -103,7 +106,7 @@ public sealed class LoginForm : Form
             : _loginHost.ClientSize.Width - 96;
         var availableHeight = _loginHost.ClientSize.Height - 96;
         _loginCard.Width = Math.Clamp(availableWidth, 430, compact ? 560 : 520);
-        _loginCard.Height = Math.Clamp(availableHeight, 560, 650);
+        _loginCard.Height = Math.Clamp(availableHeight, 460, 650);
         _loginCard.Padding = compact
             ? new Padding(24, 18, 24, 12)
             : Padding.Empty;
@@ -113,7 +116,7 @@ public sealed class LoginForm : Form
     private static Control CreateBrandPanel()
     {
         var panel = new WebGradientPanel { Dock = DockStyle.Fill };
-        var content = new TableLayoutPanel
+        var content = new BufferedTableLayoutPanel
         {
             Width = 860,
             Height = 820,
@@ -219,7 +222,7 @@ public sealed class LoginForm : Form
             TextAlign = ContentAlignment.TopLeft,
             Padding = new Padding(0, 8, 0, 0)
         }, 0, 7);
-        var host = new TableLayoutPanel
+        var host = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -260,16 +263,23 @@ public sealed class LoginForm : Form
         _login.FlatAppearance.BorderSize = 0;
         _login.TabStop = false;
 
-        var showPassword = new AnimatedButton
+        var showPassword = new Button
         {
             Text = "Mostrar",
             FlatStyle = FlatStyle.Flat,
             ForeColor = DesktopTheme.Primary,
             BackColor = DesktopTheme.Surface,
             Font = DesktopTheme.ButtonFont(9),
-            Cursor = Cursors.Hand
+            Cursor = Cursors.Hand,
+            TabStop = false,
+            TextAlign = ContentAlignment.MiddleRight,
+            Padding = new Padding(0, 0, 2, 0),
+            UseVisualStyleBackColor = false,
+            AutoSize = false
         };
-        DesktopTheme.StyleTextButton(showPassword);
+        showPassword.FlatAppearance.BorderSize = 0;
+        showPassword.FlatAppearance.MouseOverBackColor = DesktopTheme.PrimarySoft;
+        showPassword.FlatAppearance.MouseDownBackColor = DesktopTheme.CyanSoft;
         showPassword.Click += (_, _) =>
         {
             _password.UseSystemPasswordChar = !_password.UseSystemPasswordChar;
@@ -284,7 +294,7 @@ public sealed class LoginForm : Form
             Dock = DockStyle.Fill
         };
 
-        var content = new TableLayoutPanel
+        var content = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -310,7 +320,7 @@ public sealed class LoginForm : Form
         {
             Text = "BIENVENIDO",
             Font = DesktopTheme.EyebrowFont(),
-            ForeColor = DesktopTheme.Cyan,
+            ForeColor = DesktopTheme.PrimaryVivid,
             AutoSize = true
         }, 0, 0);
         content.Controls.Add(new Label
@@ -352,7 +362,7 @@ public sealed class LoginForm : Form
             TextAlign = ContentAlignment.BottomCenter
         }, 0, 11);
 
-        var host = new TableLayoutPanel
+        var host = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = DesktopTheme.Background,
@@ -393,10 +403,14 @@ public sealed class LoginForm : Form
         {
             _login.Enabled = false;
             _login.Text = "Conectando…";
+            _email.Enabled = false;
+            _password.Enabled = false;
             UseWaitCursor = true;
+            await Task.Yield();
             var session = await _apiClient.IniciarSesionAsync(
                 _email.Text.Trim(),
-                _password.Text);
+                _password.Text,
+                _lifetime.Token);
             if (!session.PuedeUsarDesktop)
             {
                 _apiClient.CerrarSesion();
@@ -417,6 +431,8 @@ public sealed class LoginForm : Form
         finally
         {
             UseWaitCursor = false;
+            _email.Enabled = true;
+            _password.Enabled = true;
             _login.Enabled = true;
             _login.Text = "Iniciar sesión";
         }
@@ -436,6 +452,16 @@ public sealed class LoginForm : Form
         return string.IsNullOrWhiteSpace(exception.Message)
             ? "No pudimos iniciar sesión. Revisa tus datos e inténtalo nuevamente."
             : exception.Message.Trim();
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _lifetime.Cancel();
+            _lifetime.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }
 

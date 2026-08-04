@@ -4,5 +4,7 @@
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;
+        public string PersonalAsignado { get; set; } = string.Empty;
+        public string CorreosAsociados { get; set; } = string.Empty;
     }
 }

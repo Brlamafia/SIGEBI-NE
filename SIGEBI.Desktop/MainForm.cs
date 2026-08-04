@@ -9,12 +9,14 @@ public sealed class MainForm : Form
 
     // Mantiene los datos ya consultados al navegar entre módulos. Cualquier alta,
     // cambio o eliminación invalida este caché desde ApiClient.
-    private static readonly TimeSpan ModuleRefreshInterval = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan ModuleRefreshInterval = TimeSpan.FromMinutes(5);
     private readonly ApiClient _api;
     private readonly DesktopSession _session;
     private readonly Task _inicioWarmupTask;
     private readonly Dictionary<TabPage, DateTime> _moduleLoadedAt = [];
     private readonly HashSet<TabPage> _modulesLoading = [];
+    private readonly Font _gridStatusFont = DesktopTheme.Font(9.5f, FontStyle.Bold);
+    private readonly Font _emptyGridFont = DesktopTheme.Font(11);
     private readonly Label _status = new()
     {
         Text = "Todo listo para trabajar",
@@ -78,11 +80,13 @@ public sealed class MainForm : Form
 
         var logout = new AnimatedButton
         {
-            Text = "↪   Cerrar sesión",
+            Text = "↪  Cerrar sesión",
             Dock = DockStyle.Fill,
             Margin = new Padding(18, 8, 18, 16)
         };
         DesktopTheme.StyleNavigationButton(logout, false);
+        logout.Font = DesktopTheme.Font(9.5f);
+        logout.Padding = new Padding(12, 0, 8, 0);
         logout.Click += (_, _) =>
         {
             _api.CerrarSesion();
@@ -104,7 +108,7 @@ public sealed class MainForm : Form
 
         var statusFooter = CrearPieEstado();
 
-        var root = new TableLayoutPanel
+        var root = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -113,9 +117,9 @@ public sealed class MainForm : Form
             Padding = Padding.Empty,
             BackColor = DesktopTheme.Background
         };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 264));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 282));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 86));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         root.Controls.Add(sidebar, 0, 0);
@@ -136,7 +140,7 @@ public sealed class MainForm : Form
         {
             tabs.ItemSize = new Size(0, 1);
             await CargarPrimeraPestanaAsync(tabs);
-            _ = PrepararModulosEnSegundoPlanoAsync();
+            _ = PrepararModulosEnSegundoPlanoAsync(tabs);
         };
     }
 
@@ -149,7 +153,7 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(18, 24, 18, 0)
         };
-        var layout = new TableLayoutPanel
+        var layout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -163,7 +167,7 @@ public sealed class MainForm : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
 
         layout.Controls.Add(CrearMarcaLateral(), 0, 0);
-        var navigation = new FlowLayoutPanel
+        var navigation = new BufferedFlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
@@ -182,7 +186,7 @@ public sealed class MainForm : Form
             var button = new AnimatedButton
             {
                 Text = $"{ObtenerIconoModulo(tabs.TabPages[index].Text)}   {tabs.TabPages[index].Text}",
-                Width = 208,
+                Width = 226,
                 Margin = new Padding(0, 3, 0, 3),
                 Tag = pageIndex
             };
@@ -232,7 +236,7 @@ public sealed class MainForm : Form
 
     private static Control CrearMarcaLateral()
     {
-        var content = new TableLayoutPanel
+        var content = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -268,10 +272,10 @@ public sealed class MainForm : Form
         }
         content.Controls.Add(new Label
         {
-            Text = "GESTIÓN PARA EL PERSONAL",
+            Text = "GESTIÓN DEL PERSONAL",
             Dock = DockStyle.Fill,
             ForeColor = Color.FromArgb(205, 242, 255),
-            Font = DesktopTheme.EyebrowFont(),
+            Font = DesktopTheme.EyebrowFont(8),
             TextAlign = ContentAlignment.MiddleCenter
         }, 0, 1);
         return content;
@@ -279,27 +283,27 @@ public sealed class MainForm : Form
 
     private Control CrearEncabezado(Label moduleTitle)
     {
-        var header = new TableLayoutPanel
+        var header = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
             RowCount = 1,
             BackColor = DesktopTheme.Surface,
-            Padding = new Padding(28, 12, 26, 10),
+            Padding = new Padding(28, 9, 26, 8),
             Margin = Padding.Empty
         };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52));
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 255));
 
-        var heading = new TableLayoutPanel
+        var heading = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
             RowCount = 2,
             BackColor = Color.Transparent
         };
-        heading.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+        heading.RowStyles.Add(new RowStyle(SizeType.Absolute, 18));
         heading.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         heading.Controls.Add(new Label
         {
@@ -332,7 +336,8 @@ public sealed class MainForm : Form
             ForeColor = DesktopTheme.Text,
             Font = DesktopTheme.LabelFont(),
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(10, 0, 0, 0)
+            Padding = new Padding(10, 0, 0, 0),
+            AutoEllipsis = true
         }, 2, 0);
         return header;
     }
@@ -351,7 +356,7 @@ public sealed class MainForm : Form
             using var border = new Pen(DesktopTheme.Border);
             eventArgs.Graphics.DrawLine(border, 0, 0, footer.Width, 0);
         };
-        var layout = new TableLayoutPanel
+        var layout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
@@ -362,7 +367,7 @@ public sealed class MainForm : Form
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 225));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 245));
         layout.Controls.Add(new Label
         {
             Text = "●",
@@ -374,7 +379,7 @@ public sealed class MainForm : Form
         layout.Controls.Add(_status, 1, 0);
         var connectionBadge = new Label
         {
-            Text = "API CONECTADA  ·  SUPABASE CLOUD",
+            Text = "API CONECTADA  ·  SUPABASE",
             Dock = DockStyle.Fill,
             ForeColor = DesktopTheme.PrimaryDark,
             BackColor = DesktopTheme.PrimarySoft,
@@ -419,7 +424,7 @@ public sealed class MainForm : Form
             BackColor = DesktopTheme.Background,
             Padding = new Padding(28, 22, 28, 22)
         };
-        var content = new TableLayoutPanel
+        var content = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Top,
             Height = 760,
@@ -431,7 +436,7 @@ public sealed class MainForm : Form
         };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 160));
-        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 116));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 132));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 224));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -443,7 +448,7 @@ public sealed class MainForm : Form
         var pendingValue = CrearEtiquetaDashboard("—", 24, FontStyle.Bold, DesktopTheme.Navy);
         var activeValue = CrearEtiquetaDashboard("—", 24, FontStyle.Bold, DesktopTheme.Navy);
         var finesValue = CrearEtiquetaDashboard("—", 24, FontStyle.Bold, DesktopTheme.Navy);
-        var metrics = new TableLayoutPanel
+        var metrics = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
@@ -491,7 +496,7 @@ public sealed class MainForm : Form
         var pendingCount = CrearEtiquetaDashboard("0", 9, FontStyle.Bold, DesktopTheme.Text);
         var activeCount = CrearEtiquetaDashboard("0", 9, FontStyle.Bold, DesktopTheme.Text);
         var overdueCount = CrearEtiquetaDashboard("0", 9, FontStyle.Bold, DesktopTheme.Text);
-        var insights = new TableLayoutPanel
+        var insights = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -512,7 +517,7 @@ public sealed class MainForm : Form
             overdueCount), 1, 0);
         content.Controls.Add(insights, 0, 2);
 
-        var activityTitle = new TableLayoutPanel
+        var activityTitle = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -522,7 +527,7 @@ public sealed class MainForm : Form
         };
         activityTitle.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         activityTitle.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
-        var titleStack = new TableLayoutPanel
+        var titleStack = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -544,7 +549,7 @@ public sealed class MainForm : Form
         activityTitle.Controls.Add(titleStack, 0, 0);
         var requestsButton = new AnimatedButton
         {
-            Text = "Ver solicitudes  →",
+            Text = "Ver solicitudes",
             Anchor = AnchorStyles.Top | AnchorStyles.Right,
             Size = new Size(152, 40),
             Margin = new Padding(18, 4, 0, 0)
@@ -557,7 +562,7 @@ public sealed class MainForm : Form
         activityTitle.Controls.Add(requestsButton, 1, 0);
         content.Controls.Add(activityTitle, 0, 3);
 
-        var activityList = new FlowLayoutPanel
+        var activityList = new BufferedFlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
@@ -631,7 +636,7 @@ public sealed class MainForm : Form
             Margin = new Padding(0, 0, 0, 8)
         };
         hero.Resize += (_, _) => DesktopTheme.SetRoundedRegion(hero, 18);
-        var layout = new TableLayoutPanel
+        var layout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -641,7 +646,7 @@ public sealed class MainForm : Form
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230));
-        var copy = new TableLayoutPanel
+        var copy = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 3,
@@ -667,7 +672,7 @@ public sealed class MainForm : Form
             FontStyle.Regular,
             Color.FromArgb(225, 246, 255)), 0, 2);
         layout.Controls.Add(copy, 0, 0);
-        var count = new TableLayoutPanel
+        var count = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -708,15 +713,15 @@ public sealed class MainForm : Form
             using var accentPen = new Pen(accent, 3);
             eventArgs.Graphics.DrawLine(accentPen, 16, 1, Math.Max(16, card.Width - 16), 1);
         };
-        var layout = new TableLayoutPanel
+        var layout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 3,
             BackColor = Color.Transparent,
             Margin = Padding.Empty
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         layout.Controls.Add(CrearEtiquetaDashboard(title, 8, FontStyle.Bold, DesktopTheme.Muted), 0, 0);
         layout.Controls.Add(value, 0, 1);
@@ -734,7 +739,7 @@ public sealed class MainForm : Form
             Margin = new Padding(0, 0, 8, 0)
         };
         card.Resize += (_, _) => DesktopTheme.SetRoundedRegion(card, 16);
-        var layout = new TableLayoutPanel
+        var layout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -744,7 +749,7 @@ public sealed class MainForm : Form
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
-        var copy = new TableLayoutPanel
+        var copy = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 4,
@@ -784,7 +789,7 @@ public sealed class MainForm : Form
             Padding = new Padding(20, 16, 20, 14),
             Margin = new Padding(8, 0, 0, 0)
         };
-        var root = new TableLayoutPanel
+        var root = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -793,7 +798,7 @@ public sealed class MainForm : Form
         };
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var heading = new TableLayoutPanel
+        var heading = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -815,7 +820,7 @@ public sealed class MainForm : Form
         heading.SetRowSpan(total, 2);
         root.Controls.Add(heading, 0, 0);
 
-        var rows = new TableLayoutPanel
+        var rows = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
@@ -906,7 +911,7 @@ public sealed class MainForm : Form
                 Padding = new Padding(16, 7, 14, 7),
                 Margin = new Padding(0, 0, 0, 6)
             };
-            var layout = new TableLayoutPanel
+            var layout = new BufferedTableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 3,
@@ -1348,7 +1353,7 @@ public sealed class MainForm : Form
             Padding = new Padding(18, 24, 18, 18),
             Margin = new Padding(24, 20, 12, 20)
         };
-        var navigationLayout = new TableLayoutPanel
+        var navigationLayout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -1358,8 +1363,8 @@ public sealed class MainForm : Form
             Padding = Padding.Empty
         };
         navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
-        navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
+        navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         navigationLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         navigationLayout.Controls.Add(new Label
         {
@@ -1385,7 +1390,7 @@ public sealed class MainForm : Form
             Font = DesktopTheme.Font(9),
             TextAlign = ContentAlignment.TopLeft
         }, 0, 2);
-        var navigation = new FlowLayoutPanel
+        var navigation = new BufferedFlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.TopDown,
@@ -1432,7 +1437,7 @@ public sealed class MainForm : Form
         navigationLayout.Controls.Add(navigation, 0, 3);
         navigationCard.Controls.Add(navigationLayout);
 
-        var root = new TableLayoutPanel
+        var root = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -1441,7 +1446,7 @@ public sealed class MainForm : Form
             Margin = Padding.Empty,
             Padding = Padding.Empty
         };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 282));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 302));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.Controls.Add(navigationCard, 0, 0);
@@ -1786,8 +1791,26 @@ public sealed class MainForm : Form
         await CargarPestanaAsync(tabs.SelectedTab);
     }
 
-    private async Task PrepararModulosEnSegundoPlanoAsync()
+    private async Task PrepararModulosEnSegundoPlanoAsync(TabControl tabs)
     {
+        // Entrega primero la pantalla de Inicio y materializa las demás vistas
+        // durante pausas breves. Así el primer cambio de módulo no construye toda
+        // su jerarquía de controles en el mismo instante del clic.
+        await Task.Delay(400);
+        foreach (var page in tabs.TabPages.Cast<TabPage>())
+        {
+            if (IsDisposed || Disposing)
+                return;
+            if (page.Tag is DeferredModule)
+            {
+                // Deja intervalos suficientes para que clics, repintados y entrada
+                // del usuario siempre tengan prioridad sobre esta preparación.
+                await Task.Delay(120);
+                if (page.Tag is DeferredModule)
+                    MaterializarModulo(page);
+            }
+        }
+
         await _inicioWarmupTask;
 
         var endpoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1805,7 +1828,9 @@ public sealed class MainForm : Form
         if (_session.TieneRol("Administrador"))
             endpoints.Add("api/Usuarios");
 
-        await Task.WhenAll(endpoints.Select(async endpoint =>
+        // Las consultas se realizan de forma gradual para no competir con la
+        // navegación ni saturar el pool de conexiones inmediatamente tras login.
+        foreach (var endpoint in endpoints)
         {
             try
             {
@@ -1816,10 +1841,11 @@ public sealed class MainForm : Form
                 // La precarga es opcional. El modulo mostrara cualquier error
                 // cuando el usuario lo abra y solicite la informacion.
             }
-        }));
+            await Task.Delay(35);
+        }
 
-        // Solo precargamos datos. Los controles de cada módulo se materializan al
-        // abrirlo para no bloquear el hilo visual inmediatamente después del login.
+        // A partir de aquí, vistas y datos frecuentes quedan preparados; las
+        // operaciones explícitas del usuario siguen solicitando información fresca.
     }
 
     private async Task CargarPestanaAsync(TabPage? page)
@@ -1913,7 +1939,7 @@ public sealed class MainForm : Form
         return target;
     }
 
-    private static (TabPage Page, DataGridView Grid, FlowLayoutPanel Toolbar) CrearPagina(string name)
+    private (TabPage Page, DataGridView Grid, FlowLayoutPanel Toolbar) CrearPagina(string name)
     {
         var (title, description) = ObtenerInformacionModulo(name);
         var page = new TabPage(name)
@@ -1922,7 +1948,7 @@ public sealed class MainForm : Form
             Padding = Padding.Empty
         };
 
-        var content = new TableLayoutPanel
+        var content = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -1931,7 +1957,7 @@ public sealed class MainForm : Form
             Padding = new Padding(28, 24, 28, 24)
         };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 116));
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 132));
         content.RowStyles.Add(new RowStyle(SizeType.Absolute, 154));
         content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -1942,7 +1968,7 @@ public sealed class MainForm : Form
             Margin = new Padding(0, 0, 0, 14)
         };
         heading.Resize += (_, _) => DesktopTheme.SetRoundedRegion(heading, 16);
-        var heroLayout = new TableLayoutPanel
+        var heroLayout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -1952,7 +1978,7 @@ public sealed class MainForm : Form
         };
         heroLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         heroLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
-        heroLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        heroLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
         heroLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         heroLayout.Controls.Add(new Label
         {
@@ -1992,7 +2018,7 @@ public sealed class MainForm : Form
             Padding = new Padding(18, 10, 18, 10),
             Margin = new Padding(0, 0, 0, 14)
         };
-        var actionLayout = new TableLayoutPanel
+        var actionLayout = new BufferedTableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
@@ -2011,7 +2037,7 @@ public sealed class MainForm : Form
             ForeColor = DesktopTheme.Primary,
             TextAlign = ContentAlignment.MiddleLeft
         }, 0, 0);
-        var toolbar = new FlowLayoutPanel
+        var toolbar = new BufferedFlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(0, 3, 0, 0),
@@ -2049,7 +2075,7 @@ public sealed class MainForm : Form
             TextRenderer.DrawText(
                 eventArgs.Graphics,
                 "No hay registros para mostrar.\nUsa una acción de arriba para consultar información.",
-                DesktopTheme.Font(11),
+                _emptyGridFont,
                 grid.ClientRectangle,
                 DesktopTheme.Muted,
                 TextFormatFlags.HorizontalCenter |
@@ -2134,6 +2160,11 @@ public sealed class MainForm : Form
             ["libroId"] = "ID libro",
             ["usuarioId"] = "ID usuario",
             ["usuarioNombre"] = "Usuario",
+            ["nombreCompleto"] = "Nombre completo",
+            ["email"] = "Correo electrónico",
+            ["cargo"] = "Cargo",
+            ["personalAsignado"] = "Personal asignado",
+            ["correosAsociados"] = "Correos asociados",
             ["prestamoId"] = "ID préstamo",
             ["solicitudPrestamoId"] = "ID solicitud",
             ["libroTitulo"] = "Libro solicitado",
@@ -2159,7 +2190,7 @@ public sealed class MainForm : Form
             : char.ToUpperInvariant(text[0]) + text[1..];
     }
 
-    private static void FormatearCeldaEstado(
+    private void FormatearCeldaEstado(
         DataGridView grid,
         DataGridViewCellFormattingEventArgs eventArgs)
     {
@@ -2178,7 +2209,7 @@ public sealed class MainForm : Form
                 DesktopTheme.Danger,
             _ => DesktopTheme.Text
         };
-        eventArgs.CellStyle.Font = DesktopTheme.Font(9.5f, FontStyle.Bold);
+        eventArgs.CellStyle.Font = _gridStatusFont;
     }
 
     private void AgregarBoton(FlowLayoutPanel toolbar, string text, Func<Task> action)
@@ -2222,9 +2253,21 @@ public sealed class MainForm : Form
             ? await _api.GetFreshAsync(endpoint)
             : await _api.GetAsync(endpoint);
         var table = await Task.Run(() => ConvertirEnTabla(json));
-        grid.SuspendLayout();
-        grid.DataSource = table;
-        grid.ResumeLayout();
+        if (grid is BufferedDataGridView bufferedGrid)
+            bufferedGrid.BeginUpdate();
+        else
+            grid.SuspendLayout();
+        try
+        {
+            grid.DataSource = table;
+        }
+        finally
+        {
+            if (grid is BufferedDataGridView completedGrid)
+                completedGrid.EndUpdate();
+            else
+                grid.ResumeLayout(true);
+        }
         _status.Text = grid.Rows.Count switch
         {
             0 => "Consulta completada · No hay registros para mostrar",
@@ -2504,5 +2547,16 @@ public sealed class MainForm : Form
             DateTimeOffset.TryParse(value, out var date))
             return date.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
         return value;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _toolTips.Dispose();
+            _gridStatusFont.Dispose();
+            _emptyGridFont.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }

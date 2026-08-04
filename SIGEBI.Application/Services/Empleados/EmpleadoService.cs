@@ -64,6 +64,30 @@ namespace SIGEBI.Application.Services.Empleados
             return _mapper.Map<EmpleadoDto>(empleado);
         }
 
+        public override async Task<IReadOnlyCollection<EmpleadoDto>> GetPageAsync(
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            if (page <= 0)
+                throw new ArgumentOutOfRangeException(nameof(page));
+            if (pageSize is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(pageSize));
+
+            var empleados = await _empleados.ObtenerPaginaAsync(
+                (page - 1) * pageSize,
+                pageSize,
+                cancellationToken);
+            return _mapper.Map<IReadOnlyCollection<EmpleadoDto>>(empleados);
+        }
+
+        public override async Task<EmpleadoDto> GetByIdAsync(int id)
+        {
+            var empleado = await _empleados.ObtenerPorIdAsync(id)
+                ?? throw new NotFoundException(nameof(Empleado), id);
+            return _mapper.Map<EmpleadoDto>(empleado);
+        }
+
         public async Task<EmpleadoDto> ActualizarAsync(
             int id,
             UpdateEmpleadoDto dto,

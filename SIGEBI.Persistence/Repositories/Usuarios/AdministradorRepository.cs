@@ -30,7 +30,7 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
 
         public async Task<IReadOnlyCollection<Administrador>> ObtenerTodosAsync(CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando todos los administradores"); return await _dbSet.AsNoTracking().Include(a => a.Usuario).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando todos los administradores"); return await _dbSet.AsNoTracking().Include(a => a.Usuario).Include(a => a.Cargo).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando Admins"); throw; }
         }
 
@@ -51,6 +51,7 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
                 return await _dbSet
                     .AsNoTracking()
                     .Include(a => a.Usuario)
+                    .Include(a => a.Cargo)
                     .OrderBy(a => a.Id)
                     .Skip(skip)
                     .Take(take)
