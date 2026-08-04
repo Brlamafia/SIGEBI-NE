@@ -14,6 +14,10 @@ no crea tablas, no ejecuta `ALTER TABLE` y no inserta datos de demostración al
 iniciar. El esquema y los datos iniciales se administran explícitamente en
 Supabase mediante el SQL aprobado por el equipo.
 
+Luego de cargar el esquema, ejecute `database/performance-indexes.sql` desde el
+SQL Editor de Supabase. Es un script idempotente de índices y estadísticas; no
+es una migración y no modifica los datos existentes.
+
 `GET /health/ready` comprueba la conexión y verifica, en modo de solo lectura,
 que Supabase tenga las tablas y columnas requeridas.
 
@@ -74,4 +78,8 @@ contiene credenciales predeterminadas ni se conecta directamente a Supabase.
 ```powershell
 dotnet build SIGEBI.slnx -c Release
 dotnet test SIGEBI.Tests/SIGEBI.Tests.csproj -c Release
+dotnet format SIGEBI.slnx --verify-no-changes --no-restore
 ```
+
+El flujo `.github/workflows/quality.yml` ejecuta estas comprobaciones en cada
+push a `master` y en cada pull request.

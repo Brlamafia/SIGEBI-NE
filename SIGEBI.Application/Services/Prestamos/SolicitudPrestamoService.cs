@@ -28,8 +28,8 @@ namespace SIGEBI.Application.Services.Prestamos
     public class SolicitudPrestamoService : BaseService<SolicitudPrestamo, SolicitudPrestamoDto>, ISolicitudPrestamoService
     {
         private readonly ISolicitudPrestamoRepository _solicitudRepository;
-        private readonly IRepository<Libro> _libroRepository;
-        private readonly IRepository<Usuario> _usuarioRepository;
+        private readonly ILibroRepository _libroRepository;
+        private readonly IUsuarioRepository _usuarioRepository;
         private readonly INotificacionService _notificacionService;
         private readonly IMultaRepository _multas;
         private readonly IPrestamoRepository _prestamos;
@@ -41,8 +41,8 @@ namespace SIGEBI.Application.Services.Prestamos
 
         public SolicitudPrestamoService(
             ISolicitudPrestamoRepository repository,
-            IRepository<Libro> libroRepository,
-            IRepository<Usuario> usuarioRepository,
+            ILibroRepository libroRepository,
+            IUsuarioRepository usuarioRepository,
             INotificacionService notificacionService,
             IMultaRepository multas,
             IPrestamoRepository prestamos,
@@ -101,22 +101,15 @@ namespace SIGEBI.Application.Services.Prestamos
             IEnumerable<SolicitudPrestamo> solicitudes)
         {
             var entities = solicitudes.ToArray();
-            var usuarios = new Dictionary<int, Usuario>();
-            var libros = new Dictionary<int, Libro>();
+            if (entities.Length == 0)
+                return Array.Empty<SolicitudPrestamoDto>();
 
-            foreach (var usuarioId in entities.Select(item => item.UsuarioId).Distinct())
-            {
-                var usuario = await _usuarioRepository.GetByIdAsync(usuarioId);
-                if (usuario is not null)
-                    usuarios[usuarioId] = usuario;
-            }
-
-            foreach (var libroId in entities.Select(item => item.LibroId).Distinct())
-            {
-                var libro = await _libroRepository.GetByIdAsync(libroId);
-                if (libro is not null)
-                    libros[libroId] = libro;
-            }
+            var usuarios = (await _usuarioRepository.ObtenerPorIdsAsync(
+                    entities.Select(item => item.UsuarioId).Distinct().ToArray()))
+                .ToDictionary(usuario => usuario.Id);
+            var libros = (await _libroRepository.ObtenerPorIdsAsync(
+                    entities.Select(item => item.LibroId).Distinct().ToArray()))
+                .ToDictionary(libro => libro.Id);
 
             return entities.Select(entity =>
             {
@@ -139,12 +132,12 @@ namespace SIGEBI.Application.Services.Prestamos
             {
                 await _unitOfWork.EjecutarEnTransaccionAsync(async cancellationToken =>
                 {
-                    var usuario = await _usuarioRepository.GetByIdAsync(dto.UsuarioId)
+                    var usuario = await _usuarioRepository.ObtenerPorIdAsync(dto.UsuarioId, cancellationToken)
                         ?? throw new BusinessRuleException("El usuario especificado no existe.");
                     if (usuario.Estado != EstadoUsuario.Activo)
                         throw new BusinessRuleException("El usuario no está activo y no puede solicitar préstamos.");
 
-                    var libro = await _libroRepository.GetByIdAsync(dto.LibroId)
+                    var libro = await _libroRepository.ObtenerPorIdAsync(dto.LibroId, cancellationToken)
                         ?? throw new BusinessRuleException("El libro solicitado no existe.");
                     if (libro.Estado.Equals("Descatalogado", StringComparison.OrdinalIgnoreCase))
                         throw new BusinessRuleException("El libro solicitado está descatalogado.");

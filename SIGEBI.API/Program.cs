@@ -15,6 +15,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.DataProtection;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,11 +35,15 @@ builder.Services.Configure<PrestamosVencidosOptions>(
     builder.Configuration.GetSection(PrestamosVencidosOptions.SectionName));
 builder.Services.Configure<SmtpOptions>(
     builder.Configuration.GetSection(SmtpOptions.SectionName));
+builder.Services.AddHostedService<DatabaseWarmupHostedService>();
 builder.Services.AddHostedService<PrestamosVencidosBackgroundService>();
 builder.Services.AddDataProtection().SetApplicationName("SIGEBI.API");
 
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Debe configurar Jwt:Key.");
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException(
+        "Jwt:Key debe contener al menos 32 bytes para firmar tokens de forma segura.");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("Debe configurar Jwt:Issuer.");
 var jwtAudience = builder.Configuration["Jwt:Audience"]
@@ -64,6 +69,20 @@ builder.Services.AddAuthorization(options =>
         policy => policy.RequireAssertion(context =>
             context.User.IsInRole("Administrador") ||
             context.User.HasClaim("permission", "SIGEBI.ADMIN"))));
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "desconocido",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -131,6 +150,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 app.UseExceptionHandler();
 app.UseCors("WebClient");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/health/live", new HealthCheckOptions

@@ -422,16 +422,16 @@ internal static class DesktopTheme
         var bottom = -1;
 
         for (var y = 0; y < bitmap.Height; y += 2)
-        for (var x = 0; x < bitmap.Width; x += 2)
-        {
-            if (bitmap.GetPixel(x, y).A < 16)
-                continue;
+            for (var x = 0; x < bitmap.Width; x += 2)
+            {
+                if (bitmap.GetPixel(x, y).A < 16)
+                    continue;
 
-            left = Math.Min(left, x);
-            top = Math.Min(top, y);
-            right = Math.Max(right, x);
-            bottom = Math.Max(bottom, y);
-        }
+                left = Math.Min(left, x);
+                top = Math.Min(top, y);
+                right = Math.Max(right, x);
+                bottom = Math.Max(bottom, y);
+            }
 
         return right >= left && bottom >= top
             ? Rectangle.FromLTRB(left, top, right + 1, bottom + 1)
@@ -563,8 +563,8 @@ internal sealed class WebGradientPanel : Panel
 
         using var dot = new SolidBrush(Color.FromArgb(34, 255, 255, 255));
         for (var x = 16; x < Width; x += 22)
-        for (var y = 18; y < Height; y += 22)
-            eventArgs.Graphics.FillEllipse(dot, x, y, 2, 2);
+            for (var y = 18; y < Height; y += 22)
+                eventArgs.Graphics.FillEllipse(dot, x, y, 2, 2);
     }
 }
 

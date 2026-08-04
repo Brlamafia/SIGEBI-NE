@@ -30,8 +30,37 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
 
         public async Task<IReadOnlyCollection<Administrador>> ObtenerTodosAsync(CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando todos los administradores"); return await _dbSet.Include(a => a.Usuario).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando todos los administradores"); return await _dbSet.AsNoTracking().Include(a => a.Usuario).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando Admins"); throw; }
+        }
+
+        public async Task<IReadOnlyCollection<Administrador>> ObtenerPaginaAsync(
+            int skip,
+            int take,
+            CancellationToken ct = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(skip);
+            if (take is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(take));
+            try
+            {
+                _logger.LogInformation(
+                    "Consultando administradores. Desplazamiento {Skip}, tamaño {Take}",
+                    skip,
+                    take);
+                return await _dbSet
+                    .AsNoTracking()
+                    .Include(a => a.Usuario)
+                    .OrderBy(a => a.Id)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error paginando administradores");
+                throw;
+            }
         }
     }
 }

@@ -18,6 +18,9 @@ public sealed class PrestamosVencidosBackgroundService(
         if (configuracion.IntervaloMinutos <= 0 || configuracion.UsuarioResponsableId <= 0)
             throw new InvalidOperationException("La configuración del trabajo de préstamos vencidos no es válida.");
 
+        // No compite con el inicio de sesión ni con la carga inicial del cliente.
+        await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(configuracion.IntervaloMinutos));
         do
         {

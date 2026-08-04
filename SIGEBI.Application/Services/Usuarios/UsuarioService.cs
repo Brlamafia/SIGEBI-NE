@@ -84,6 +84,16 @@ namespace SIGEBI.Application.Services.Usuarios
             return _mapper.Map<IReadOnlyCollection<UsuarioDto>>(usuarios);
         }
 
+        public async Task<IReadOnlyCollection<UsuarioDto>> ObtenerPorIdsAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(ids);
+            var idsUnicos = ids.Where(id => id > 0).Distinct().ToArray();
+            var usuarios = await _usuarios.ObtenerPorIdsAsync(idsUnicos, cancellationToken);
+            return _mapper.Map<IReadOnlyCollection<UsuarioDto>>(usuarios);
+        }
+
         public async Task<UsuarioDto> CrearAsync(
             SaveUsuarioDto dto,
             CancellationToken cancellationToken = default)

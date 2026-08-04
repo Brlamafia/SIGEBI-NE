@@ -29,7 +29,7 @@ namespace SIGEBI.Persistence.Repositories.Usuarios
 
         public async Task<IReadOnlyCollection<Cargo>> ObtenerTodosAsync(CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando todos los cargos"); return await _dbSet.ToListAsync(); }
+            try { _logger.LogInformation("Consultando todos los cargos"); return await _dbSet.AsNoTracking().ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error listando cargos"); throw; }
         }
     }

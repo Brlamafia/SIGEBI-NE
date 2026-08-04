@@ -27,7 +27,7 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             int usuarioId,
             CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando solicitudes del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(s => s.UsuarioId == usuarioId).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando solicitudes del usuario {UsuarioId}", usuarioId); return await _dbSet.AsNoTracking().Where(s => s.UsuarioId == usuarioId).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error usuario {Id}", usuarioId); throw; }
         }
 
@@ -35,7 +35,7 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             EstadoSolicitud estado,
             CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando solicitudes en estado {Estado}", estado); return await _dbSet.Where(s => s.Estado == estado).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando solicitudes en estado {Estado}", estado); return await _dbSet.AsNoTracking().Where(s => s.Estado == estado).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error estado {E}", estado); throw; }
         }
     }

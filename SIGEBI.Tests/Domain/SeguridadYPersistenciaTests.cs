@@ -10,6 +10,23 @@ namespace SIGEBI.Tests.Domain;
 public sealed class SeguridadYPersistenciaTests
 {
     [Fact]
+    public void Usuario_NormalizaEmailAlCrearYActualizar()
+    {
+        var usuario = new Usuario(
+            "Ana",
+            "Pérez",
+            "001",
+            "  ANA@SIGEBI.TEST  ",
+            TipoUsuario.Estudiante);
+
+        Assert.Equal("ana@sigebi.test", usuario.Email);
+
+        usuario.ActualizarContacto("809-000-0000", "  NUEVO@SIGEBI.TEST ");
+
+        Assert.Equal("nuevo@sigebi.test", usuario.Email);
+    }
+
+    [Fact]
     public void Usuario_SeBloqueaYReiniciaIntentos()
     {
         var usuario = new Usuario(

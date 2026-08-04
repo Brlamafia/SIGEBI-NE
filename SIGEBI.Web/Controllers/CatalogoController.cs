@@ -40,15 +40,7 @@ public sealed class CatalogoController(
             catalogTask);
 
         var books = await booksTask;
-        var hasNextPage = books.Count == PageSize &&
-            (await api.SearchBooksAsync(
-                termino,
-                genero,
-                editorial,
-                disponible,
-                pagina + 1,
-                PageSize,
-                cancellationToken)).Count > 0;
+        var hasNextPage = books.Count > PageSize;
         var requests = await requestsTask;
         var summary = await summaryTask;
         var restriction = GetRequestRestriction(summary);
@@ -56,7 +48,7 @@ public sealed class CatalogoController(
 
         return View(new CatalogoViewModel
         {
-            Libros = books,
+            Libros = books.Take(PageSize).ToArray(),
             Termino = termino,
             Genero = genero,
             Editorial = editorial,

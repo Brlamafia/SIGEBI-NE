@@ -39,6 +39,7 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             {
                 _logger.LogInformation("Consultando multas del usuario {UsuarioId}", usuarioId);
                 return await _dbSet
+                    .AsNoTracking()
                     .Where(m => m.UsuarioId == usuarioId)
                     .OrderByDescending(m => m.FechaGeneracion)
                     .ToListAsync(ct);
@@ -56,6 +57,7 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
             {
                 _logger.LogInformation("Consultando multas en estado {Estado}", estado);
                 return await _dbSet
+                    .AsNoTracking()
                     .Where(m => m.Estado == estado)
                     .OrderByDescending(m => m.FechaGeneracion)
                     .ToListAsync(ct);
@@ -109,6 +111,32 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
                     ex,
                     "Error al calcular monto pendiente del usuario {UsuarioId}",
                     usuarioId);
+                throw;
+            }
+        }
+
+        public async Task<IReadOnlyCollection<Multa>> ObtenerPorRangoAsync(
+            DateTime desde,
+            DateTime hasta,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation(
+                    "Consultando multas generadas entre {Desde} y {Hasta}",
+                    desde,
+                    hasta);
+                return await _dbSet
+                    .AsNoTracking()
+                    .Where(multa =>
+                        multa.FechaGeneracion >= desde &&
+                        multa.FechaGeneracion <= hasta)
+                    .OrderByDescending(multa => multa.FechaGeneracion)
+                    .ToListAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al consultar multas por rango");
                 throw;
             }
         }

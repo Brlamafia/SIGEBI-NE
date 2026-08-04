@@ -28,10 +28,12 @@ public sealed class SolicitudPrestamoServiceTests
         AssignId(user, 5);
         AssignId(book, 8);
         var requests = new Mock<ISolicitudPrestamoRepository>();
-        var books = new Mock<IRepository<Libro>>();
-        books.Setup(item => item.GetByIdAsync(8)).ReturnsAsync(book);
-        var users = new Mock<IRepository<Usuario>>();
-        users.Setup(item => item.GetByIdAsync(5)).ReturnsAsync(user);
+        var books = new Mock<ILibroRepository>();
+        books.Setup(item => item.ObtenerPorIdAsync(8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(book);
+        var users = new Mock<IUsuarioRepository>();
+        users.Setup(item => item.ObtenerPorIdAsync(5, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
         var inventory = new Mock<IInventarioRepository>();
         inventory.Setup(item => item.ObtenerPorLibroIdAsync(
                 8,
@@ -76,8 +78,8 @@ public sealed class SolicitudPrestamoServiceTests
             .ReturnsAsync(request);
         var service = CreateService(
             requests.Object,
-            Mock.Of<IRepository<Libro>>(),
-            Mock.Of<IRepository<Usuario>>(),
+            Mock.Of<ILibroRepository>(),
+            Mock.Of<IUsuarioRepository>(),
             Mock.Of<IInventarioRepository>(),
             Mock.Of<IMultaRepository>(),
             ExecutingUnitOfWork().Object);
@@ -92,8 +94,8 @@ public sealed class SolicitudPrestamoServiceTests
 
     private static SolicitudPrestamoService CreateService(
         ISolicitudPrestamoRepository requests,
-        IRepository<Libro> books,
-        IRepository<Usuario> users,
+        ILibroRepository books,
+        IUsuarioRepository users,
         IInventarioRepository inventory,
         IMultaRepository fines,
         IUnitOfWork unitOfWork) =>

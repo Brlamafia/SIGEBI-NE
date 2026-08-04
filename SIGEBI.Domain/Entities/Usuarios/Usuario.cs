@@ -36,7 +36,7 @@ namespace SIGEBI.Domain.Entities.Usuarios
             Nombre = ValidarTextoObligatorio(nombre, nameof(nombre));
             Apellido = ValidarTextoObligatorio(apellido, nameof(apellido));
             Cedula = ValidarTextoObligatorio(cedula, nameof(cedula));
-            Email = ValidarTextoObligatorio(email, nameof(email));
+            Email = NormalizarEmail(email);
             Telefono = telefono?.Trim() ?? string.Empty;
             TipoUsuario = tipoUsuario;
             Estado = EstadoUsuario.Activo;
@@ -55,7 +55,7 @@ namespace SIGEBI.Domain.Entities.Usuarios
             Apellido = ValidarTextoObligatorio(apellido, nameof(apellido));
             Cedula = ValidarTextoObligatorio(cedula, nameof(cedula));
             Telefono = telefono?.Trim() ?? string.Empty;
-            Email = ValidarTextoObligatorio(email, nameof(email));
+            Email = NormalizarEmail(email);
             TipoUsuario = Enum.IsDefined(tipoUsuario)
                 ? tipoUsuario
                 : throw new ArgumentOutOfRangeException(nameof(tipoUsuario));
@@ -68,7 +68,7 @@ namespace SIGEBI.Domain.Entities.Usuarios
         public void ActualizarContacto(string telefono, string email)
         {
             Telefono = telefono?.Trim() ?? string.Empty;
-            Email = ValidarTextoObligatorio(email, nameof(email));
+            Email = NormalizarEmail(email);
             MarcarComoModificada();
         }
 
@@ -129,5 +129,8 @@ namespace SIGEBI.Domain.Entities.Usuarios
                 throw new ArgumentException("Este campo es obligatorio.", nombreParametro);
             return valor.Trim();
         }
+
+        private static string NormalizarEmail(string email) =>
+            ValidarTextoObligatorio(email, nameof(email)).ToLowerInvariant();
     }
 }

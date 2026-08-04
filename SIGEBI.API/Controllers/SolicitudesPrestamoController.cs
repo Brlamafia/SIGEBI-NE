@@ -5,6 +5,7 @@ using SIGEBI.Application.Interfaces.SolicitudesPrestamo;
 using SIGEBI.Application.Interfaces.Seguridad;
 using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace SIGEBI.API.Controllers
 {
@@ -26,7 +27,11 @@ namespace SIGEBI.API.Controllers
 
         [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _solicitudService.GetAllAsync());
+        public async Task<IActionResult> GetAll(
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 100,
+            CancellationToken cancellationToken = default) =>
+            Ok(await _solicitudService.GetPageAsync(pagina, tamanoPagina, cancellationToken));
 
         [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpGet("{id}")]

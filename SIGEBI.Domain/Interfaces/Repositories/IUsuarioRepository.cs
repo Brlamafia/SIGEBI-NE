@@ -8,6 +8,9 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     public interface IUsuarioRepository
     {
         Task<Usuario?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Usuario>> ObtenerPorIdsAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default);
         Task<Usuario?> ObtenerPorCedulaAsync(string cedula, CancellationToken cancellationToken = default);
         Task<Usuario?> ObtenerPorEmailAsync(string email, CancellationToken cancellationToken = default);
         Task<Usuario?> ObtenerPorIdConRolesAsync(int id, CancellationToken cancellationToken = default);

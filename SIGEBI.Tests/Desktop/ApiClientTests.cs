@@ -7,6 +7,69 @@ namespace SIGEBI.Tests.Desktop;
 public sealed class ApiClientTests
 {
     [Fact]
+    public async Task GetAsync_ReutilizaRespuestaRecienteSinOtraPeticionHttp()
+    {
+        var requests = 0;
+        var handler = new StubHandler(_ =>
+        {
+            requests++;
+            return JsonResponse("""{"items":[1]}""");
+        });
+        using var httpClient = new HttpClient(handler);
+        using var client = new ApiClient(httpClient);
+        client.ConfigurarBaseUrl("https://api.sigebi.test");
+
+        await client.GetAsync("api/catalogo");
+        await client.GetAsync("api/catalogo");
+
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
+    public async Task GetAsync_ComparteUnaPeticionCuandoVariasConsultasCoinciden()
+    {
+        var requests = 0;
+        var handler = new DelayedStubHandler(async cancellationToken =>
+        {
+            Interlocked.Increment(ref requests);
+            await Task.Delay(75, cancellationToken);
+            return JsonResponse("""{"items":[1]}""");
+        });
+        using var httpClient = new HttpClient(handler);
+        using var client = new ApiClient(httpClient);
+        client.ConfigurarBaseUrl("https://api.sigebi.test");
+
+        await Task.WhenAll(
+            client.GetAsync("api/catalogo"),
+            client.GetAsync("api/catalogo"),
+            client.GetAsync("api/catalogo"));
+
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
+    public async Task EscrituraYActualizacionExplicita_InvalidanLaCacheDeLectura()
+    {
+        var getRequests = 0;
+        var handler = new StubHandler(request =>
+        {
+            if (request.Method == HttpMethod.Get)
+                getRequests++;
+            return JsonResponse("{}");
+        });
+        using var httpClient = new HttpClient(handler);
+        using var client = new ApiClient(httpClient);
+        client.ConfigurarBaseUrl("https://api.sigebi.test");
+
+        await client.GetAsync("api/catalogo");
+        await client.GetFreshAsync("api/catalogo");
+        await client.PostAsync("api/catalogo", new { titulo = "Prueba" });
+        await client.GetAsync("api/catalogo");
+
+        Assert.Equal(3, getRequests);
+    }
+
+    [Fact]
     public async Task ConfigurarBaseUrl_PermiteReutilizarLaMismaUrlDespuesDeUnaSolicitud()
     {
         var handler = new StubHandler(_ => JsonResponse("""{"items":[]}"""));
@@ -146,5 +209,15 @@ public sealed class ApiClientTests
             HttpRequestMessage request,
             CancellationToken cancellationToken) =>
             Task.FromResult(responseFactory(request));
+    }
+
+    private sealed class DelayedStubHandler(
+        Func<CancellationToken, Task<HttpResponseMessage>> responseFactory)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            responseFactory(cancellationToken);
     }
 }

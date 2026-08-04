@@ -17,7 +17,7 @@ public static class DependencyInjection
                 "La cadena de conexion de Supabase es obligatoria.");
         }
 
-        services.AddDbContext<SigebiContext>(options =>
+        services.AddDbContextPool<SigebiContext>(options =>
         {
             options.UseNpgsql(
                     connectionString,

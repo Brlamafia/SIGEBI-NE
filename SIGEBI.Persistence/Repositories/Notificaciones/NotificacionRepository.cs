@@ -26,7 +26,7 @@ namespace SIGEBI.Persistence.Repositories.Notificaciones
             int usuarioId,
             CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando notificaciones del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(n => n.UsuarioId == usuarioId).OrderByDescending(n => n.FechaEnvio).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando notificaciones del usuario {UsuarioId}", usuarioId); return await _dbSet.AsNoTracking().Where(n => n.UsuarioId == usuarioId).OrderByDescending(n => n.FechaEnvio).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error usuario {Id}", usuarioId); throw; }
         }
 
@@ -54,7 +54,7 @@ namespace SIGEBI.Persistence.Repositories.Notificaciones
             int usuarioId,
             CancellationToken ct = default)
         {
-            try { _logger.LogInformation("Consultando notificaciones no leídas del usuario {UsuarioId}", usuarioId); return await _dbSet.Where(n => n.UsuarioId == usuarioId && !n.Leida).ToListAsync(ct); }
+            try { _logger.LogInformation("Consultando notificaciones no leídas del usuario {UsuarioId}", usuarioId); return await _dbSet.AsNoTracking().Where(n => n.UsuarioId == usuarioId && !n.Leida).ToListAsync(ct); }
             catch (Exception ex) { _logger.LogError(ex, "Error leidas usuario {Id}", usuarioId); throw; }
         }
 

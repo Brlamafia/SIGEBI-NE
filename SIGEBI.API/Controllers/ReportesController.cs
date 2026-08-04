@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.Catalogo;
 using SIGEBI.Application.Dtos.Reportes;
@@ -13,20 +12,17 @@ namespace SIGEBI.API.Controllers
     [Route("api/[controller]")]
     public class ReportesController : ControllerBase
     {
-        private readonly IInventarioService _inventarioService;
         private readonly IPrestamoService _prestamoService;
         private readonly ILibroService _libroService;
         private readonly IMultaService _multaService;
         private readonly IUsuarioService _usuarioService;
 
         public ReportesController(
-            IInventarioService inventarioService,
             IPrestamoService prestamoService,
             ILibroService libroService,
             IMultaService multaService,
             IUsuarioService usuarioService)
         {
-            _inventarioService = inventarioService;
             _prestamoService = prestamoService;
             _libroService = libroService;
             _multaService = multaService;
@@ -37,20 +33,17 @@ namespace SIGEBI.API.Controllers
         [HttpGet("inventario")]
         public async Task<IActionResult> GetReporteInventario()
         {
-            var inventarios = await _inventarioService.ObtenerTodosAsync(HttpContext.RequestAborted);
-            var libros = (await _libroService.BuscarLibrosAsync(
-                cancellationToken: HttpContext.RequestAborted)).ToDictionary(l => l.Id);
-            return Ok(inventarios.Select(inventario =>
-            {
-                libros.TryGetValue(inventario.LibroId, out var libro);
-                return new InventarioReporteDto(
-                    inventario.LibroId,
-                    libro?.Titulo ?? $"Libro {inventario.LibroId}",
-                    libro?.Genero ?? "Sin categoría",
-                    inventario.CantidadTotal,
-                    inventario.CantidadDisponible,
-                    inventario.CantidadPrestada);
-            }).OrderBy(item => item.Categoria).ThenBy(item => item.Titulo));
+            var libros = await _libroService.BuscarLibrosAsync(
+                cancellationToken: HttpContext.RequestAborted);
+            return Ok(libros.Select(libro => new InventarioReporteDto(
+                    libro.Id,
+                    libro.Titulo,
+                    libro.Genero ?? "Sin categoría",
+                    libro.CantidadTotal,
+                    libro.CantidadDisponible,
+                    libro.CantidadPrestada))
+                .OrderBy(item => item.Categoria)
+                .ThenBy(item => item.Titulo));
         }
 
         [Authorize(Roles = "Administrador,Auditor")]
@@ -132,14 +125,14 @@ namespace SIGEBI.API.Controllers
             CancellationToken cancellationToken)
         {
             ValidarRango(desde, hasta);
-            var estados = new[] { "Pendiente", "Pagada", "Resuelta" };
-            var colecciones = await Task.WhenAll(estados.Select(
-                estado => _multaService.ObtenerPorEstadoAsync(estado, cancellationToken)));
-            var multas = colecciones.SelectMany(x => x)
-                .Where(m => m.FechaGeneracion >= desde && m.FechaGeneracion <= hasta)
-                .DistinctBy(m => m.Id)
+            var multas = (await _multaService.ObtenerPorRangoAsync(
+                    desde,
+                    hasta,
+                    cancellationToken))
                 .ToArray();
-            var usuarios = (await _usuarioService.GetAllAsync())
+            var usuarios = (await _usuarioService.ObtenerPorIdsAsync(
+                    multas.Select(multa => multa.UsuarioId).Distinct().ToArray(),
+                    cancellationToken))
                 .ToDictionary(usuario => usuario.Id);
             return Ok(new ReporteMultasDto
             {

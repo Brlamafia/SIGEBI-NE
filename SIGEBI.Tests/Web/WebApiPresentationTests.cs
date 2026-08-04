@@ -149,12 +149,9 @@ public sealed class WebApiPresentationTests
         var api = new Mock<ISigebiApiClient>();
         api.Setup(client => client.SearchBooksAsync(
                 null, null, null, null, 1, 12, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Enumerable.Range(1, 12)
+            .ReturnsAsync(Enumerable.Range(1, 13)
                 .Select(id => new LibroDto { Id = id, Titulo = $"Libro {id}" })
                 .ToArray());
-        api.Setup(client => client.SearchBooksAsync(
-                null, null, null, null, 2, 12, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new LibroDto { Id = 13, Titulo = "Libro 13" }]);
         api.Setup(client => client.GetMyRequestsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         api.Setup(client => client.GetMySummaryAsync(It.IsAny<CancellationToken>()))
@@ -173,6 +170,9 @@ public sealed class WebApiPresentationTests
         Assert.Equal(12, model.Libros.Count);
         Assert.True(model.HayPaginaSiguiente);
         Assert.Equal(12, model.Libros.Max(item => item.Id));
+        api.Verify(client => client.SearchBooksAsync(
+                null, null, null, null, 2, 12, It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

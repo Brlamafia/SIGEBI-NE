@@ -22,6 +22,14 @@ namespace SIGEBI.Domain.Interfaces.Repositories
             DateTime fechaDesde,
             DateTime fechaHasta,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Auditoria>> FiltrarPaginaAsync(
+            int skip,
+            int take,
+            int? usuarioResponsableId = null,
+            ModuloAuditoria? modulo = null,
+            DateTime? fechaDesde = null,
+            DateTime? fechaHasta = null,
+            CancellationToken cancellationToken = default);
         Task AgregarAsync(Auditoria auditoria, CancellationToken cancellationToken = default);
         Task AgregarRangoAsync(
             IEnumerable<Auditoria> auditorias,

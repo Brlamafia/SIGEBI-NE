@@ -38,7 +38,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             try
             {
                 _logger.LogInformation("Consultando todo el inventario");
-                return await _dbSet.OrderBy(i => i.LibroId).ToListAsync(ct);
+                return await _dbSet.AsNoTracking().OrderBy(i => i.LibroId).ToListAsync(ct);
             }
             catch (Exception ex)
             {
@@ -60,6 +60,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
                     "Consultando inventarios para {Cantidad} libros",
                     libroIds.Count);
                 return await _dbSet
+                    .AsNoTracking()
                     .Where(inventario => libroIds.Contains(inventario.LibroId))
                     .OrderBy(inventario => inventario.LibroId)
                     .ToListAsync(ct);

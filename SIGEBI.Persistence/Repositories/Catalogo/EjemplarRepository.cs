@@ -89,6 +89,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             {
                 _logger.LogInformation("Consultando ejemplares del libro {LibroId} en estado {Estado}", libroId, estado);
                 return await _dbSet
+                    .AsNoTracking()
                     .Where(e => e.LibroId == libroId && e.Estado == estado)
                     .OrderBy(e => e.Id)
                     .ToListAsync(ct);

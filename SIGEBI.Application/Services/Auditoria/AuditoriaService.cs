@@ -60,7 +60,10 @@ namespace SIGEBI.Application.Services.Auditoria
             DateTime fechaHasta,
             CancellationToken cancellationToken = default)
         {
-            var auditorias = await _auditorias.ObtenerPorRangoAsync(fechaDesde, fechaHasta, cancellationToken);
+            var auditorias = await _auditorias.ObtenerPorRangoAsync(
+                DateTimeNormalizer.ToUtc(fechaDesde),
+                DateTimeNormalizer.ToUtc(fechaHasta),
+                cancellationToken);
             return _mapper.Map<IReadOnlyCollection<AuditoriaDto>>(auditorias);
         }
 
@@ -69,25 +72,29 @@ namespace SIGEBI.Application.Services.Auditoria
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(filtro);
+            if (filtro.Pagina <= 0 || filtro.TamanoPagina is <= 0 or > 200)
+                throw new BusinessRuleException("La paginación indicada no es válida.");
+            if (filtro.FechaDesde.HasValue != filtro.FechaHasta.HasValue)
+                throw new BusinessRuleException("Debe indicar la fecha inicial y la fecha final.");
 
-            if (filtro.FechaDesde.HasValue || filtro.FechaHasta.HasValue)
-            {
-                if (!filtro.FechaDesde.HasValue || !filtro.FechaHasta.HasValue)
-                    throw new BusinessRuleException("Debe indicar la fecha inicial y la fecha final.");
-
-                return await ObtenerPorRangoAsync(
-                    filtro.FechaDesde.Value,
-                    filtro.FechaHasta.Value,
-                    cancellationToken);
-            }
-
-            if (!string.IsNullOrWhiteSpace(filtro.Modulo))
-                return await ObtenerPorModuloAsync(filtro.Modulo, cancellationToken);
-
-            if (filtro.UsuarioResponsableId.HasValue)
-                return await ObtenerPorUsuarioAsync(filtro.UsuarioResponsableId.Value, cancellationToken);
-
-            return await ObtenerTodasAsync(cancellationToken);
+            ModuloAuditoria? modulo = string.IsNullOrWhiteSpace(filtro.Modulo)
+                ? null
+                : ConvertirModulo(filtro.Modulo);
+            DateTime? desde = filtro.FechaDesde.HasValue
+                ? DateTimeNormalizer.ToUtc(filtro.FechaDesde.Value)
+                : null;
+            DateTime? hasta = filtro.FechaHasta.HasValue
+                ? DateTimeNormalizer.ToUtc(filtro.FechaHasta.Value)
+                : null;
+            var resultados = await _auditorias.FiltrarPaginaAsync(
+                (filtro.Pagina - 1) * filtro.TamanoPagina,
+                filtro.TamanoPagina,
+                filtro.UsuarioResponsableId,
+                modulo,
+                desde,
+                hasta,
+                cancellationToken);
+            return _mapper.Map<IReadOnlyCollection<AuditoriaDto>>(resultados);
         }
 
         private static ModuloAuditoria ConvertirModulo(string modulo)

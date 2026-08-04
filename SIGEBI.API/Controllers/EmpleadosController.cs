@@ -3,6 +3,7 @@ using SIGEBI.Application.Dtos.Empleados;
 using SIGEBI.Application.Interfaces.Empleados;
 using Microsoft.AspNetCore.Authorization;
 using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations;
 
 namespace SIGEBI.API.Controllers
 {
@@ -19,7 +20,11 @@ namespace SIGEBI.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _empleadoService.GetAllAsync());
+        public async Task<IActionResult> GetAll(
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 100,
+            CancellationToken cancellationToken = default) =>
+            Ok(await _empleadoService.GetPageAsync(pagina, tamanoPagina, cancellationToken));
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id) => Ok(await _empleadoService.GetByIdAsync(id));

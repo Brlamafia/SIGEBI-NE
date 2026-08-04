@@ -36,6 +36,7 @@ namespace SIGEBI.IOC.Dependencies
     {
         public static IServiceCollection AddApplicationDependencies(this IServiceCollection services)
         {
+            services.AddMemoryCache();
             services.AddAutoMapper(configuration =>
                 configuration.AddMaps(typeof(MappingProfile).Assembly));
             services.AddValidatorsFromAssemblyContaining<SaveRolValidator>();

@@ -8,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews(options =>
     options.Filters.Add<ApiExceptionFilter>());
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
+var cookieSecurePolicy = builder.Environment.IsDevelopment()
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
 var authentication = builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -17,12 +21,16 @@ var authentication = builder.Services
         options.Cookie.Name = "SIGEBI.Web.Session";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = cookieSecurePolicy;
         options.ExpireTimeSpan = TimeSpan.FromHours(2);
         options.SlidingExpiration = true;
     })
     .AddCookie("External", options =>
     {
         options.Cookie.Name = "SIGEBI.Web.External";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = cookieSecurePolicy;
         options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
     });
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
@@ -42,8 +50,10 @@ builder.Services.AddTransient<ApiAuthenticationHandler>();
 builder.Services.AddHttpClient<ISigebiApiClient, SigebiApiClient>((services, client) =>
     {
         var configuration = services.GetRequiredService<IConfiguration>();
-        var baseUrl = configuration["Api:BaseUrl"]
-            ?? throw new InvalidOperationException("Debe configurar Api:BaseUrl.");
+        var baseUrl = configuration["Api:BaseUrl"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            throw new InvalidOperationException(
+                "Debe configurar Api:BaseUrl para el ambiente actual.");
         client.BaseAddress = new Uri(baseUrl, UriKind.Absolute);
         client.Timeout = TimeSpan.FromSeconds(30);
     })
@@ -57,7 +67,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

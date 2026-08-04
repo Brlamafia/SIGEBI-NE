@@ -47,6 +47,8 @@ namespace SIGEBI.API.Controllers
             [FromQuery] bool? disponible,
             [FromQuery, Range(1, 1_000_000)] int pagina = 1,
             [FromQuery, Range(1, 200)] int tamanoPagina = 50,
+            [FromQuery, Range(0, 200_000_000)] int? skip = null,
+            [FromQuery, Range(1, 200)] int? take = null,
             CancellationToken cancellationToken = default)
         {
             return Ok(await _libroService.BuscarLibrosAsync(
@@ -54,8 +56,8 @@ namespace SIGEBI.API.Controllers
                 genero,
                 editorial,
                 disponible,
-                (pagina - 1) * tamanoPagina,
-                tamanoPagina,
+                skip ?? (pagina - 1) * tamanoPagina,
+                take ?? tamanoPagina,
                 cancellationToken));
         }
 

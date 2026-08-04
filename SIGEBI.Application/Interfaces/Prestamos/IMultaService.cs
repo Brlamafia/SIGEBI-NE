@@ -16,6 +16,11 @@ namespace SIGEBI.Application.Interfaces.Prestamos
             string estado,
             CancellationToken cancellationToken = default);
 
+        Task<IReadOnlyCollection<MultaDto>> ObtenerPorRangoAsync(
+            DateTime desde,
+            DateTime hasta,
+            CancellationToken cancellationToken = default);
+
         Task<bool> TienePendientesPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);

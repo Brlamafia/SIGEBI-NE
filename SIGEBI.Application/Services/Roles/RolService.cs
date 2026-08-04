@@ -9,6 +9,7 @@ using SIGEBI.Application.Interfaces.Auditoria;
 using SIGEBI.Application.Interfaces.Seguridad;
 using SIGEBI.Domain.Enums;
 using SIGEBI.Domain.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace SIGEBI.Application.Services.Roles
 {
@@ -21,6 +22,8 @@ namespace SIGEBI.Application.Services.Roles
         private readonly IAuditoriaWriter _auditoria;
         private readonly IUsuarioActual _usuarioActual;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMemoryCache _cache;
+        private const string CacheKey = "administracion:roles";
 
         // Inyectamos el repositorio y el mapper para pasarlos a la clase base
         public RolService(
@@ -31,7 +34,8 @@ namespace SIGEBI.Application.Services.Roles
             IAuditoriaWriter auditoria,
             IUsuarioActual usuarioActual,
             IUnitOfWork unitOfWork,
-            IMapper mapper)
+            IMapper mapper,
+            IMemoryCache cache)
             : base(rolRepository, mapper)
         {
             _rolRepository = rolRepository;
@@ -41,11 +45,23 @@ namespace SIGEBI.Application.Services.Roles
             _auditoria = auditoria;
             _usuarioActual = usuarioActual;
             _unitOfWork = unitOfWork;
+            _cache = cache;
+        }
+
+        public override async Task<IEnumerable<RolDto>> GetAllAsync()
+        {
+            var roles = await _cache.GetOrCreateAsync(CacheKey, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+                return (await base.GetAllAsync()).ToArray();
+            });
+            return roles ?? Array.Empty<RolDto>();
         }
 
         public override async Task<RolDto> AddAsync<TSaveDto>(TSaveDto dto)
         {
             var creado = await base.AddAsync(dto);
+            _cache.Remove(CacheKey);
             await AuditarAsync(AccionAuditoria.Registrar, $"Rol {creado.Nombre} creado.");
             return creado;
         }
@@ -53,12 +69,14 @@ namespace SIGEBI.Application.Services.Roles
         public override async Task UpdateAsync<TUpdateDto>(int id, TUpdateDto dto)
         {
             await base.UpdateAsync(id, dto);
+            _cache.Remove(CacheKey);
             await AuditarAsync(AccionAuditoria.Editar, $"Rol {id} actualizado.");
         }
 
         public override async Task DeleteAsync(int id)
         {
             await base.DeleteAsync(id);
+            _cache.Remove(CacheKey);
             await AuditarAsync(AccionAuditoria.Eliminar, $"Rol {id} eliminado.");
         }
 
@@ -102,6 +120,7 @@ namespace SIGEBI.Application.Services.Roles
                 ?? throw new NotFoundException(nameof(Permiso), dto.PermisoId);
             rol.AsignarPermiso(permiso);
             await _rolRepository.ActualizarAsync(rol);
+            _cache.Remove(CacheKey);
             await AuditarAsync(AccionAuditoria.Editar, $"Permiso {permiso.Codigo} asignado al rol {rol.Id}.", ct);
         }
 
@@ -113,6 +132,7 @@ namespace SIGEBI.Application.Services.Roles
                 ?? throw new BusinessRuleException("El rol no posee ese permiso.");
             rol.RemoverPermiso(permiso);
             await _rolRepository.ActualizarAsync(rol);
+            _cache.Remove(CacheKey);
             await AuditarAsync(AccionAuditoria.Editar, $"Permiso {permiso.Codigo} removido del rol {rol.Id}.", ct);
         }
 

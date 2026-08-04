@@ -12,6 +12,9 @@ namespace SIGEBI.Application.Interfaces.Usuarios
             int pagina,
             int tamanoPagina,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<UsuarioDto>> ObtenerPorIdsAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default);
         Task<UsuarioDto> ActualizarAsync(
             int usuarioId,
             UpdateUsuarioDto dto,

@@ -23,6 +23,7 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             {
                 _logger.LogInformation("Buscando libros con el criterio: {Criterio}", criterio);
                 return await _dbSet
+                    .AsNoTracking()
                     .Where(l => l.Titulo.Contains(criterio) || l.Autor.Contains(criterio))
                     .ToListAsync(ct);
             }
@@ -97,6 +98,28 @@ namespace SIGEBI.Persistence.Repositories.Catalogo
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener el libro con ID: {Id}", id);
+                throw;
+            }
+        }
+
+        public async Task<IReadOnlyCollection<Libro>> ObtenerPorIdsAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken ct = default)
+        {
+            if (ids.Count == 0)
+                return Array.Empty<Libro>();
+
+            try
+            {
+                _logger.LogInformation("Consultando {Cantidad} libros en un solo lote", ids.Count);
+                return await _dbSet
+                    .AsNoTracking()
+                    .Where(libro => ids.Contains(libro.Id))
+                    .ToListAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener el lote de libros");
                 throw;
             }
         }

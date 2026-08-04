@@ -179,6 +179,25 @@ public sealed class ZeroMigrationsArchitectureTests
     }
 
     [Fact]
+    public void Desktop_AuditoriaPorPeriodo_UsaElContratoDeLaApi()
+    {
+        var main = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.Desktop",
+            "MainForm.cs"));
+        var controller = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "SIGEBI.API",
+            "Controllers",
+            "AuditoriaController.cs"));
+
+        Assert.Contains("?fechaDesde={desde}&fechaHasta={hasta}", main);
+        Assert.DoesNotContain("Auditoria/rango?desde=", main);
+        Assert.Contains("[FromQuery] DateTime fechaDesde", controller);
+        Assert.Contains("[FromQuery] DateTime fechaHasta", controller);
+    }
+
+    [Fact]
     public void Arranque_NoEjecutaDdlNiCargaDatos()
     {
         var startupFiles = new[]

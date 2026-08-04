@@ -5,8 +5,16 @@ namespace SIGEBI.Desktop;
 
 public sealed class MainForm : Form
 {
+    private sealed record DeferredModule(Func<TabPage> Factory);
+
+    // Mantiene los datos ya consultados al navegar entre módulos. Cualquier alta,
+    // cambio o eliminación invalida este caché desde ApiClient.
+    private static readonly TimeSpan ModuleRefreshInterval = TimeSpan.FromMinutes(2);
     private readonly ApiClient _api;
     private readonly DesktopSession _session;
+    private readonly Task _inicioWarmupTask;
+    private readonly Dictionary<TabPage, DateTime> _moduleLoadedAt = [];
+    private readonly HashSet<TabPage> _modulesLoading = [];
     private readonly Label _status = new()
     {
         Text = "Todo listo para trabajar",
@@ -33,8 +41,14 @@ public sealed class MainForm : Form
         MinimumSize = new Size(1100, 700);
         DesktopTheme.StyleForm(this);
         Icon = DesktopTheme.LoadApplicationIcon() ?? Icon;
+        DoubleBuffered = true;
+        SetStyle(
+            ControlStyles.AllPaintingInWmPaint |
+            ControlStyles.OptimizedDoubleBuffer |
+            ControlStyles.ResizeRedraw,
+            true);
 
-        var tabs = new TabControl
+        var tabs = new BufferedTabControl
         {
             Dock = DockStyle.Fill,
             Appearance = TabAppearance.FlatButtons,
@@ -44,23 +58,23 @@ public sealed class MainForm : Form
             Margin = Padding.Empty,
             Padding = Point.Empty
         };
-        tabs.TabPages.Add(CrearInicio());
+        tabs.TabPages.Add(CrearModuloDiferido("Inicio", CrearInicio));
         if (session.TieneRol("Administrador") || session.TieneRol("Bibliotecario"))
         {
-            tabs.TabPages.Add(CrearSolicitudes());
-            tabs.TabPages.Add(CrearPrestamos());
-            tabs.TabPages.Add(CrearDevoluciones());
-            tabs.TabPages.Add(CrearCatalogo());
-            tabs.TabPages.Add(CrearInventario());
-            tabs.TabPages.Add(CrearMultas());
+            tabs.TabPages.Add(CrearModuloDiferido("Solicitudes", CrearSolicitudes));
+            tabs.TabPages.Add(CrearModuloDiferido("Pr\u00E9stamos", CrearPrestamos));
+            tabs.TabPages.Add(CrearModuloDiferido("Devoluciones", CrearDevoluciones));
+            tabs.TabPages.Add(CrearModuloDiferido("Cat\u00E1logo", CrearCatalogo));
+            tabs.TabPages.Add(CrearModuloDiferido("Inventario", CrearInventario));
+            tabs.TabPages.Add(CrearModuloDiferido("Multas", CrearMultas));
         }
         if (session.TieneRol("Administrador") || session.TieneRol("Auditor"))
         {
-            tabs.TabPages.Add(CrearAuditoria());
-            tabs.TabPages.Add(CrearReportes());
+            tabs.TabPages.Add(CrearModuloDiferido("Auditor\u00EDa", CrearAuditoria));
+            tabs.TabPages.Add(CrearModuloDiferido("Reportes", CrearReportes));
         }
         if (session.TieneRol("Administrador"))
-            tabs.TabPages.Add(CrearAdministracion());
+            tabs.TabPages.Add(CrearModuloDiferido("Administraci\u00F3n", CrearAdministracion));
 
         var logout = new AnimatedButton
         {
@@ -110,6 +124,9 @@ public sealed class MainForm : Form
         root.Controls.Add(tabs, 1, 1);
         root.Controls.Add(statusFooter, 1, 2);
         Controls.Add(root);
+        // Arranca la consulta compacta antes de que el usuario seleccione Inicio.
+        // GetAsync también reúne solicitudes idénticas que ya estén en curso.
+        _inicioWarmupTask = CalentarInicioAsync();
         _toolTips.SetToolTip(logout, "Finaliza la sesión actual de forma segura.");
         tabs.SelectedIndexChanged += (_, _) =>
         {
@@ -119,6 +136,7 @@ public sealed class MainForm : Form
         {
             tabs.ItemSize = new Size(0, 1);
             await CargarPrimeraPestanaAsync(tabs);
+            _ = PrepararModulosEnSegundoPlanoAsync();
         };
     }
 
@@ -157,6 +175,7 @@ public sealed class MainForm : Form
         };
 
         var buttons = new List<Button>();
+        Button? activeButton = null;
         for (var index = 0; index < tabs.TabPages.Count; index++)
         {
             var pageIndex = index;
@@ -170,14 +189,18 @@ public sealed class MainForm : Form
             DesktopTheme.StyleNavigationButton(button, index == 0);
             button.Click += (_, _) =>
             {
+                if (ReferenceEquals(activeButton, button))
+                    return;
+                if (activeButton is not null)
+                    DesktopTheme.StyleNavigationButton(activeButton, false);
                 tabs.SelectedIndex = pageIndex;
-                foreach (var item in buttons)
-                    DesktopTheme.StyleNavigationButton(
-                        item,
-                        Convert.ToInt32(item.Tag) == pageIndex);
+                DesktopTheme.StyleNavigationButton(button, true);
+                activeButton = button;
             };
             buttons.Add(button);
             navigation.Controls.Add(button);
+            if (index == 0)
+                activeButton = button;
         }
 
         void AdjustNavigation()
@@ -239,7 +262,7 @@ public sealed class MainForm : Form
                 Text = "SIGEBI · NEW ERA",
                 Dock = DockStyle.Fill,
                 ForeColor = Color.White,
-            Font = DesktopTheme.TitleFont(17),
+                Font = DesktopTheme.TitleFont(17),
                 TextAlign = ContentAlignment.MiddleCenter
             }, 0, 0);
         }
@@ -527,7 +550,7 @@ public sealed class MainForm : Form
             Margin = new Padding(18, 4, 0, 0)
         };
         DesktopTheme.StylePrimaryButton(requestsButton);
-        requestsButton.Click += (_, _) => IrAModulo(page, "Solicitudes");
+        requestsButton.Click += (_, _) => IrAModulo(requestsButton, "Solicitudes");
         requestsButton.Visible =
             _session.TieneRol("Administrador") ||
             _session.TieneRol("Bibliotecario");
@@ -556,55 +579,45 @@ public sealed class MainForm : Form
         page.Tag = new Func<Task>(async () =>
         {
             _status.Text = "Actualizando el resumen operativo…";
-            var canViewLoans = _session.TienePermiso("PRESTAMOS_VER") ||
-                               _session.TieneRol("Administrador");
-            var canViewFines = _session.TienePermiso("MULTAS_VER") ||
-                              _session.TieneRol("Administrador");
-            var requestsTask = canViewLoans
-                ? _api.GetAsync("api/SolicitudesPrestamo")
-                : Task.FromResult(CrearJsonVacio());
-            var activeTask = canViewLoans
-                ? _api.GetAsync("api/Prestamos/activos")
-                : Task.FromResult(CrearJsonVacio());
-            var overdueTask = canViewLoans
-                ? _api.GetAsync("api/Prestamos/vencidos")
-                : Task.FromResult(CrearJsonVacio());
-            var finesTask = canViewFines
-                ? _api.GetAsync("api/Multas/estado/Pendiente")
-                : Task.FromResult(CrearJsonVacio());
-            await Task.WhenAll(requestsTask, activeTask, overdueTask, finesTask);
-
-            var requests = LeerObjetos(await requestsTask);
-            var activeLoans = LeerObjetos(await activeTask);
-            var overdueLoans = LeerObjetos(await overdueTask);
-            var fines = LeerObjetos(await finesTask);
-            var pending = requests.Count(item =>
-                LeerTexto(item, "estado").Equals("Pendiente", StringComparison.OrdinalIgnoreCase));
-            var attended = requests.Count - pending;
-            var attentionPercentage = requests.Count == 0
-                ? 0
-                : (int)Math.Round(attended * 100d / requests.Count);
-            var fineAmount = fines.Sum(item => LeerDecimal(item, "monto"));
+            if (!_session.TieneRol("Administrador") && !_session.TieneRol("Bibliotecario"))
+            {
+                pendingHero.Text = "0";
+                pendingValue.Text = "0";
+                activeValue.Text = "0";
+                finesValue.Text = 0m.ToString("C2");
+                donut.Percentage = 0;
+                RenderizarActividad(activityList, []);
+                _status.Text = "Inicio listo · no hay indicadores operativos para este perfil";
+                return;
+            }
+            await _inicioWarmupTask;
+            var summary = await _api.GetAsync("api/ResumenInicio");
+            var requests = LeerObjetos(summary, "actividadReciente");
+            var pending = LeerEntero(summary, "solicitudesPendientes");
+            var activeLoans = LeerEntero(summary, "prestamosActivos");
+            var overdueLoans = LeerEntero(summary, "prestamosVencidos");
+            var attentionPercentage = LeerEntero(summary, "porcentajeAtencion");
+            var fineAmount = LeerDecimal(summary, "montoMultasPendientes");
 
             pendingHero.Text = pending.ToString();
             pendingValue.Text = pending.ToString();
-            activeValue.Text = activeLoans.Count.ToString();
+            activeValue.Text = activeLoans.ToString();
             finesValue.Text = fineAmount.ToString("C2");
             donut.Percentage = attentionPercentage;
 
-            var maximum = Math.Max(1, Math.Max(pending, Math.Max(activeLoans.Count, overdueLoans.Count)));
+            var maximum = Math.Max(1, Math.Max(pending, Math.Max(activeLoans, overdueLoans)));
             pendingBar.Maximum = maximum;
             activeBar.Maximum = maximum;
             overdueBar.Maximum = maximum;
             pendingBar.Value = pending;
-            activeBar.Value = activeLoans.Count;
-            overdueBar.Value = overdueLoans.Count;
+            activeBar.Value = activeLoans;
+            overdueBar.Value = overdueLoans;
             pendingCount.Text = pending.ToString();
-            activeCount.Text = activeLoans.Count.ToString();
-            overdueCount.Text = overdueLoans.Count.ToString();
-            distributionTotal.Text = $"{pending + activeLoans.Count + overdueLoans.Count} movimientos";
+            activeCount.Text = activeLoans.ToString();
+            overdueCount.Text = overdueLoans.ToString();
+            distributionTotal.Text = $"{pending + activeLoans + overdueLoans} movimientos";
             RenderizarActividad(activityList, requests);
-            _status.Text = $"Inicio actualizado · {pending} solicitudes pendientes · {activeLoans.Count} préstamos activos";
+            _status.Text = $"Inicio actualizado · {pending} solicitudes pendientes · {activeLoans} préstamos activos";
         });
         return page;
     }
@@ -956,8 +969,22 @@ public sealed class MainForm : Form
         container.ResumeLayout();
     }
 
-    private static IReadOnlyList<JsonElement> LeerObjetos(JsonElement json)
+    private static IReadOnlyList<JsonElement> LeerObjetos(
+        JsonElement json,
+        string? propertyName = null)
     {
+        if (!string.IsNullOrWhiteSpace(propertyName) &&
+            json.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in json.EnumerateObject())
+            {
+                if (property.Name.Equals(propertyName, StringComparison.OrdinalIgnoreCase) &&
+                    property.Value.ValueKind == JsonValueKind.Array)
+                    return property.Value.EnumerateArray()
+                        .Where(item => item.ValueKind == JsonValueKind.Object)
+                        .ToArray();
+            }
+        }
         if (json.ValueKind == JsonValueKind.Array)
             return json.EnumerateArray()
                 .Where(item => item.ValueKind == JsonValueKind.Object)
@@ -974,6 +1001,11 @@ public sealed class MainForm : Form
         }
         return [];
     }
+
+    private static int LeerEntero(JsonElement item, string propertyName) =>
+        int.TryParse(LeerTexto(item, propertyName, "0"), out var value)
+            ? value
+            : 0;
 
     private static string LeerTexto(
         JsonElement item,
@@ -1010,8 +1042,13 @@ public sealed class MainForm : Form
     private static JsonElement CrearJsonVacio() =>
         JsonDocument.Parse("[]").RootElement.Clone();
 
-    private static void IrAModulo(TabPage page, string module)
+    private static void IrAModulo(Control source, string module)
     {
+        Control? current = source;
+        while (current is not null && current is not TabPage)
+            current = current.Parent;
+        if (current is not TabPage page)
+            return;
         if (page.Parent is not TabControl tabs)
             return;
         var target = tabs.TabPages.Cast<TabPage>()
@@ -1134,7 +1171,7 @@ public sealed class MainForm : Form
     private TabPage CrearCatalogo()
     {
         var (page, grid, toolbar) = CrearPagina("Catálogo");
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Libros"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Libros", true));
         AgregarBoton(toolbar, "Buscar", async () =>
         {
             var values = Pedir("Buscar libros", Texto("termino", "Título o autor"));
@@ -1172,7 +1209,7 @@ public sealed class MainForm : Form
     private TabPage CrearInventario()
     {
         var (page, grid, toolbar) = CrearPagina("Inventario");
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Reportes/inventario"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Reportes/inventario", true));
         AgregarBoton(toolbar, "Ver ejemplares", () => CargarPorIdAsync(grid, "Libro", "api/Inventario/libro/{0}/ejemplares"));
         AgregarBoton(toolbar, "Crear inventario", async () =>
         {
@@ -1271,9 +1308,11 @@ public sealed class MainForm : Form
                 Fecha("desde", "Desde"),
                 Fecha("hasta", "Hasta"));
             if (values is null) return;
-            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToString("O"));
-            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToString("O"));
-            await CargarAsync(grid, $"api/Auditoria/rango?desde={desde}&hasta={hasta}");
+            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToUniversalTime().ToString("O"));
+            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToUniversalTime().ToString("O"));
+            await CargarAsync(
+                grid,
+                $"api/Auditoria/rango?fechaDesde={desde}&fechaHasta={hasta}");
         });
         page.Tag = new Func<Task>(() => CargarAsync(grid, "api/Auditoria"));
         return page;
@@ -1286,7 +1325,7 @@ public sealed class MainForm : Form
             BackColor = DesktopTheme.Background,
             Padding = Padding.Empty
         };
-        var tabs = new TabControl
+        var tabs = new BufferedTabControl
         {
             Dock = DockStyle.Fill,
             Appearance = TabAppearance.FlatButtons,
@@ -1296,11 +1335,11 @@ public sealed class MainForm : Form
             Margin = Padding.Empty,
             Padding = Point.Empty
         };
-        tabs.TabPages.Add(CrearAdministracionUsuarios());
-        tabs.TabPages.Add(CrearAdministracionEmpleados());
-        tabs.TabPages.Add(CrearAdministracionAdministradores());
-        tabs.TabPages.Add(CrearAdministracionCargos());
-        tabs.TabPages.Add(CrearAdministracionRoles());
+        tabs.TabPages.Add(CrearModuloDiferido("Usuarios", CrearAdministracionUsuarios));
+        tabs.TabPages.Add(CrearModuloDiferido("Empleados", CrearAdministracionEmpleados));
+        tabs.TabPages.Add(CrearModuloDiferido("Administradores", CrearAdministracionAdministradores));
+        tabs.TabPages.Add(CrearModuloDiferido("Cargos", CrearAdministracionCargos));
+        tabs.TabPages.Add(CrearModuloDiferido("Roles y permisos", CrearAdministracionRoles));
 
         var navigationCard = new SurfaceCard
         {
@@ -1408,17 +1447,10 @@ public sealed class MainForm : Form
         root.Controls.Add(navigationCard, 0, 0);
         root.Controls.Add(tabs, 1, 0);
 
-        tabs.Selected += async (_, _) =>
-        {
-            if (tabs.SelectedTab?.Tag is Func<Task> load)
-                await ProtegerAsync(load);
-        };
+        tabs.SelectedIndexChanged += async (_, _) =>
+            await CargarPestanaAsync(tabs.SelectedTab);
         page.Controls.Add(root);
-        page.Tag = new Func<Task>(async () =>
-        {
-            if (tabs.SelectedTab?.Tag is Func<Task> load)
-                await load();
-        });
+        page.Tag = new Func<Task>(() => CargarPestanaAsync(tabs.SelectedTab));
         return page;
     }
 
@@ -1454,7 +1486,7 @@ public sealed class MainForm : Form
     {
         var (page, grid, toolbar) = CrearPagina("Usuarios");
         ConfigurarSeleccionAdministracion(grid);
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Usuarios"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Usuarios", true));
         AgregarBoton(toolbar, "Crear", async () =>
         {
             var values = Pedir("Crear usuario",
@@ -1525,7 +1557,7 @@ public sealed class MainForm : Form
     {
         var (page, grid, toolbar) = CrearPagina("Empleados");
         ConfigurarSeleccionAdministracion(grid);
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Empleados"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Empleados", true));
         AgregarBoton(toolbar, "Crear", async () =>
         {
             var values = Pedir("Registrar empleado",
@@ -1561,7 +1593,7 @@ public sealed class MainForm : Form
     {
         var (page, grid, toolbar) = CrearPagina("Administradores");
         ConfigurarSeleccionAdministracion(grid);
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Administradores"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Administradores", true));
         AgregarBoton(toolbar, "Crear", async () =>
         {
             var values = Pedir("Registrar administrador",
@@ -1595,7 +1627,7 @@ public sealed class MainForm : Form
     {
         var (page, grid, toolbar) = CrearPagina("Cargos");
         ConfigurarSeleccionAdministracion(grid);
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Cargos"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Cargos", true));
         AgregarBoton(toolbar, "Crear", async () =>
         {
             var values = Pedir("Crear cargo", Texto("nombre", "Nombre"));
@@ -1629,7 +1661,7 @@ public sealed class MainForm : Form
     {
         var (page, grid, toolbar) = CrearPagina("Roles y permisos");
         ConfigurarSeleccionAdministracion(grid);
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Roles"));
+        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Roles", true));
         AgregarBoton(toolbar, "Crear rol", async () =>
         {
             var values = Pedir("Crear rol",
@@ -1717,8 +1749,8 @@ public sealed class MainForm : Form
         {
             var values = Pedir("Período del reporte", Fecha("desde", "Desde"), Fecha("hasta", "Hasta"));
             if (values is null) return;
-            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToString("O"));
-            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToString("O"));
+            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToUniversalTime().ToString("O"));
+            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToUniversalTime().ToString("O"));
             await CargarAsync(grid, $"api/Reportes/prestamos-fecha?desde={desde}&hasta={hasta}");
         });
         AgregarBoton(toolbar, "Multas por período", async () =>
@@ -1728,8 +1760,8 @@ public sealed class MainForm : Form
                 Fecha("desde", "Desde"),
                 Fecha("hasta", "Hasta"));
             if (values is null) return;
-            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToString("O"));
-            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToString("O"));
+            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToUniversalTime().ToString("O"));
+            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToUniversalTime().ToString("O"));
             await CargarAsync(grid, $"api/Reportes/multas?desde={desde}&hasta={hasta}");
         });
         AgregarBoton(toolbar, "Catálogo y demanda", async () =>
@@ -1739,8 +1771,8 @@ public sealed class MainForm : Form
                 Fecha("desde", "Desde"),
                 Fecha("hasta", "Hasta"));
             if (values is null) return;
-            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToString("O"));
-            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToString("O"));
+            var desde = Uri.EscapeDataString(((DateTime)values["desde"]!).ToUniversalTime().ToString("O"));
+            var hasta = Uri.EscapeDataString(((DateTime)values["hasta"]!).ToUniversalTime().ToString("O"));
             await CargarAsync(grid, $"api/Reportes/catalogo?desde={desde}&hasta={hasta}");
         });
         page.Tag = new Func<Task>(() => CargarAsync(grid, "api/Reportes/inventario"));
@@ -1749,13 +1781,136 @@ public sealed class MainForm : Form
 
     private async Task CargarPrimeraPestanaAsync(TabControl tabs)
     {
-        tabs.Selected += async (_, _) =>
+        tabs.SelectedIndexChanged += async (_, _) =>
+            await CargarPestanaAsync(tabs.SelectedTab);
+        await CargarPestanaAsync(tabs.SelectedTab);
+    }
+
+    private async Task PrepararModulosEnSegundoPlanoAsync()
+    {
+        await _inicioWarmupTask;
+
+        var endpoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_session.TieneRol("Administrador") || _session.TieneRol("Bibliotecario"))
         {
-            if (tabs.SelectedTab?.Tag is Func<Task> load)
-                await ProtegerAsync(load);
+            endpoints.Add("api/SolicitudesPrestamo/estado/Pendiente");
+            endpoints.Add("api/Libros");
+            endpoints.Add("api/Reportes/inventario");
+        }
+        if (_session.TieneRol("Administrador") || _session.TieneRol("Auditor"))
+        {
+            endpoints.Add("api/Auditoria");
+            endpoints.Add("api/Reportes/inventario");
+        }
+        if (_session.TieneRol("Administrador"))
+            endpoints.Add("api/Usuarios");
+
+        await Task.WhenAll(endpoints.Select(async endpoint =>
+        {
+            try
+            {
+                await _api.GetAsync(endpoint);
+            }
+            catch
+            {
+                // La precarga es opcional. El modulo mostrara cualquier error
+                // cuando el usuario lo abra y solicite la informacion.
+            }
+        }));
+
+        // Solo precargamos datos. Los controles de cada módulo se materializan al
+        // abrirlo para no bloquear el hilo visual inmediatamente después del login.
+    }
+
+    private async Task CargarPestanaAsync(TabPage? page)
+    {
+        if (page?.Tag is DeferredModule)
+        {
+            _status.Text = $"Preparando {page.Text}\u2026";
+            await Task.Yield();
+            page = MaterializarModulo(page);
+            await Task.Yield();
+        }
+        if (page?.Tag is not Func<Task> load)
+            return;
+        if (_moduleLoadedAt.TryGetValue(page, out var loadedAt) &&
+            DateTime.UtcNow - loadedAt < ModuleRefreshInterval)
+        {
+            _status.Text = $"{page.Text} listo · mostrando información reciente";
+            return;
+        }
+        if (!_modulesLoading.Add(page))
+            return;
+
+        try
+        {
+            await ProtegerAsync(load);
+            _moduleLoadedAt[page] = DateTime.UtcNow;
+        }
+        finally
+        {
+            _modulesLoading.Remove(page);
+        }
+    }
+
+    private async Task CalentarInicioAsync()
+    {
+        if (!_session.TieneRol("Administrador") && !_session.TieneRol("Bibliotecario"))
+            return;
+
+        try
+        {
+            await _api.GetAsync("api/ResumenInicio");
+        }
+        catch
+        {
+            // La precarga no debe impedir la carga normal ni mostrar errores.
+        }
+    }
+
+    private static TabPage CrearModuloDiferido(string name, Func<TabPage> factory)
+    {
+        var page = new TabPage(name)
+        {
+            BackColor = DesktopTheme.Background,
+            Padding = Padding.Empty,
+            Tag = new DeferredModule(factory)
         };
-        if (tabs.SelectedTab?.Tag is Func<Task> firstLoad)
-            await ProtegerAsync(firstLoad);
+        page.Controls.Add(new Label
+        {
+            Text = $"Preparando {name}\u2026",
+            Dock = DockStyle.Fill,
+            ForeColor = DesktopTheme.Muted,
+            BackColor = DesktopTheme.Background,
+            Font = DesktopTheme.Font(11),
+            TextAlign = ContentAlignment.MiddleCenter
+        });
+        return page;
+    }
+
+    private static TabPage MaterializarModulo(TabPage target)
+    {
+        if (target.Tag is not DeferredModule deferred)
+            return target;
+
+        var built = deferred.Factory();
+        target.SuspendLayout();
+        foreach (Control existing in target.Controls.Cast<Control>().ToArray())
+            existing.Dispose();
+        target.Controls.Clear();
+
+        foreach (var control in built.Controls.Cast<Control>().ToArray())
+        {
+            built.Controls.Remove(control);
+            target.Controls.Add(control);
+        }
+
+        target.BackColor = built.BackColor;
+        target.Padding = built.Padding;
+        target.Tag = built.Tag;
+        target.ResumeLayout(true);
+        built.Dispose();
+        return target;
     }
 
     private static (TabPage Page, DataGridView Grid, FlowLayoutPanel Toolbar) CrearPagina(string name)
@@ -1868,7 +2023,7 @@ public sealed class MainForm : Form
         actionLayout.Controls.Add(toolbar, 0, 1);
         actionSection.Controls.Add(actionLayout);
 
-        var grid = new DataGridView
+        var grid = new BufferedDataGridView
         {
             Dock = DockStyle.Fill,
             ReadOnly = true,
@@ -2057,11 +2212,19 @@ public sealed class MainForm : Form
         toolbar.Controls.Add(button);
     }
 
-    private async Task CargarAsync(DataGridView grid, string endpoint)
+    private async Task CargarAsync(
+        DataGridView grid,
+        string endpoint,
+        bool forceRefresh = false)
     {
         _status.Text = "Actualizando información del módulo…";
-        var json = await _api.GetAsync(endpoint);
-        grid.DataSource = ConvertirEnTabla(json);
+        var json = forceRefresh
+            ? await _api.GetFreshAsync(endpoint)
+            : await _api.GetAsync(endpoint);
+        var table = await Task.Run(() => ConvertirEnTabla(json));
+        grid.SuspendLayout();
+        grid.DataSource = table;
+        grid.ResumeLayout();
         _status.Text = grid.Rows.Count switch
         {
             0 => "Consulta completada · No hay registros para mostrar",

@@ -16,6 +16,10 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<IReadOnlyCollection<Multa>> ObtenerPorEstadoAsync(
             EstadoMulta estado,
             CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Multa>> ObtenerPorRangoAsync(
+            DateTime desde,
+            DateTime hasta,
+            CancellationToken cancellationToken = default);
         Task<bool> TienePendientesPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);

@@ -12,9 +12,8 @@ public sealed class LoginForm : Form
         Dock = DockStyle.Fill,
         PlaceholderText = "nombre@correo.com"
     };
-    private readonly TextBox _password = new()
+    private readonly PasswordTextBox _password = new()
     {
-        UseSystemPasswordChar = true,
         Dock = DockStyle.Fill,
         PlaceholderText = "Escribe tu contraseña"
     };

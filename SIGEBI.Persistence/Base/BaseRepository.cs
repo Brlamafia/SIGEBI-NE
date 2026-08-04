@@ -26,12 +26,15 @@ namespace SIGEBI.Persistence.Base
             _logger = logger;
         }
 
-        public virtual async Task<IEnumerable<T>> GetAllAsync()
+        public virtual async Task<IEnumerable<T>> GetAllAsync(
+            CancellationToken ct = default)
         {
             try
             {
                 _logger.LogInformation("Consultando todos los registros de {Entidad}", typeof(T).Name);
-                var registros = await _dbSet.ToListAsync();
+                var registros = await _dbSet
+                    .AsNoTracking()
+                    .ToListAsync(ct);
                 _logger.LogInformation(
                     "Consulta de {Entidad} completada con {Cantidad} registros",
                     typeof(T).Name,
@@ -46,12 +49,14 @@ namespace SIGEBI.Persistence.Base
             }
         }
 
-        public virtual async Task<T?> GetByIdAsync(int id)
+        public virtual async Task<T?> GetByIdAsync(
+            int id,
+            CancellationToken ct = default)
         {
             try
             {
                 _logger.LogInformation("Consultando {Entidad} con ID {Id}", typeof(T).Name, id);
-                var registro = await _dbSet.FindAsync(id);
+                var registro = await _dbSet.FindAsync([id], ct);
                 _logger.LogInformation(
                     "Consulta de {Entidad} ID {Id} completada. Encontrado: {Encontrado}",
                     typeof(T).Name,
@@ -66,6 +71,36 @@ namespace SIGEBI.Persistence.Base
             }
         }
 
+        public virtual async Task<IReadOnlyCollection<T>> GetPageAsync(
+            int skip,
+            int take,
+            CancellationToken ct = default)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(skip);
+            if (take is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(take));
+
+            try
+            {
+                _logger.LogInformation(
+                    "Consultando página de {Entidad}. Desplazamiento {Skip}, tamaño {Take}",
+                    typeof(T).Name,
+                    skip,
+                    take);
+                return await _dbSet
+                    .AsNoTracking()
+                    .OrderBy(entity => EF.Property<int>(entity, "Id"))
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al paginar la tabla {Entidad}", typeof(T).Name);
+                throw;
+            }
+        }
+
         public virtual async Task AgregarAsync(T entity, CancellationToken ct = default)
         {
             try
@@ -74,7 +109,7 @@ namespace SIGEBI.Persistence.Base
                 _logger.LogInformation("Iniciando la inserción de un nuevo registro en {Entidad}", typeof(T).Name);
 
                 await _dbSet.AddAsync(entity, ct);
-                await _context.SaveChangesAsync(ct);
+                await GuardarSiNoHayTransaccionAsync(ct);
 
                 _logger.LogInformation("Registro guardado exitosamente en {Entidad}", typeof(T).Name);
             }
@@ -85,13 +120,15 @@ namespace SIGEBI.Persistence.Base
             }
         }
 
-        public virtual async Task ActualizarAsync(T entity)
+        public virtual async Task ActualizarAsync(
+            T entity,
+            CancellationToken ct = default)
         {
             try
             {
                 _logger.LogInformation("Iniciando actualización de un registro en {Entidad}", typeof(T).Name);
                 _dbSet.Update(entity);
-                await _context.SaveChangesAsync();
+                await GuardarSiNoHayTransaccionAsync(ct);
                 _logger.LogInformation("Actualización completada en {Entidad}", typeof(T).Name);
             }
             catch (Exception ex)
@@ -101,13 +138,15 @@ namespace SIGEBI.Persistence.Base
             }
         }
 
-        public virtual async Task EliminarAsync(T entity)
+        public virtual async Task EliminarAsync(
+            T entity,
+            CancellationToken ct = default)
         {
             try
             {
                 _logger.LogInformation("Iniciando eliminación de un registro en {Entidad}", typeof(T).Name);
                 _dbSet.Remove(entity);
-                await _context.SaveChangesAsync();
+                await GuardarSiNoHayTransaccionAsync(ct);
                 _logger.LogInformation("Registro eliminado de la tabla {Entidad}", typeof(T).Name);
             }
             catch (Exception ex)
@@ -115,6 +154,19 @@ namespace SIGEBI.Persistence.Base
                 _logger.LogError(ex, "Error al intentar eliminar en la tabla {Entidad}", typeof(T).Name);
                 throw;
             }
+        }
+
+        private async Task GuardarSiNoHayTransaccionAsync(CancellationToken ct)
+        {
+            if (_context.Database.CurrentTransaction is not null)
+            {
+                _logger.LogDebug(
+                    "El cambio de {Entidad} queda pendiente para la unidad de trabajo activa",
+                    typeof(T).Name);
+                return;
+            }
+
+            await _context.SaveChangesAsync(ct);
         }
     }
 }

@@ -195,13 +195,12 @@ public sealed class OperationDialog : Form
         }
         else
         {
-            var text = new TextBox
-            {
-                Dock = DockStyle.Top,
-                Text = field.DefaultValue,
-                UseSystemPasswordChar = field.Kind == InputKind.Password,
-                PlaceholderText = field.Label
-            };
+            var text = field.Kind == InputKind.Password
+                ? new PasswordTextBox()
+                : new TextBox();
+            text.Dock = DockStyle.Top;
+            text.Text = field.DefaultValue;
+            text.PlaceholderText = field.Label;
             DesktopTheme.StyleInput(text);
             editor = text;
         }

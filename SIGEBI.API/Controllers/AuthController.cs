@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using SIGEBI.Application.Dtos.Auth;
 using SIGEBI.Application.Dtos.Usuarios;
@@ -18,6 +19,7 @@ namespace SIGEBI.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("auth")]
 public sealed class AuthController(
     IConfiguration configuration,
     IAuthenticationService authentication,

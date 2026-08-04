@@ -46,6 +46,22 @@ namespace SIGEBI.Application.Services.Administradores
         public async Task<IReadOnlyCollection<AdministradorDto>> ObtenerTodosAsync(CancellationToken ct = default)
             => _mapper.Map<IReadOnlyCollection<AdministradorDto>>(await _administradores.ObtenerTodosAsync(ct));
 
+        public async Task<IReadOnlyCollection<AdministradorDto>> ObtenerPaginaAsync(
+            int pagina,
+            int tamanoPagina,
+            CancellationToken ct = default)
+        {
+            if (pagina <= 0)
+                throw new ArgumentOutOfRangeException(nameof(pagina));
+            if (tamanoPagina is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(tamanoPagina));
+            return _mapper.Map<IReadOnlyCollection<AdministradorDto>>(
+                await _administradores.ObtenerPaginaAsync(
+                    (pagina - 1) * tamanoPagina,
+                    tamanoPagina,
+                    ct));
+        }
+
         public async Task<AdministradorDto> ObtenerPorIdAsync(int id, CancellationToken ct = default)
             => _mapper.Map<AdministradorDto>(await _administradores.ObtenerPorIdAsync(id, ct) ?? throw new NotFoundException(nameof(Administrador), id));
 

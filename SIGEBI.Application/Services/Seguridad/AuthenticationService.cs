@@ -1,8 +1,8 @@
 using SIGEBI.Application.Dtos.Auth;
+using SIGEBI.Application.Dtos.Usuarios;
 using SIGEBI.Application.Exceptions;
 using SIGEBI.Application.Interfaces.Auditoria;
 using SIGEBI.Application.Interfaces.Seguridad;
-using SIGEBI.Application.Interfaces.Usuarios;
 using SIGEBI.Application.Options;
 using SIGEBI.Application.Security;
 using SIGEBI.Domain.Enums;
@@ -12,7 +12,6 @@ using SIGEBI.Domain.Interfaces.Repositories;
 namespace SIGEBI.Application.Services.Seguridad;
 
 public sealed class AuthenticationService(
-    IUsuarioService userService,
     IUsuarioRepository users,
     IAuditoriaWriter audit,
     IUnitOfWork unitOfWork,
@@ -57,8 +56,9 @@ public sealed class AuthenticationService(
             AccionAuditoria.Registrar,
             "Inicio de sesión exitoso.",
             cancellationToken: cancellationToken);
+        await unitOfWork.GuardarCambiosAsync(cancellationToken);
 
-        return await BuildResultAsync(user, cancellationToken);
+        return BuildResult(user);
     }
 
     public async Task<AuthenticatedUserDto> AuthenticateExternalAsync(
@@ -82,12 +82,11 @@ public sealed class AuthenticationService(
             cancellationToken: cancellationToken);
         await unitOfWork.GuardarCambiosAsync(cancellationToken);
 
-        return await BuildResultAsync(user, cancellationToken);
+        return BuildResult(user);
     }
 
-    private async Task<AuthenticatedUserDto> BuildResultAsync(
-        SIGEBI.Domain.Entities.Usuarios.Usuario user,
-        CancellationToken cancellationToken)
+    private static AuthenticatedUserDto BuildResult(
+        SIGEBI.Domain.Entities.Usuarios.Usuario user)
     {
         var roles = user.Roles
             .Select(role => role.Nombre)
@@ -103,7 +102,20 @@ public sealed class AuthenticationService(
             .ToArray();
         return new AuthenticatedUserDto
         {
-            Usuario = await userService.GetByIdAsync(user.Id),
+            // El repositorio ya cargó el usuario, sus roles y permisos para validar
+            // el acceso. Reutilizar esa entidad evita una segunda consulta remota.
+            Usuario = new UsuarioDto
+            {
+                Id = user.Id,
+                Nombre = user.Nombre,
+                Apellido = user.Apellido,
+                Email = user.Email,
+                Cedula = user.Cedula,
+                Telefono = user.Telefono,
+                TipoUsuario = user.TipoUsuario.ToString(),
+                Estado = user.Estado.ToString(),
+                TieneMultasPendientes = false
+            },
             Roles = roles.OrderBy(role => role).ToArray(),
             Permisos = permissions
         };

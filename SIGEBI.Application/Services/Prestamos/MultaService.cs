@@ -44,6 +44,16 @@ public sealed class MultaService(
                 EnumParser.ParseDefined<EstadoMulta>(estado, "estado de la multa"),
                 ct));
 
+    public async Task<IReadOnlyCollection<MultaDto>> ObtenerPorRangoAsync(
+        DateTime desde,
+        DateTime hasta,
+        CancellationToken ct = default) =>
+        mapper.Map<IReadOnlyCollection<MultaDto>>(
+            await multas.ObtenerPorRangoAsync(
+                DateTimeNormalizer.ToUtc(desde),
+                DateTimeNormalizer.ToUtc(hasta),
+                ct));
+
     public Task<bool> TienePendientesPorUsuarioAsync(
         int usuarioId,
         CancellationToken ct = default) =>

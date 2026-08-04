@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Memory;
 using SIGEBI.Application.Dtos.Auth;
 using SIGEBI.Application.Dtos.Catalogo;
 using SIGEBI.Application.Dtos.Notificaciones;
@@ -13,8 +14,10 @@ namespace SIGEBI.Web.Services;
 
 public sealed class SigebiApiClient(
     HttpClient httpClient,
-    IConfiguration configuration) : ISigebiApiClient
+    IConfiguration configuration,
+    IMemoryCache? cache = null) : ISigebiApiClient
 {
+    private readonly IMemoryCache _cache = cache ?? new MemoryCache(new MemoryCacheOptions());
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         Converters = { new JsonStringEnumConverter() }
@@ -83,21 +86,30 @@ public sealed class SigebiApiClient(
             ["genero"] = genre,
             ["editorial"] = publisher,
             ["disponible"] = available?.ToString().ToLowerInvariant(),
-            ["pagina"] = page.ToString(),
-            ["tamanoPagina"] = pageSize.ToString()
+            ["skip"] = ((page - 1) * pageSize).ToString(),
+            ["take"] = Math.Min(pageSize + 1, 200).ToString()
         };
         return GetAsync<IReadOnlyCollection<LibroDto>>(
             QueryHelpers.AddQueryString("api/Libros/buscar", query),
             cancellationToken);
     }
 
-    public Task<IReadOnlyCollection<LibroDto>> GetBooksAsync(
+    public async Task<IReadOnlyCollection<LibroDto>> GetBooksAsync(
         int page = 1,
         int pageSize = 200,
-        CancellationToken cancellationToken = default) =>
-        GetAsync<IReadOnlyCollection<LibroDto>>(
-            $"api/Libros?pagina={page}&tamanoPagina={pageSize}",
-            cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var cacheKey = $"web:catalogo:{page}:{pageSize}";
+        var result = await _cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            entry.SlidingExpiration = TimeSpan.FromMinutes(2);
+            return await GetAsync<IReadOnlyCollection<LibroDto>>(
+                $"api/Libros?pagina={page}&tamanoPagina={pageSize}",
+                cancellationToken);
+        });
+        return result ?? Array.Empty<LibroDto>();
+    }
 
     public Task<LibroDto> GetBookByIdAsync(
         int bookId,

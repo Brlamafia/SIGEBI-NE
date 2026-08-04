@@ -62,12 +62,11 @@ public class PrestamoRepository(
             _logger.LogInformation(
                 "Consultando préstamos del ejemplar {EjemplarId}",
                 ejemplarId);
-            var ids = await _context.PrestamoEjemplares
-                .Where(item => item.EjemplarId == ejemplarId)
-                .Select(item => item.PrestamoId)
-                .ToArrayAsync(ct);
             return await ConsultarAsync(
-                () => _dbSet.Where(item => ids.Contains(item.Id))
+                () => _dbSet.Where(item =>
+                        _context.PrestamoEjemplares.Any(relation =>
+                            relation.EjemplarId == ejemplarId &&
+                            relation.PrestamoId == item.Id))
                     .OrderByDescending(item => item.FechaPrestamo),
                 ct,
                 "préstamos del ejemplar",
@@ -226,28 +225,29 @@ public class PrestamoRepository(
                 "Iniciando consulta de {Operacion}. Identificador: {EntidadId}",
                 operacion,
                 entidadId);
-            var prestamos = await crearConsulta().ToListAsync(ct);
-            if (prestamos.Count > 0)
-            {
-                var ids = prestamos.Select(item => item.Id).ToArray();
-                var relaciones = await _context.PrestamoEjemplares
-                    .AsNoTracking()
-                    .Where(item => ids.Contains(item.PrestamoId))
-                    .ToListAsync(ct);
-                var ejemplares = relaciones
-                    .GroupBy(item => item.PrestamoId)
-                    .ToDictionary(group => group.Key, group => group.First().EjemplarId);
-                foreach (var prestamo in prestamos)
+            var resultados = await crearConsulta()
+                .AsNoTracking()
+                .Select(prestamo => new
                 {
-                    if (ejemplares.TryGetValue(prestamo.Id, out var ejemplarId))
-                        prestamo.CargarEjemplarPersistido(ejemplarId);
-                }
+                    Prestamo = prestamo,
+                    EjemplarId = _context.PrestamoEjemplares
+                        .Where(relation => relation.PrestamoId == prestamo.Id)
+                        .Select(relation => (int?)relation.EjemplarId)
+                        .FirstOrDefault()
+                })
+                .ToListAsync(ct);
+            foreach (var resultado in resultados)
+            {
+                if (resultado.EjemplarId.HasValue)
+                    resultado.Prestamo.CargarEjemplarPersistido(resultado.EjemplarId.Value);
             }
+
+            var prestamos = resultados.Select(resultado => resultado.Prestamo).ToArray();
 
             _logger.LogInformation(
                 "Consulta de {Operacion} completada con {Cantidad} registros",
                 operacion,
-                prestamos.Count);
+                prestamos.Length);
             return prestamos;
         }
         catch (Exception exception)

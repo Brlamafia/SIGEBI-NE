@@ -9,6 +9,9 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     public interface ILibroRepository : IRepository<Libro>
     {
         Task<Libro?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Libro>> ObtenerPorIdsAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default);
         Task<Libro?> ObtenerPorIsbnAsync(string isbn, CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Libro>> BuscarPorCriterioAsync(string criterio, CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Libro>> BuscarAsync(

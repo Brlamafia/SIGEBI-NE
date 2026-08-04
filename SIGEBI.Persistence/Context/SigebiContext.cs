@@ -78,17 +78,25 @@ public class SigebiContext : DbContext
 
     private void PrepararCargosLegados()
     {
-        foreach (var entry in ChangeTracker.Entries<Empleado>()
-                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
-        {
-            if (!RequiereResolverCargo(entry))
-                continue;
+        var entries = ChangeTracker.Entries<Empleado>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified)
+            .Where(RequiereResolverCargo)
+            .ToArray();
+        var idsPendientes = entries
+            .Where(entry => ObtenerNombreCargoRastreado(entry.Entity) is null)
+            .Select(entry => entry.Entity.CargoId)
+            .Distinct()
+            .ToArray();
+        var cargos = idsPendientes.Length == 0
+            ? new Dictionary<int, string>()
+            : Cargos.AsNoTracking()
+                .Where(cargo => idsPendientes.Contains(cargo.Id))
+                .ToDictionary(cargo => cargo.Id, cargo => cargo.Nombre);
 
+        foreach (var entry in entries)
+        {
             var nombreCargo = ObtenerNombreCargoRastreado(entry.Entity)
-                ?? Cargos.AsNoTracking()
-                    .Where(c => c.Id == entry.Entity.CargoId)
-                    .Select(c => c.Nombre)
-                    .SingleOrDefault();
+                ?? cargos.GetValueOrDefault(entry.Entity.CargoId);
 
             AsignarCargoLegado(entry, nombreCargo);
         }
@@ -96,17 +104,25 @@ public class SigebiContext : DbContext
 
     private async Task PrepararCargosLegadosAsync(CancellationToken cancellationToken)
     {
-        foreach (var entry in ChangeTracker.Entries<Empleado>()
-                     .Where(e => e.State is EntityState.Added or EntityState.Modified))
-        {
-            if (!RequiereResolverCargo(entry))
-                continue;
+        var entries = ChangeTracker.Entries<Empleado>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified)
+            .Where(RequiereResolverCargo)
+            .ToArray();
+        var idsPendientes = entries
+            .Where(entry => ObtenerNombreCargoRastreado(entry.Entity) is null)
+            .Select(entry => entry.Entity.CargoId)
+            .Distinct()
+            .ToArray();
+        var cargos = idsPendientes.Length == 0
+            ? new Dictionary<int, string>()
+            : await Cargos.AsNoTracking()
+                .Where(cargo => idsPendientes.Contains(cargo.Id))
+                .ToDictionaryAsync(cargo => cargo.Id, cargo => cargo.Nombre, cancellationToken);
 
+        foreach (var entry in entries)
+        {
             var nombreCargo = ObtenerNombreCargoRastreado(entry.Entity)
-                ?? await Cargos.AsNoTracking()
-                    .Where(c => c.Id == entry.Entity.CargoId)
-                    .Select(c => c.Nombre)
-                    .SingleOrDefaultAsync(cancellationToken);
+                ?? cargos.GetValueOrDefault(entry.Entity.CargoId);
 
             AsignarCargoLegado(entry, nombreCargo);
         }
@@ -211,6 +227,9 @@ public class SigebiContext : DbContext
         solicitud.Ignore(s => s.FechaModificacion);
         solicitud.HasOne<Usuario>().WithMany().HasForeignKey(s => s.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         solicitud.HasOne<Libro>().WithMany().HasForeignKey(s => s.LibroId).OnDelete(DeleteBehavior.Restrict);
+        solicitud.HasIndex(s => new { s.Estado, s.FechaSolicitud });
+        solicitud.HasIndex(s => new { s.UsuarioId, s.FechaSolicitud });
+        solicitud.HasIndex(s => new { s.LibroId, s.Estado });
     }
 
     private static void ConfigurarNotificacion(ModelBuilder modelBuilder)
@@ -223,8 +242,30 @@ public class SigebiContext : DbContext
         notificacion.Property(n => n.Mensaje).HasColumnName("mensaje").HasMaxLength(500).IsRequired();
         notificacion.Property(n => n.FechaEnvio).HasColumnName("fecha_envio");
         notificacion.Property(n => n.Leida).HasColumnName("leida");
-        notificacion.Property(n => n.TipoEvento).HasColumnName("tipo_evento").HasConversion<string>().HasMaxLength(100).IsRequired();
+        notificacion.Property(n => n.TipoEvento)
+            .HasColumnName("tipo_evento")
+            .HasConversion(
+                tipo => tipo.ToString(),
+                valor => ParsearTipoNotificacionPersistida(valor))
+            .HasMaxLength(100)
+            .IsRequired();
         notificacion.HasOne<Usuario>().WithMany().HasForeignKey(n => n.UsuarioId).OnDelete(DeleteBehavior.Restrict);
+        notificacion.HasIndex(n => new { n.UsuarioId, n.FechaEnvio });
+        notificacion.HasIndex(n => new { n.UsuarioId, n.Leida });
+    }
+
+    private static TipoNotificacion ParsearTipoNotificacionPersistida(string valor)
+    {
+        if (Enum.TryParse<TipoNotificacion>(valor, true, out var tipo) &&
+            Enum.IsDefined(tipo))
+        {
+            return tipo;
+        }
+
+        // El esquema inicial guardaba nombres funcionales como "Prestamo".
+        // Se interpretan como información general para conservar compatibilidad
+        // con los registros existentes sin requerir migraciones de base de datos.
+        return TipoNotificacion.Informacion;
     }
 
     private static void ConfigurarCargo(ModelBuilder modelBuilder)
@@ -330,6 +371,9 @@ public class SigebiContext : DbContext
         prestamo.Ignore(p => p.FechaCreacion);
         prestamo.Property(p => p.Estado).HasConversion<string>().HasMaxLength(50);
         prestamo.HasIndex(p => p.SolicitudPrestamoId).IsUnique();
+        prestamo.HasIndex(p => new { p.UsuarioId, p.Estado });
+        prestamo.HasIndex(p => new { p.LibroId, p.Estado });
+        prestamo.HasIndex(p => new { p.Estado, p.FechaEsperadaDevolucion });
         prestamo.HasOne<Usuario>().WithMany().HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<Libro>().WithMany().HasForeignKey(p => p.LibroId).OnDelete(DeleteBehavior.Restrict);
         prestamo.HasOne<SolicitudPrestamo>().WithOne().HasForeignKey<Prestamo>(p => p.SolicitudPrestamoId).OnDelete(DeleteBehavior.Restrict);
@@ -376,6 +420,8 @@ public class SigebiContext : DbContext
         multa.HasOne<Usuario>().WithMany().HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.Restrict);
         multa.HasOne<Prestamo>().WithMany().HasForeignKey(m => m.PrestamoId).OnDelete(DeleteBehavior.Restrict);
         multa.HasOne<Empleado>().WithMany().HasForeignKey(m => m.EmpleadoResolucionId).OnDelete(DeleteBehavior.Restrict);
+        multa.HasIndex(m => new { m.UsuarioId, m.Estado });
+        multa.HasIndex(m => new { m.Estado, m.FechaGeneracion });
     }
 
     private static void ConfigurarInventario(ModelBuilder modelBuilder)
@@ -411,6 +457,7 @@ public class SigebiContext : DbContext
         ejemplar.Property(e => e.FechaCreacion).HasColumnName("fecha_registro");
         ejemplar.Ignore(e => e.FechaModificacion);
         ejemplar.HasIndex(e => e.Codigo).IsUnique();
+        ejemplar.HasIndex(e => new { e.LibroId, e.Estado });
         ejemplar.HasOne<Libro>().WithMany().HasForeignKey(e => e.LibroId).OnDelete(DeleteBehavior.Restrict);
     }
 
@@ -427,5 +474,8 @@ public class SigebiContext : DbContext
         auditoria.Property(a => a.Resultado).HasColumnName("resultado").HasConversion<string>().HasMaxLength(50);
         auditoria.Property(a => a.Fecha).HasColumnName("fecha");
         auditoria.HasOne<Usuario>().WithMany().HasForeignKey(a => a.UsuarioResponsableId).OnDelete(DeleteBehavior.Restrict);
+        auditoria.HasIndex(a => a.Fecha);
+        auditoria.HasIndex(a => new { a.UsuarioResponsableId, a.Fecha });
+        auditoria.HasIndex(a => new { a.Modulo, a.Fecha });
     }
 }

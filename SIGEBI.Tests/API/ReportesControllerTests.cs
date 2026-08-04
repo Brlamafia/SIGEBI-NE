@@ -5,7 +5,6 @@ using SIGEBI.Application.Dtos.Catalogo;
 using SIGEBI.Application.Dtos.Prestamos;
 using SIGEBI.Application.Dtos.Reportes;
 using SIGEBI.Application.Interfaces.Catalogo;
-using SIGEBI.Application.Interfaces.Inventario;
 using SIGEBI.Application.Interfaces.Prestamos;
 using SIGEBI.Application.Interfaces.Usuarios;
 
@@ -54,7 +53,6 @@ public sealed class ReportesControllerTests
                 desde, hasta, It.IsAny<CancellationToken>()))
             .ReturnsAsync(prestamos);
         var controller = new ReportesController(
-            Mock.Of<IInventarioService>(),
             servicioPrestamos.Object,
             catalogo.Object,
             Mock.Of<IMultaService>(),

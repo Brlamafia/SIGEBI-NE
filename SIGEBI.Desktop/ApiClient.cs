@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -8,8 +9,14 @@ namespace SIGEBI.Desktop;
 
 public sealed class ApiClient : IDisposable
 {
+    private static readonly TimeSpan ReadCacheDuration = TimeSpan.FromMinutes(2);
     private readonly HttpClient _httpClient;
     private readonly bool _ownsClient;
+    private readonly ConcurrentDictionary<string, CachedResponse> _readCache =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, Lazy<Task<JsonElement>>> _inflightGets =
+        new(StringComparer.OrdinalIgnoreCase);
+    private long _readGeneration;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true,
@@ -49,6 +56,9 @@ public sealed class ApiClient : IDisposable
         string password,
         CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _readGeneration);
+        _readCache.Clear();
+        _inflightGets.Clear();
         using var response = await _httpClient.PostAsJsonAsync(
             "api/Auth/login",
             new { email, password },
@@ -70,32 +80,110 @@ public sealed class ApiClient : IDisposable
 
     public void CerrarSesion()
     {
+        Interlocked.Increment(ref _readGeneration);
+        _readCache.Clear();
+        _inflightGets.Clear();
         Session = null;
         _httpClient.DefaultRequestHeaders.Authorization = null;
     }
 
-    public Task<JsonElement> GetAsync(
+    public async Task<JsonElement> GetAsync(
         string endpoint,
-        CancellationToken cancellationToken = default) =>
-        EnviarAsync(HttpMethod.Get, endpoint, null, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        if (_readCache.TryGetValue(endpoint, out var cached) &&
+            cached.ExpiresAtUtc > DateTime.UtcNow)
+            return cached.Value;
+
+        var pending = _inflightGets.GetOrAdd(
+            endpoint,
+            key => new Lazy<Task<JsonElement>>(
+                () => ObtenerYGuardarAsync(
+                    key,
+                    Volatile.Read(ref _readGeneration)),
+                LazyThreadSafetyMode.ExecutionAndPublication));
+        try
+        {
+            return await pending.Value.WaitAsync(cancellationToken);
+        }
+        finally
+        {
+            if (pending.IsValueCreated && pending.Value.IsCompleted &&
+                _inflightGets.TryGetValue(endpoint, out var current) &&
+                ReferenceEquals(current, pending))
+                _inflightGets.TryRemove(endpoint, out _);
+        }
+    }
+
+    public async Task<JsonElement> GetFreshAsync(
+        string endpoint,
+        CancellationToken cancellationToken = default)
+    {
+        var generation = Volatile.Read(ref _readGeneration);
+        var value = await EnviarAsync(
+            HttpMethod.Get,
+            endpoint,
+            null,
+            cancellationToken);
+        GuardarEnCache(endpoint, value, generation);
+        return value;
+    }
 
     public Task<JsonElement> PostAsync(
         string endpoint,
         object payload,
         CancellationToken cancellationToken = default) =>
-        EnviarAsync(HttpMethod.Post, endpoint, payload, cancellationToken);
+        EnviarCambioAsync(HttpMethod.Post, endpoint, payload, cancellationToken);
 
     public Task<JsonElement> PutAsync(
         string endpoint,
         object payload,
         CancellationToken cancellationToken = default) =>
-        EnviarAsync(HttpMethod.Put, endpoint, payload, cancellationToken);
+        EnviarCambioAsync(HttpMethod.Put, endpoint, payload, cancellationToken);
 
     public Task<JsonElement> DeleteAsync(
         string endpoint,
         object? payload = null,
         CancellationToken cancellationToken = default) =>
-        EnviarAsync(HttpMethod.Delete, endpoint, payload, cancellationToken);
+        EnviarCambioAsync(HttpMethod.Delete, endpoint, payload, cancellationToken);
+
+    private async Task<JsonElement> EnviarCambioAsync(
+        HttpMethod method,
+        string endpoint,
+        object? payload,
+        CancellationToken cancellationToken)
+    {
+        var value = await EnviarAsync(method, endpoint, payload, cancellationToken);
+        Interlocked.Increment(ref _readGeneration);
+        _readCache.Clear();
+        _inflightGets.Clear();
+        return value;
+    }
+
+    private async Task<JsonElement> ObtenerYGuardarAsync(
+        string endpoint,
+        long generation)
+    {
+        var value = await EnviarAsync(
+            HttpMethod.Get,
+            endpoint,
+            null,
+            CancellationToken.None);
+        GuardarEnCache(endpoint, value, generation);
+        return value;
+    }
+
+    private void GuardarEnCache(
+        string endpoint,
+        JsonElement value,
+        long generation)
+    {
+        if (generation != Volatile.Read(ref _readGeneration))
+            return;
+        _readCache[endpoint] = new CachedResponse(
+            value,
+            DateTime.UtcNow.Add(ReadCacheDuration));
+    }
 
     private async Task<JsonElement> EnviarAsync(
         HttpMethod method,
@@ -195,6 +283,8 @@ public sealed class ApiClient : IDisposable
         if (_ownsClient)
             _httpClient.Dispose();
     }
+
+    private sealed record CachedResponse(JsonElement Value, DateTime ExpiresAtUtc);
 }
 
 public sealed class DesktopSession

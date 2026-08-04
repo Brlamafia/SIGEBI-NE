@@ -39,8 +39,15 @@ public sealed class PrestamoConsultaService(
                 EnumParser.ParseDefined<EstadoPrestamo>(estado, "estado"),
                 ct));
 
-    public async Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorRangoAsync(DateTime desde, DateTime hasta, CancellationToken ct = default) =>
-        mapper.Map<IReadOnlyCollection<PrestamoDto>>(await prestamos.ObtenerPorRangoAsync(desde, hasta, ct));
+    public async Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorRangoAsync(
+        DateTime desde,
+        DateTime hasta,
+        CancellationToken ct = default) =>
+        mapper.Map<IReadOnlyCollection<PrestamoDto>>(
+            await prestamos.ObtenerPorRangoAsync(
+                DateTimeNormalizer.ToUtc(desde),
+                DateTimeNormalizer.ToUtc(hasta),
+                ct));
 
     public Task<IReadOnlyCollection<PrestamoDto>> ObtenerActivosAsync(CancellationToken ct = default) =>
         ObtenerPorEstadoAsync(nameof(EstadoPrestamo.Activo), ct);

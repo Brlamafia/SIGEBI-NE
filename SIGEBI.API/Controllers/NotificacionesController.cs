@@ -26,7 +26,11 @@ namespace SIGEBI.API.Controllers
 
         [Authorize(Roles = "Administrador,Auditor")]
         [HttpGet]
-        public async Task<IActionResult> GetAll() => Ok(await _notificacionService.GetAllAsync());
+        public async Task<IActionResult> GetAll(
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 100,
+            CancellationToken cancellationToken = default) =>
+            Ok(await _notificacionService.GetPageAsync(pagina, tamanoPagina, cancellationToken));
 
         [Authorize(Roles = "Administrador,Auditor")]
         [HttpGet("{id}")]

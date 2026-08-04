@@ -2,6 +2,7 @@
 using SIGEBI.Domain.Interfaces.Repositories;
 using SIGEBI.Application.Exceptions;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SIGEBI.Application.Base
@@ -30,6 +31,23 @@ namespace SIGEBI.Application.Base
             var entity = await _repository.GetByIdAsync(id);
             if (entity == null) throw new NotFoundException(typeof(TEntity).Name, id);
             return _mapper.Map<TDto>(entity);
+        }
+
+        public virtual async Task<IReadOnlyCollection<TDto>> GetPageAsync(
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            if (page <= 0)
+                throw new ArgumentOutOfRangeException(nameof(page));
+            if (pageSize is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(pageSize));
+
+            var entities = await _repository.GetPageAsync(
+                (page - 1) * pageSize,
+                pageSize,
+                cancellationToken);
+            return _mapper.Map<IReadOnlyCollection<TDto>>(entities);
         }
 
         public virtual async Task<TDto> AddAsync<TSaveDto>(TSaveDto dto) where TSaveDto : class
