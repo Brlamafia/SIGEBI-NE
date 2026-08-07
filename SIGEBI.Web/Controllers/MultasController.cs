@@ -20,8 +20,8 @@ public sealed class MultasController(ISigebiApiClient api) : Controller
         return View(new MultasViewModel
         {
             Multas = summary.Multas,
-            Prestamos = summary.Prestamos.ToDictionary(item => item.Id),
-            TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
+            Prestamos = summary.Prestamos.DistinctBy(item => item.Id).ToDictionary(item => item.Id),
+            TitulosLibros = catalog.DistinctBy(item => item.Id).ToDictionary(item => item.Id, item => item.Titulo)
         });
     }
 }

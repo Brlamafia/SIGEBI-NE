@@ -28,7 +28,7 @@ public sealed class HomeController(ISigebiApiClient api) : Controller
                 .Sum(item => item.Monto),
             NotificacionesSinLeer = summary.Notificaciones.Count(item => !item.Leida),
             Solicitudes = requests,
-            TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
+            TitulosLibros = catalog.DistinctBy(item => item.Id).ToDictionary(item => item.Id, item => item.Titulo)
         });
     }
 

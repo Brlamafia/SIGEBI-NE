@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using SIGEBI.Web;
 using SIGEBI.Web.Services;
 using SIGEBI.Web.Filters;
 
@@ -18,7 +19,7 @@ var authentication = builder.Services
     {
         options.LoginPath = "/Auth/Login";
         options.AccessDeniedPath = "/Auth/AccesoDenegado";
-        options.Cookie.Name = "SIGEBI.Web.Session";
+        options.Cookie.Name = WebConstants.SessionCookieName;
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = cookieSecurePolicy;
@@ -27,7 +28,7 @@ var authentication = builder.Services
     })
     .AddCookie("External", options =>
     {
-        options.Cookie.Name = "SIGEBI.Web.External";
+        options.Cookie.Name = WebConstants.ExternalCookieName;
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = cookieSecurePolicy;
@@ -42,7 +43,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) &&
     {
         options.ClientId = googleClientId;
         options.ClientSecret = googleClientSecret;
-        options.SignInScheme = "External";
+        options.SignInScheme = WebConstants.ExternalScheme;
     });
 }
 builder.Services.AddAuthorization();

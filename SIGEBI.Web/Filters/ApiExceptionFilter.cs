@@ -27,7 +27,7 @@ public sealed class ApiExceptionFilter(
 
         if (statusCode == StatusCodes.Status401Unauthorized)
         {
-            context.HttpContext.Response.Cookies.Delete("SIGEBI.Web.Session");
+            context.HttpContext.Response.Cookies.Delete(WebConstants.SessionCookieName);
             context.Result = new RedirectToActionResult(
                 "Login",
                 "Auth",

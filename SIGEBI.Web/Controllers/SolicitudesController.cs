@@ -21,7 +21,7 @@ public sealed class SolicitudesController(
         return View(new SolicitudesViewModel
         {
             Solicitudes = await requestsTask,
-            TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
+            TitulosLibros = catalog.DistinctBy(item => item.Id).ToDictionary(item => item.Id, item => item.Titulo)
         });
     }
 
