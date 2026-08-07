@@ -26,6 +26,9 @@ namespace SIGEBI.Application.Services.Catalogo
     {
         private readonly ILibroRepository _libroRepository;
         private readonly IPrestamoRepository _prestamos;
+        private readonly ISolicitudPrestamoRepository _solicitudes;
+        private readonly IInventarioRepository _inventarios;
+        private readonly IEjemplarRepository _ejemplares;
         private readonly IInventarioService _inventarioService;
         private readonly IAuditoriaWriter _auditoria;
         private readonly IUsuarioActual _usuarioActual;
@@ -35,6 +38,9 @@ namespace SIGEBI.Application.Services.Catalogo
         public LibroService(
             ILibroRepository repository,
             IPrestamoRepository prestamos,
+            ISolicitudPrestamoRepository solicitudes,
+            IInventarioRepository inventarios,
+            IEjemplarRepository ejemplares,
             IInventarioService inventarioService,
             IAuditoriaWriter auditoria,
             IUsuarioActual usuarioActual,
@@ -44,6 +50,9 @@ namespace SIGEBI.Application.Services.Catalogo
         {
             _libroRepository = repository;
             _prestamos = prestamos;
+            _solicitudes = solicitudes;
+            _inventarios = inventarios;
+            _ejemplares = ejemplares;
             _inventarioService = inventarioService;
             _auditoria = auditoria;
             _usuarioActual = usuarioActual;
@@ -60,6 +69,15 @@ namespace SIGEBI.Application.Services.Catalogo
             await _unitOfWork.EjecutarEnTransaccionAsync(async cancellationToken =>
             {
                 creado = await base.AddAsync(datos);
+                // Se guarda primero para que PostgreSQL asigne el ID del libro antes
+                // de registrar su inventario inicial dentro de la misma transacción.
+                await _unitOfWork.GuardarCambiosAsync(cancellationToken);
+                var libroCreado = await _libroRepository.ObtenerPorIsbnAsync(
+                    datos.ISBN,
+                    cancellationToken)
+                    ?? throw new InvalidOperationException(
+                        "El libro recién registrado no pudo recuperarse.");
+                creado = _mapper.Map<LibroDto>(libroCreado);
                 await _inventarioService.CrearAsync(new CrearInventarioDto
                 {
                     LibroId = creado.Id,
@@ -77,7 +95,7 @@ namespace SIGEBI.Application.Services.Catalogo
 
             if (creado is null)
                 throw new InvalidOperationException("No se pudo crear el libro.");
-            return (await BuscarLibrosAsync(creado.ISBN)).Single();
+            return await GetByIdAsync(creado.Id);
         }
 
         public override async Task<LibroDto> GetByIdAsync(int id)
@@ -100,29 +118,35 @@ namespace SIGEBI.Application.Services.Catalogo
                 $"Libro {id} actualizado.");
         }
 
-        // Regla de Negocio: Candado de borrado
+        // Regla de negocio: solo se permite borrar libros sin historial asociado.
         public override async Task DeleteAsync(int id)
         {
             var libro = await _libroRepository.GetByIdAsync(id)
                 ?? throw new NotFoundException(nameof(Libro), id);
             var prestamos = await _prestamos.ObtenerPorLibroAsync(id);
-            var libroPrestado = prestamos.Any(prestamo =>
-                prestamo.Estado is EstadoPrestamo.Activo or EstadoPrestamo.Vencido);
+            var solicitudes = await _solicitudes.ObtenerPorLibroAsync(id);
 
-            if (libroPrestado)
+            if (prestamos.Any() || solicitudes.Any())
             {
-                throw new BusinessRuleException("Imposible descatalogar: Este libro tiene copias prestadas o solicitudes pendientes.");
+                throw new BusinessRuleException(
+                    "No se puede eliminar el libro porque posee préstamos o solicitudes asociados.");
             }
 
             await _unitOfWork.EjecutarEnTransaccionAsync(async cancellationToken =>
             {
-                libro.Descatalogar();
-                await _libroRepository.ActualizarAsync(libro);
+                var ejemplares = await _ejemplares.ObtenerPorLibroAsync(id, cancellationToken);
+                _ejemplares.EliminarRango(ejemplares);
+
+                var inventario = await _inventarios.ObtenerPorLibroIdAsync(id, cancellationToken);
+                if (inventario is not null)
+                    await _inventarios.EliminarAsync(inventario, cancellationToken);
+
+                await _libroRepository.EliminarAsync(libro, cancellationToken);
                 await _auditoria.RegistrarAsync(
                     _usuarioActual.UsuarioId,
                     ModuloAuditoria.Catalogo,
-                    AccionAuditoria.ActualizarEstado,
-                    $"Libro {id} descatalogado.",
+                    AccionAuditoria.Eliminar,
+                    $"Libro {id} eliminado del catálogo.",
                     cancellationToken: cancellationToken);
             }, IsolationLevel.Serializable);
         }
@@ -165,13 +189,24 @@ namespace SIGEBI.Application.Services.Catalogo
             InventarioDto? inventario)
         {
             var result = _mapper.Map<LibroDto>(libro);
-            result.Descripcion = ObtenerDescripcion(libro);
+            result.Descripcion = string.IsNullOrWhiteSpace(libro.Descripcion)
+                ? ObtenerDescripcion(libro)
+                : libro.Descripcion;
             if (inventario is not null)
             {
                 result.CantidadTotal = inventario.CantidadTotal;
                 result.CantidadDisponible = inventario.CantidadDisponible;
                 result.CantidadPrestada = inventario.CantidadPrestada;
             }
+
+            // La disponibilidad que ve el personal se obtiene del inventario actual.
+            // "Activo" es un valor heredado de datos anteriores y no describe el
+            // estado operativo de un libro; solo se conserva "Descatalogado" como
+            // estado administrativo explícito.
+            if (!string.Equals(result.Estado, "Descatalogado", StringComparison.OrdinalIgnoreCase))
+                result.Estado = result.CantidadDisponible > 0
+                    ? "Disponible"
+                    : "Sin disponibilidad";
 
             return result;
         }

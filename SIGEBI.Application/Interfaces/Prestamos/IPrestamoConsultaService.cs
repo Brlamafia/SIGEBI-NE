@@ -4,6 +4,7 @@ namespace SIGEBI.Application.Interfaces.Prestamos;
 
 public interface IPrestamoConsultaService
 {
+    Task<IReadOnlyCollection<PrestamoDto>> ObtenerTodosAsync(CancellationToken cancellationToken = default);
     Task<PrestamoDto> ObtenerPorIdAsync(int prestamoId, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorUsuarioAsync(int usuarioId, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<PrestamoDto>> ObtenerPorLibroAsync(int libroId, CancellationToken cancellationToken = default);

@@ -7,7 +7,9 @@ namespace SIGEBI.Application.Dtos.Multas
     {
         public int Id { get; set; }
         public int UsuarioId { get; set; }
+        public string UsuarioNombre { get; set; } = string.Empty;
         public int? PrestamoId { get; set; }
+        public string LibroTitulo { get; set; } = string.Empty;
         public string Tipo { get; set; } = string.Empty;
         public decimal Monto { get; set; }
         public string Motivo { get; set; } = string.Empty;

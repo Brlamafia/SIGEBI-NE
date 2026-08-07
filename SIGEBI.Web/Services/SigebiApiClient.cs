@@ -143,6 +143,9 @@ public sealed class SigebiApiClient(
     public Task MarkNotificationReadAsync(int notificationId, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Put, $"api/Notificaciones/{notificationId}/leer", null, cancellationToken);
 
+    public Task MarkAllNotificationsReadAsync(CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, "api/Notificaciones/leer-todas", null, cancellationToken);
+
     private async Task<T> SendExternalAsync<T>(
         string uri,
         object body,

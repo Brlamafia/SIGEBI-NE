@@ -27,9 +27,20 @@ namespace SIGEBI.Application.Mappings
             // Separación de capas: Catálogo se expone mediante DTOs y no mediante entidades.
             CreateMap<Libro, LibroDto>().ReverseMap();
             CreateMap<SaveLibroDto, Libro>()
-                .ConstructUsing(src => new Libro(src.Titulo, src.Autor, src.ISBN, src.Genero, src.Editorial));
+                .ConstructUsing(src => new Libro(
+                    src.Titulo,
+                    src.Autor,
+                    src.ISBN,
+                    src.Genero,
+                    src.Editorial,
+                    src.Descripcion));
             CreateMap<UpdateLibroDto, Libro>()
-                .AfterMap((src, dest) => dest.ActualizarDetalles(src.Titulo, src.Autor, src.Genero, src.Editorial));
+                .AfterMap((src, dest) => dest.ActualizarDetalles(
+                    src.Titulo,
+                    src.Autor,
+                    src.Genero,
+                    src.Editorial,
+                    src.Descripcion));
 
             // Separación entre capas: Usuarios queda aislado de los detalles internos del dominio.
             CreateMap<Usuario, UsuarioDto>()

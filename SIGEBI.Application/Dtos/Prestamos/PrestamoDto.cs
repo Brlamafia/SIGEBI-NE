@@ -12,6 +12,10 @@ namespace SIGEBI.Application.Dtos.Prestamos
         public int SolicitudPrestamoId { get; set; }
         public int EmpleadoPrestamoId { get; set; }
         public int? EmpleadoDevolucionId { get; set; }
+        public string UsuarioNombre { get; set; } = string.Empty;
+        public string LibroTitulo { get; set; } = string.Empty;
+        public string EmpleadoPrestamoNombre { get; set; } = string.Empty;
+        public string EmpleadoDevolucionNombre { get; set; } = string.Empty;
         public DateTime FechaPrestamo { get; set; }
         public DateTime FechaEsperadaDevolucion { get; set; }
         public DateTime? FechaRealDevolucion { get; set; }

@@ -1065,10 +1065,88 @@ public sealed class MainForm : Form
     private TabPage CrearSolicitudes()
     {
         var (page, grid, toolbar) = CrearPagina("Solicitudes");
-        AgregarBoton(toolbar, "Pendientes", () => CargarAsync(
-            grid,
-            "api/SolicitudesPrestamo/estado/Pendiente"));
-        AgregarBoton(toolbar, "Ver todas", () => CargarAsync(grid, "api/SolicitudesPrestamo"));
+        const int tamanoPagina = 10;
+        var paginaActual = 1;
+        string? estadoActual = "Pendiente";
+        var navegacion = new BufferedFlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = new Padding(0, 6, 0, 0)
+        };
+        var indicadorPagina = new Label
+        {
+            AutoSize = true,
+            Text = "Página 1",
+            ForeColor = DesktopTheme.Muted,
+            Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+            Margin = new Padding(10, 10, 4, 0)
+        };
+        var paginador = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 52,
+            BackColor = DesktopTheme.Surface,
+            Padding = new Padding(0, 0, 0, 4)
+        };
+        var paginadorLayout = new BufferedTableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 1,
+            BackColor = Color.Transparent
+        };
+        paginadorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        paginadorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        paginadorLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        paginadorLayout.Controls.Add(navegacion, 1, 0);
+        paginador.Controls.Add(paginadorLayout);
+        if (grid.Parent is Control tarjetaTabla)
+            tarjetaTabla.Controls.Add(paginador);
+
+        async Task CargarPaginaAsync(int pagina)
+        {
+            var paginaAnterior = paginaActual;
+            paginaActual = Math.Max(1, pagina);
+            var endpoint = estadoActual is null
+                ? $"api/SolicitudesPrestamo?pagina={paginaActual}&tamanoPagina={tamanoPagina}"
+                : $"api/SolicitudesPrestamo/estado/{estadoActual}?pagina={paginaActual}&tamanoPagina={tamanoPagina}";
+            await CargarAsync(
+                grid,
+                endpoint);
+
+            // Si no existen registros en la página solicitada, se conserva la última válida.
+            if (grid.Rows.Count == 0 && paginaActual > 1)
+            {
+                paginaActual = paginaAnterior;
+                endpoint = estadoActual is null
+                    ? $"api/SolicitudesPrestamo?pagina={paginaActual}&tamanoPagina={tamanoPagina}"
+                    : $"api/SolicitudesPrestamo/estado/{estadoActual}?pagina={paginaActual}&tamanoPagina={tamanoPagina}";
+                await CargarAsync(
+                    grid,
+                    endpoint);
+            }
+
+            indicadorPagina.Text = $"Página {paginaActual} · {tamanoPagina} por página";
+        }
+
+        AgregarBoton(toolbar, "Pendientes", () =>
+        {
+            estadoActual = "Pendiente";
+            return CargarPaginaAsync(1);
+        });
+        AgregarBoton(toolbar, "Ver todas", () =>
+        {
+            estadoActual = null;
+            return CargarPaginaAsync(1);
+        });
+        AgregarBoton(navegacion, "Anterior", () => CargarPaginaAsync(paginaActual - 1));
+        AgregarBoton(navegacion, "Siguiente", () => CargarPaginaAsync(paginaActual + 1));
+        navegacion.Controls.Add(indicadorPagina);
         AgregarBoton(toolbar, "Aprobar", async () =>
         {
             if (!ValidarFilaPendiente(grid, "aprobar"))
@@ -1081,7 +1159,8 @@ public sealed class MainForm : Form
             values["solicitudPrestamoId"] = solicitudId.Value;
             values["empleadoPrestamoId"] = _session.Usuario.Id;
             await EjecutarAsync(() => _api.PostAsync("api/Prestamos", values), "Préstamo aprobado");
-            await CargarAsync(grid, "api/SolicitudesPrestamo/estado/Pendiente");
+            estadoActual = "Pendiente";
+            await CargarPaginaAsync(1);
         });
         AgregarBoton(toolbar, "Rechazar", async () =>
         {
@@ -1095,11 +1174,10 @@ public sealed class MainForm : Form
             values["solicitudPrestamoId"] = solicitudId.Value;
             values["empleadoResponsableId"] = _session.Usuario.Id;
             await EjecutarAsync(() => _api.PostAsync("api/Prestamos/solicitudes/rechazar", values), "Solicitud rechazada");
-            await CargarAsync(grid, "api/SolicitudesPrestamo/estado/Pendiente");
+            estadoActual = "Pendiente";
+            await CargarPaginaAsync(1);
         });
-        page.Tag = new Func<Task>(() => CargarAsync(
-            grid,
-            "api/SolicitudesPrestamo/estado/Pendiente"));
+        page.Tag = new Func<Task>(() => CargarPaginaAsync(1));
         return page;
     }
 
@@ -1108,6 +1186,7 @@ public sealed class MainForm : Form
         var (page, grid, toolbar) = CrearPagina("Préstamos");
         AgregarBoton(toolbar, "Activos", () => CargarAsync(grid, "api/Prestamos/activos"));
         AgregarBoton(toolbar, "Vencidos", () => CargarAsync(grid, "api/Prestamos/vencidos"));
+        AgregarBoton(toolbar, "Ver todos", () => CargarAsync(grid, "api/Prestamos", true));
         AgregarBoton(toolbar, "Por usuario", () => CargarPorIdAsync(grid, "Usuario", "api/Prestamos/usuario/{0}"));
         AgregarBoton(toolbar, "Por libro", () => CargarPorIdAsync(grid, "Libro", "api/Prestamos/libro/{0}"));
         AgregarBoton(toolbar, "Por ejemplar", () => CargarPorIdAsync(grid, "Ejemplar", "api/Prestamos/ejemplar/{0}"));
@@ -1143,6 +1222,38 @@ public sealed class MainForm : Form
     private TabPage CrearDevoluciones()
     {
         var (page, grid, toolbar) = CrearPagina("Devoluciones");
+        const string pendientesDevolucionEndpoint = "api/Prestamos/pendientes-devolucion";
+        const int tamanoPagina = 10;
+        var paginaActual = 1;
+        var endpointActual = pendientesDevolucionEndpoint;
+        var navegacion = CrearNavegacionPaginada(grid, out var indicadorPagina);
+
+        async Task CargarPaginaAsync(int pagina)
+        {
+            var paginaAnterior = paginaActual;
+            paginaActual = Math.Max(1, pagina);
+            await CargarAsync(grid, $"{endpointActual}?pagina={paginaActual}&tamanoPagina={tamanoPagina}", true);
+            if (grid.Rows.Count == 0 && paginaActual > 1)
+            {
+                paginaActual = paginaAnterior;
+                await CargarAsync(grid, $"{endpointActual}?pagina={paginaActual}&tamanoPagina={tamanoPagina}", true);
+            }
+            indicadorPagina.Text = $"Página {paginaActual} · {tamanoPagina} por página";
+        }
+
+        AgregarBoton(toolbar, "Por devolver", () =>
+        {
+            endpointActual = pendientesDevolucionEndpoint;
+            return CargarPaginaAsync(1);
+        });
+        AgregarBoton(toolbar, "Ver todos", () =>
+        {
+            endpointActual = "api/Prestamos";
+            return CargarPaginaAsync(1);
+        });
+        AgregarBoton(navegacion, "Anterior", () => CargarPaginaAsync(paginaActual - 1));
+        AgregarBoton(navegacion, "Siguiente", () => CargarPaginaAsync(paginaActual + 1));
+        navegacion.Controls.Add(indicadorPagina);
         AgregarBoton(toolbar, "Historial por usuario", () => CargarPorIdAsync(grid, "Usuario", "api/Devoluciones/usuario/{0}"));
         AgregarBoton(toolbar, "Historial por libro", () => CargarPorIdAsync(grid, "Libro", "api/Devoluciones/libro/{0}"));
         AgregarBoton(toolbar, "Registrar devolución", async () =>
@@ -1155,7 +1266,8 @@ public sealed class MainForm : Form
             values["prestamoId"] = prestamoId.Value;
             values["empleadoDevolucionId"] = _session.Usuario.Id;
             await EjecutarAsync(() => _api.PostAsync("api/Devoluciones", values), "Devolución registrada");
-            await CargarAsync(grid, "api/Prestamos/activos");
+            endpointActual = pendientesDevolucionEndpoint;
+            await CargarPaginaAsync(1);
         });
         AgregarBoton(toolbar, "Devolución con daño", async () =>
         {
@@ -1169,26 +1281,54 @@ public sealed class MainForm : Form
             values["empleadoResponsableId"] = _session.Usuario.Id;
             await EjecutarAsync(() => _api.PostAsync("api/Devoluciones/con-danio", values), "Daño y devolución registrados");
         });
-        page.Tag = new Func<Task>(() => CargarAsync(grid, "api/Prestamos/activos"));
+        page.Tag = new Func<Task>(() => CargarPaginaAsync(1));
         return page;
     }
 
     private TabPage CrearCatalogo()
     {
         var (page, grid, toolbar) = CrearPagina("Catálogo");
-        AgregarBoton(toolbar, "Actualizar", () => CargarAsync(grid, "api/Libros", true));
+        const int tamanoPagina = 10;
+        var paginaActual = 1;
+        var endpointActual = "api/Libros";
+        var navegacion = CrearNavegacionPaginada(grid, out var indicadorPagina);
+
+        async Task CargarPaginaAsync(int pagina)
+        {
+            var paginaAnterior = paginaActual;
+            paginaActual = Math.Max(1, pagina);
+            var separador = endpointActual.Contains('?') ? '&' : '?';
+            await CargarAsync(grid, $"{endpointActual}{separador}pagina={paginaActual}&tamanoPagina={tamanoPagina}", true);
+            if (grid.Rows.Count == 0 && paginaActual > 1)
+            {
+                paginaActual = paginaAnterior;
+                await CargarAsync(grid, $"{endpointActual}{separador}pagina={paginaActual}&tamanoPagina={tamanoPagina}", true);
+            }
+            indicadorPagina.Text = $"Página {paginaActual} · {tamanoPagina} por página";
+        }
+
+        AgregarBoton(toolbar, "Actualizar", () =>
+        {
+            endpointActual = "api/Libros";
+            return CargarPaginaAsync(1);
+        });
+        AgregarBoton(navegacion, "Anterior", () => CargarPaginaAsync(paginaActual - 1));
+        AgregarBoton(navegacion, "Siguiente", () => CargarPaginaAsync(paginaActual + 1));
+        navegacion.Controls.Add(indicadorPagina);
         AgregarBoton(toolbar, "Buscar", async () =>
         {
             var values = Pedir("Buscar libros", Texto("termino", "Título o autor"));
             if (values is null) return;
-            await CargarAsync(grid, $"api/Libros/buscar?termino={Uri.EscapeDataString(values["termino"]?.ToString() ?? "")}");
+            endpointActual = $"api/Libros/buscar?termino={Uri.EscapeDataString(values["termino"]?.ToString() ?? "")}";
+            await CargarPaginaAsync(1);
         });
         AgregarBoton(toolbar, "Nuevo libro", async () =>
         {
             var values = PedirLibro("Registrar libro", incluirDatosRegistro: true);
             if (values is null) return;
             await EjecutarAsync(() => _api.PostAsync("api/Libros", values), "Libro registrado");
-            await CargarAsync(grid, "api/Libros");
+            endpointActual = "api/Libros";
+            await CargarPaginaAsync(1);
         });
         AgregarBoton(toolbar, "Editar libro", async () =>
         {
@@ -1197,17 +1337,19 @@ public sealed class MainForm : Form
             var values = PedirLibro("Actualizar libro", grid);
             if (values is null) return;
             await EjecutarAsync(() => _api.PutAsync($"api/Libros/{id}", values), "Libro actualizado");
-            await CargarAsync(grid, "api/Libros");
+            await CargarPaginaAsync(paginaActual);
         });
         AgregarBoton(toolbar, "Eliminar libro", async () =>
         {
             var id = ObtenerIdSeleccionado(grid, "Libro");
             if (id is null || !Confirmar("¿Deseas eliminar el libro seleccionado?"))
                 return;
-            await EjecutarAsync(() => _api.DeleteAsync($"api/Libros/{id}"), "Libro eliminado");
-            await CargarAsync(grid, "api/Libros");
+            await EjecutarAsync(
+                () => _api.DeleteAsync($"api/Libros/{id}"),
+                "Libro eliminado del catálogo");
+            await CargarPaginaAsync(paginaActual);
         });
-        page.Tag = new Func<Task>(() => CargarAsync(grid, "api/Libros"));
+        page.Tag = new Func<Task>(() => CargarPaginaAsync(1));
         return page;
     }
 
@@ -1939,6 +2081,53 @@ public sealed class MainForm : Form
         return target;
     }
 
+    private BufferedFlowLayoutPanel CrearNavegacionPaginada(
+        DataGridView grid,
+        out Label indicadorPagina)
+    {
+        var navegacion = new BufferedFlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = new Padding(0, 6, 0, 0)
+        };
+        indicadorPagina = new Label
+        {
+            AutoSize = true,
+            Text = "Página 1 · 10 por página",
+            ForeColor = DesktopTheme.Muted,
+            Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+            Margin = new Padding(10, 10, 4, 0)
+        };
+        var paginador = new Panel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 52,
+            BackColor = DesktopTheme.Surface,
+            Padding = new Padding(0, 0, 0, 4)
+        };
+        var layout = new BufferedTableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 3,
+            RowCount = 1,
+            BackColor = Color.Transparent
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        layout.Controls.Add(navegacion, 1, 0);
+        paginador.Controls.Add(layout);
+        if (grid.Parent is Control tarjetaTabla)
+            tarjetaTabla.Controls.Add(paginador);
+
+        return navegacion;
+    }
+
     private (TabPage Page, DataGridView Grid, FlowLayoutPanel Toolbar) CrearPagina(string name)
     {
         var (title, description) = ObtenerInformacionModulo(name);
@@ -2068,6 +2257,11 @@ public sealed class MainForm : Form
         grid.Tag = recordCount;
         grid.DataBindingComplete += (_, _) => ConfigurarColumnas(grid);
         grid.CellFormatting += (_, eventArgs) => FormatearCeldaEstado(grid, eventArgs);
+        grid.CellDoubleClick += (_, eventArgs) =>
+        {
+            if (eventArgs.RowIndex >= 0)
+                MostrarDetallesRegistro(grid, name);
+        };
         grid.Paint += (_, eventArgs) =>
         {
             if (grid.Rows.Count != 0)
@@ -2095,6 +2289,23 @@ public sealed class MainForm : Form
         content.Controls.Add(gridCard, 0, 2);
         page.Controls.Add(content);
         return (page, grid, toolbar);
+    }
+
+    private void MostrarDetallesRegistro(DataGridView grid, string moduleName)
+    {
+        if (grid.CurrentRow is null)
+            return;
+
+        var details = grid.Columns
+            .Cast<DataGridViewColumn>()
+            .Where(column => column.Visible)
+            .Select(column => new DetailItem(
+                column.HeaderText,
+                grid.CurrentRow.Cells[column.Index].Value?.ToString() ?? "Sin información"))
+            .ToArray();
+
+        using var dialog = new DetailsDialog($"Detalles · {moduleName}", details);
+        dialog.ShowDialog(this);
     }
 
     private static (string Title, string Description) ObtenerInformacionModulo(string name) =>
@@ -2253,6 +2464,11 @@ public sealed class MainForm : Form
             ? await _api.GetFreshAsync(endpoint)
             : await _api.GetAsync(endpoint);
         var table = await Task.Run(() => ConvertirEnTabla(json));
+        if (endpoint.StartsWith("api/Prestamos", StringComparison.OrdinalIgnoreCase) ||
+            endpoint.StartsWith("api/Devoluciones", StringComparison.OrdinalIgnoreCase))
+            PrepararTablaPrestamosParaConsulta(table);
+        if (endpoint.StartsWith("api/Multas", StringComparison.OrdinalIgnoreCase))
+            PrepararTablaMultasParaConsulta(table);
         if (grid is BufferedDataGridView bufferedGrid)
             bufferedGrid.BeginUpdate();
         else
@@ -2282,6 +2498,8 @@ public sealed class MainForm : Form
 
     private static string ObtenerIconoAccion(string text)
     {
+        if (text.Equals("Anterior", StringComparison.OrdinalIgnoreCase)) return "<";
+        if (text.Equals("Siguiente", StringComparison.OrdinalIgnoreCase)) return ">";
         if (text.Contains("Actualizar", StringComparison.OrdinalIgnoreCase)) return "↻";
         if (text.Contains("Buscar", StringComparison.OrdinalIgnoreCase) ||
             text.StartsWith("Por ", StringComparison.OrdinalIgnoreCase)) return "⌕";
@@ -2482,6 +2700,10 @@ public sealed class MainForm : Form
             "editorial",
             "Editorial",
             grid is null ? "" : ObtenerCelda(grid, "editorial")));
+        fields.Add(Texto(
+            "descripcion",
+            "Descripci\u00F3n",
+            grid is null ? "" : ObtenerCelda(grid, "descripcion")));
         if (incluirDatosRegistro)
             fields.Add(Entero(
                 "numeroEjemplares",
@@ -2533,6 +2755,32 @@ public sealed class MainForm : Form
             table.Rows.Add(row);
         }
         return table;
+    }
+
+    private static void PrepararTablaPrestamosParaConsulta(DataTable table)
+    {
+        // Estos identificadores se conservan en la respuesta para operaciones internas,
+        // pero no aportan contexto al personal en las pantallas de consulta.
+        foreach (var column in new[]
+                 {
+                     "usuarioId", "libroId", "ejemplarId", "solicitudPrestamoId",
+                     "empleadoPrestamoId", "empleadoDevolucionId"
+                 })
+        {
+            if (table.Columns.Contains(column))
+                table.Columns.Remove(column);
+        }
+    }
+
+    private static void PrepararTablaMultasParaConsulta(DataTable table)
+    {
+        // La multa conserva su ID para registrar pagos o resoluciones. Los demás
+        // identificadores son técnicos y se sustituyen por datos comprensibles.
+        foreach (var column in new[] { "usuarioId", "prestamoId", "empleadoResolucionId" })
+        {
+            if (table.Columns.Contains(column))
+                table.Columns.Remove(column);
+        }
     }
 
     private static object FormatearValor(JsonProperty property)

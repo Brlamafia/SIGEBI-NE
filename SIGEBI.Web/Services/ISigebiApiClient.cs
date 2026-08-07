@@ -26,6 +26,7 @@ public interface ISigebiApiClient
     Task CancelRequestAsync(int requestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<NotificacionDto>> GetMyNotificationsAsync(int page, int pageSize, CancellationToken cancellationToken = default);
     Task MarkNotificationReadAsync(int notificationId, CancellationToken cancellationToken = default);
+    Task MarkAllNotificationsReadAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class ApiSession

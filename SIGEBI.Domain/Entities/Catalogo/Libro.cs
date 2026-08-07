@@ -11,25 +11,39 @@ namespace SIGEBI.Domain.Entities.Catalogo
         public string ISBN { get; private set; } = string.Empty;
         public string Genero { get; private set; } = string.Empty;
         public string Editorial { get; private set; } = string.Empty;
+        public string Descripcion { get; private set; } = string.Empty;
         public string Estado { get; private set; } = "Disponible";
 
         private Libro() { }
 
-        public Libro(string titulo, string autor, string isbn, string genero, string editorial)
+        public Libro(
+            string titulo,
+            string autor,
+            string isbn,
+            string genero,
+            string editorial,
+            string? descripcion = null)
         {
             Titulo = ValidarTextoObligatorio(titulo, nameof(titulo));
             Autor = ValidarTextoObligatorio(autor, nameof(autor));
             ISBN = ValidarTextoObligatorio(isbn, nameof(isbn));
             Genero = genero?.Trim() ?? string.Empty;
             Editorial = editorial?.Trim() ?? string.Empty;
+            Descripcion = descripcion?.Trim() ?? string.Empty;
         }
 
-        public void ActualizarDetalles(string titulo, string autor, string genero, string editorial)
+        public void ActualizarDetalles(
+            string titulo,
+            string autor,
+            string genero,
+            string editorial,
+            string? descripcion = null)
         {
             Titulo = ValidarTextoObligatorio(titulo, nameof(titulo));
             Autor = ValidarTextoObligatorio(autor, nameof(autor));
             Genero = genero?.Trim() ?? string.Empty;
             Editorial = editorial?.Trim() ?? string.Empty;
+            Descripcion = descripcion?.Trim() ?? string.Empty;
             MarcarComoModificada();
         }
 

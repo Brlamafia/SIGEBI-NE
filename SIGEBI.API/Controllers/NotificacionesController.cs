@@ -56,6 +56,14 @@ namespace SIGEBI.API.Controllers
             return NoContent();
         }
 
+        [HttpPut("leer-todas")]
+        public async Task<IActionResult> MarcarTodasComoLeidas(
+            CancellationToken cancellationToken)
+        {
+            var actualizadas = await _notificacionService.MarcarTodasComoLeidasAsync(cancellationToken);
+            return Ok(new { actualizadas });
+        }
+
         [Authorize(Roles = "Administrador")]
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] SaveNotificacionDto dto)

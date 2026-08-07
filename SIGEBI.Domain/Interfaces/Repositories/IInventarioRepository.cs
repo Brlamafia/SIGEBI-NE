@@ -16,6 +16,7 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<Inventario?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Inventario?> ObtenerPorLibroIdAsync(int libroId, CancellationToken cancellationToken = default);
         Task AgregarAsync(Inventario inventario, CancellationToken cancellationToken = default);
+        Task EliminarAsync(Inventario inventario, CancellationToken cancellationToken = default);
         void Actualizar(Inventario inventario);
     }
 }

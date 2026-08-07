@@ -90,6 +90,23 @@ namespace SIGEBI.Application.Services.Prestamos
             return await EnriquecerAsync(solicitudes);
         }
 
+        public override async Task<IReadOnlyCollection<SolicitudPrestamoDto>> GetPageAsync(
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            if (page <= 0)
+                throw new ArgumentOutOfRangeException(nameof(page));
+            if (pageSize is <= 0 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(pageSize));
+
+            var solicitudes = await _solicitudRepository.GetPageAsync(
+                (page - 1) * pageSize,
+                pageSize,
+                cancellationToken);
+            return await EnriquecerAsync(solicitudes);
+        }
+
         public override async Task<SolicitudPrestamoDto> GetByIdAsync(int id)
         {
             var solicitud = await _solicitudRepository.GetByIdAsync(id)

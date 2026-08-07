@@ -20,6 +20,9 @@ namespace SIGEBI.Domain.Interfaces.Repositories
         Task<IEnumerable<Notificacion>> ObtenerNoLeidasPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);
+        Task<int> MarcarTodasComoLeidasAsync(
+            int usuarioId,
+            CancellationToken cancellationToken = default);
         Task<bool> ExisteEventoAsync(
             int usuarioId,
             string textoIdentificador,

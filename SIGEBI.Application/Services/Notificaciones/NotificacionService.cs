@@ -138,6 +138,31 @@ namespace SIGEBI.Application.Services.Notificaciones
             return true;
         }
 
+        public async Task<int> MarcarTodasComoLeidasAsync(
+            CancellationToken cancellationToken = default)
+        {
+            if (!_usuarioActual.EstaAutenticado)
+                throw new BusinessRuleException("No se pudo determinar el usuario autenticado.");
+
+            var actualizadas = 0;
+            await _unitOfWork.EjecutarEnTransaccionAsync(async ct =>
+            {
+                actualizadas = await _notificacionRepository.MarcarTodasComoLeidasAsync(
+                    _usuarioActual.UsuarioId,
+                    ct);
+
+                if (actualizadas > 0)
+                {
+                    await AuditarAsync(
+                        AccionAuditoria.ActualizarEstado,
+                        $"{actualizadas} notificación(es) marcada(s) como leída(s).",
+                        ct);
+                }
+            }, cancellationToken);
+
+            return actualizadas;
+        }
+
         private Task AuditarAsync(
             AccionAuditoria accion,
             string descripcion,

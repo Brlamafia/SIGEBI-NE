@@ -17,6 +17,16 @@ namespace SIGEBI.Persistence.Repositories.Prestamos
     {
         public SolicitudPrestamoRepository(SigebiContext context, ILogger<SolicitudPrestamoRepository> logger) : base(context, logger) { }
 
+        public async Task<IEnumerable<SolicitudPrestamo>> ObtenerPorLibroAsync(
+            int libroId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(solicitud => solicitud.LibroId == libroId)
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<SolicitudPrestamo?> ObtenerPorIdAsync(int id, CancellationToken ct = default)
         {
             try { _logger.LogInformation("Consultando solicitud {SolicitudId}", id); return await _dbSet.FindAsync(new object[] { id }, ct); }

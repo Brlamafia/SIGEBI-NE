@@ -14,6 +14,13 @@ public class PrestamoRepository(
     ILogger<PrestamoRepository> logger)
     : MutableRepository<Prestamo>(context, logger), IPrestamoRepository
 {
+    public Task<IReadOnlyCollection<Prestamo>> ObtenerTodosAsync(
+        CancellationToken ct = default) =>
+        ConsultarAsync(
+            () => _dbSet.OrderByDescending(item => item.FechaPrestamo),
+            ct,
+            "todos los préstamos");
+
     public async Task<Prestamo?> ObtenerPorIdAsync(
         int id,
         CancellationToken ct = default)
@@ -211,6 +218,29 @@ public class PrestamoRepository(
                 "Error al registrar préstamo para usuario {UsuarioId} y libro {LibroId}",
                 prestamo.UsuarioId,
                 prestamo.LibroId);
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyCollection<Prestamo>> ObtenerPorIdsAsync(
+        IReadOnlyCollection<int> ids,
+        CancellationToken ct = default)
+    {
+        if (ids.Count == 0)
+            return Array.Empty<Prestamo>();
+
+        try
+        {
+            var idSet = ids.Distinct().ToArray();
+            _logger.LogInformation("Consultando {Cantidad} préstamos para enriquecer multas", idSet.Length);
+            return await _dbSet
+                .AsNoTracking()
+                .Where(item => idSet.Contains(item.Id))
+                .ToListAsync(ct);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Error al consultar préstamos por IDs");
             throw;
         }
     }

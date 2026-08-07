@@ -22,6 +22,10 @@ namespace SIGEBI.Domain.Interfaces.Repositories
             EstadoSolicitud estado,
             CancellationToken cancellationToken = default);
 
+        Task<IEnumerable<SolicitudPrestamo>> ObtenerPorLibroAsync(
+            int libroId,
+            CancellationToken cancellationToken = default);
+
         void Actualizar(SolicitudPrestamo solicitud);
     }
 }

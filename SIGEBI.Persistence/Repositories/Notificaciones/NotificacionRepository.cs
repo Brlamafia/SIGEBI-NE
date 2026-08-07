@@ -58,6 +58,26 @@ namespace SIGEBI.Persistence.Repositories.Notificaciones
             catch (Exception ex) { _logger.LogError(ex, "Error leidas usuario {Id}", usuarioId); throw; }
         }
 
+        public async Task<int> MarcarTodasComoLeidasAsync(
+            int usuarioId,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation("Marcando como leídas todas las notificaciones del usuario {UsuarioId}", usuarioId);
+                return await _dbSet
+                    .Where(notification => notification.UsuarioId == usuarioId && !notification.Leida)
+                    .ExecuteUpdateAsync(
+                        setters => setters.SetProperty(notification => notification.Leida, true),
+                        ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marcando como leídas las notificaciones del usuario {UsuarioId}", usuarioId);
+                throw;
+            }
+        }
+
         public async Task<bool> ExisteEventoAsync(
             int usuarioId,
             string textoIdentificador,

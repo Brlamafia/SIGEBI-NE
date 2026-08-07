@@ -29,5 +29,7 @@ namespace SIGEBI.Application.Interfaces.Notificaciones
         Task<bool> MarcarComoLeidaAsync(
             int notificacionId,
             CancellationToken cancellationToken = default);
+        Task<int> MarcarTodasComoLeidasAsync(
+            CancellationToken cancellationToken = default);
     }
 }

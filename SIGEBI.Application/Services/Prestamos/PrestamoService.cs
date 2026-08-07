@@ -13,6 +13,9 @@ public sealed class PrestamoService(
     IPrestamoIncidenciaService incidencias,
     IPrestamoMantenimientoService mantenimiento) : IPrestamoService
 {
+    public Task<IReadOnlyCollection<PrestamoDto>> ObtenerTodosAsync(CancellationToken ct = default) =>
+        consultas.ObtenerTodosAsync(ct);
+
     public Task<PrestamoDto> ObtenerPorIdAsync(int id, CancellationToken ct = default) =>
         consultas.ObtenerPorIdAsync(id, ct);
 

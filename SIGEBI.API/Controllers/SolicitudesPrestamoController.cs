@@ -39,8 +39,22 @@ namespace SIGEBI.API.Controllers
 
         [Authorize(Roles = "Administrador,Bibliotecario")]
         [HttpGet("estado/{estado}")]
-        public async Task<IActionResult> GetByEstado(string estado) =>
-            Ok(await _solicitudService.ObtenerPorEstadoAsync(estado));
+        public async Task<IActionResult> GetByEstado(
+            string estado,
+            [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+            [FromQuery, Range(1, 200)] int tamanoPagina = 100)
+        {
+            var solicitudes = await _solicitudService.ObtenerPorEstadoAsync(estado);
+
+            // Se mantienen los parámetros opcionales para no afectar a los consumidores
+            // existentes y permitir que la pantalla pagine sin abandonar el filtro actual.
+            if (pagina == 1 && tamanoPagina == 100)
+                return Ok(solicitudes);
+
+            return Ok(solicitudes
+                .Skip((pagina - 1) * tamanoPagina)
+                .Take(tamanoPagina));
+        }
 
         [HttpGet("mias")]
         public async Task<IActionResult> GetMias() =>

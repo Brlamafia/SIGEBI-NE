@@ -53,4 +53,23 @@ public sealed class NotificacionesController(ISigebiApiClient api) : Controller
 
         return RedirectToAction(nameof(Index), new { pagina = model.Pagina });
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarcarTodasLeidas(
+        int pagina = 1,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await api.MarkAllNotificationsReadAsync(cancellationToken);
+            TempData["Success"] = "Todas las notificaciones pendientes fueron marcadas como leídas.";
+        }
+        catch (SigebiApiException exception)
+        {
+            TempData["Error"] = exception.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { pagina = Math.Max(1, pagina) });
+    }
 }

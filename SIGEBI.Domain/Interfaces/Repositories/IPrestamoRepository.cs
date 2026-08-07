@@ -9,7 +9,12 @@ namespace SIGEBI.Domain.Interfaces.Repositories
     // Repository: abstrae la persistencia de préstamos sin filtrar detalles de Entity Framework.
     public interface IPrestamoRepository
     {
+        Task<IReadOnlyCollection<Prestamo>> ObtenerTodosAsync(
+            CancellationToken cancellationToken = default);
         Task<Prestamo?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<Prestamo>> ObtenerPorIdsAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default);
         Task<IReadOnlyCollection<Prestamo>> ObtenerPorUsuarioAsync(
             int usuarioId,
             CancellationToken cancellationToken = default);

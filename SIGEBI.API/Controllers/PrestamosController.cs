@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SIGEBI.Application.Dtos.Prestamos;
 using SIGEBI.Application.Interfaces.Prestamos;
+using System.ComponentModel.DataAnnotations;
 
 namespace SIGEBI.API.Controllers;
 
@@ -15,6 +16,19 @@ public class PrestamosController : ControllerBase
     public PrestamosController(IPrestamoService prestamos)
     {
         _prestamos = prestamos;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerTodos(
+        CancellationToken cancellationToken,
+        [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+        [FromQuery, Range(1, 200)] int tamanoPagina = 10)
+    {
+        var prestamos = await _prestamos.ObtenerTodosAsync(cancellationToken);
+        return Ok(prestamos
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToArray());
     }
 
     [HttpGet("{prestamoId:int}")]
@@ -56,6 +70,23 @@ public class PrestamosController : ControllerBase
     public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerVencidos(
         CancellationToken cancellationToken)
         => Ok(await _prestamos.ObtenerVencidosAsync(cancellationToken));
+
+    [HttpGet("pendientes-devolucion")]
+    public async Task<ActionResult<IReadOnlyCollection<PrestamoDto>>> ObtenerPendientesDevolucion(
+        CancellationToken cancellationToken,
+        [FromQuery, Range(1, 1_000_000)] int pagina = 1,
+        [FromQuery, Range(1, 200)] int tamanoPagina = 10)
+    {
+        // Un préstamo vencido continúa fuera de biblioteca y debe poder devolverse.
+        var activos = await _prestamos.ObtenerActivosAsync(cancellationToken);
+        var vencidos = await _prestamos.ObtenerVencidosAsync(cancellationToken);
+        return Ok(activos
+            .Concat(vencidos)
+            .OrderByDescending(item => item.FechaEsperadaDevolucion)
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToArray());
+    }
 
     [HttpPost]
     public async Task<ActionResult<PrestamoDto>> Registrar(

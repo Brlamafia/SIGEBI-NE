@@ -1,6 +1,15 @@
 @model NotificacionesViewModel
 @{ ViewData["Title"] = "Notificaciones"; }
-<div class="section-head"><div><h3>Notificaciones</h3><p>Avisos importantes sobre tu actividad.</p></div></div>
+<div class="section-head">
+    <div><h3>Notificaciones</h3><p>Avisos importantes sobre tu actividad.</p></div>
+    @if (Model.Notificaciones.Any(item => !item.Leida))
+    {
+        <form asp-action="MarcarTodasLeidas" method="post">
+            <input type="hidden" name="pagina" value="@Model.Pagina" />
+            <button class="card-button button-success" type="submit">✓ Marcar todas como leídas</button>
+        </form>
+    }
+</div>
 <div class="list">
     @foreach (var item in Model.Notificaciones.OrderByDescending(x => x.FechaEnvio))
     {

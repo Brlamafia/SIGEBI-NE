@@ -15,6 +15,9 @@ namespace SIGEBI.Application.Services.Prestamos;
 
 public sealed class MultaService(
     IMultaRepository multas,
+    IPrestamoRepository prestamos,
+    IUsuarioRepository usuarios,
+    ILibroRepository libros,
     IResponsablePrestamoResolver responsables,
     IPrestamoEventosService eventos,
     IUnitOfWork unitOfWork,
@@ -27,32 +30,66 @@ public sealed class MultaService(
     {
         var multa = await multas.ObtenerPorIdAsync(multaId, ct)
             ?? throw new NotFoundException(nameof(Multa), multaId);
-        return mapper.Map<MultaDto>(multa);
+        return (await EnriquecerAsync([multa], ct)).Single();
     }
 
     public async Task<IReadOnlyCollection<MultaDto>> ObtenerPorUsuarioAsync(
         int usuarioId,
         CancellationToken ct = default) =>
-        mapper.Map<IReadOnlyCollection<MultaDto>>(
-            await multas.ObtenerPorUsuarioAsync(usuarioId, ct));
+        await EnriquecerAsync(await multas.ObtenerPorUsuarioAsync(usuarioId, ct), ct);
 
     public async Task<IReadOnlyCollection<MultaDto>> ObtenerPorEstadoAsync(
         string estado,
         CancellationToken ct = default) =>
-        mapper.Map<IReadOnlyCollection<MultaDto>>(
+        await EnriquecerAsync(
             await multas.ObtenerPorEstadoAsync(
                 EnumParser.ParseDefined<EstadoMulta>(estado, "estado de la multa"),
-                ct));
+                ct),
+            ct);
 
     public async Task<IReadOnlyCollection<MultaDto>> ObtenerPorRangoAsync(
         DateTime desde,
         DateTime hasta,
         CancellationToken ct = default) =>
-        mapper.Map<IReadOnlyCollection<MultaDto>>(
+        await EnriquecerAsync(
             await multas.ObtenerPorRangoAsync(
                 DateTimeNormalizer.ToUtc(desde),
                 DateTimeNormalizer.ToUtc(hasta),
-                ct));
+                ct),
+            ct);
+
+    private async Task<IReadOnlyCollection<MultaDto>> EnriquecerAsync(
+        IReadOnlyCollection<Multa> entidades,
+        CancellationToken ct)
+    {
+        if (entidades.Count == 0)
+            return Array.Empty<MultaDto>();
+
+        var usuariosPorId = (await usuarios.ObtenerPorIdsAsync(
+                entidades.Select(item => item.UsuarioId).Distinct().ToArray(), ct))
+            .ToDictionary(item => item.Id);
+        var prestamosPorId = (await prestamos.ObtenerPorIdsAsync(
+                entidades.Where(item => item.PrestamoId.HasValue)
+                    .Select(item => item.PrestamoId!.Value)
+                    .Distinct()
+                    .ToArray(), ct))
+            .ToDictionary(item => item.Id);
+        var librosPorId = (await libros.ObtenerPorIdsAsync(
+                prestamosPorId.Values.Select(item => item.LibroId).Distinct().ToArray(), ct))
+            .ToDictionary(item => item.Id);
+
+        return entidades.Select(entidad =>
+        {
+            var dto = mapper.Map<MultaDto>(entidad);
+            if (usuariosPorId.TryGetValue(entidad.UsuarioId, out var usuario))
+                dto.UsuarioNombre = $"{usuario.Nombre} {usuario.Apellido}".Trim();
+            if (entidad.PrestamoId is int prestamoId &&
+                prestamosPorId.TryGetValue(prestamoId, out var prestamo) &&
+                librosPorId.TryGetValue(prestamo.LibroId, out var libro))
+                dto.LibroTitulo = libro.Titulo;
+            return dto;
+        }).ToArray();
+    }
 
     public Task<bool> TienePendientesPorUsuarioAsync(
         int usuarioId,

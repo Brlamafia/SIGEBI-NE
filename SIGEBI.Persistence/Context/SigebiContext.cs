@@ -206,6 +206,7 @@ public class SigebiContext : DbContext
         libro.Property(l => l.Autor).HasColumnName("autor").HasMaxLength(150).IsRequired();
         libro.Property(l => l.Genero).HasColumnName("genero").HasMaxLength(100);
         libro.Property(l => l.Editorial).HasColumnName("editorial").HasMaxLength(100);
+        libro.Property(l => l.Descripcion).HasColumnName("descripcion").HasMaxLength(1000);
         libro.Property(l => l.Estado).HasColumnName("estado").HasMaxLength(50);
         libro.Ignore(l => l.FechaCreacion);
         libro.Ignore(l => l.FechaModificacion);
