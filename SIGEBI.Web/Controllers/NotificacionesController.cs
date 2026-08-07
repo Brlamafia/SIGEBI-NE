@@ -18,16 +18,12 @@ public sealed class NotificacionesController(ISigebiApiClient api) : Controller
         pagina = Math.Max(1, pagina);
         var notifications = await api.GetMyNotificationsAsync(
             pagina,
-            PageSize,
+            PageSize + 1,
             cancellationToken);
-        var hasNextPage = notifications.Count == PageSize &&
-            (await api.GetMyNotificationsAsync(
-                pagina + 1,
-                PageSize,
-                cancellationToken)).Count > 0;
+        var hasNextPage = notifications.Count > PageSize;
         return View(new NotificacionesViewModel
         {
-            Notificaciones = notifications,
+            Notificaciones = notifications.Take(PageSize).ToList(),
             Pagina = pagina,
             HayPaginaSiguiente = hasNextPage
         });
@@ -45,8 +41,16 @@ public sealed class NotificacionesController(ISigebiApiClient api) : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        await api.MarkNotificationReadAsync(model.Id, cancellationToken);
-        TempData["Success"] = "La notificación fue marcada como leída.";
+        try
+        {
+            await api.MarkNotificationReadAsync(model.Id, cancellationToken);
+            TempData["Success"] = "La notificación fue marcada como leída.";
+        }
+        catch (SigebiApiException exception)
+        {
+            TempData["Error"] = exception.Message;
+        }
+
         return RedirectToAction(nameof(Index), new { pagina = model.Pagina });
     }
 }

@@ -20,7 +20,7 @@ public sealed class PrestamosController(ISigebiApiClient api) : Controller
         return View(new PrestamosViewModel
         {
             Prestamos = summary.Prestamos,
-            TitulosLibros = catalog.ToDictionary(item => item.Id, item => item.Titulo)
+            TitulosLibros = catalog.DistinctBy(item => item.Id).ToDictionary(item => item.Id, item => item.Titulo)
         });
     }
 }
