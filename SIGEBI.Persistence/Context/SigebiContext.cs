@@ -389,7 +389,7 @@ public class SigebiContext : DbContext
         relacion.Property(item => item.PrestamoId).HasColumnName("id_prestamo");
         relacion.Property(item => item.EjemplarId).HasColumnName("id_ejemplar");
         relacion.Property(item => item.FechaAsignacion).HasColumnName("fecha_asignacion");
-        relacion.HasOne<Prestamo>()
+        relacion.HasOne(item => item.Prestamo)
             .WithMany()
             .HasForeignKey(item => item.PrestamoId)
             .OnDelete(DeleteBehavior.Cascade);

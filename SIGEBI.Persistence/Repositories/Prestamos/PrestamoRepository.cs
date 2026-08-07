@@ -191,7 +191,9 @@ public class PrestamoRepository(
             await _context.PrestamoEjemplares.AddAsync(
                 new PrestamoEjemplarRelacion
                 {
-                    PrestamoId = prestamo.Id,
+                    // La navegación permite a EF propagar la clave generada del préstamo
+                    // antes de insertar la relación dentro de la misma transacción.
+                    Prestamo = prestamo,
                     EjemplarId = ejemplarId,
                     FechaAsignacion = DateTime.UtcNow
                 },

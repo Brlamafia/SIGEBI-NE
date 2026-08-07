@@ -44,7 +44,7 @@ public sealed class ResumenInicioController(
         // ejecutar en paralelo sin reutilizar una instancia de EF Core.
         var solicitudesTask = EnAlcanceAsync(serviceProvider =>
             serviceProvider.GetRequiredService<ISolicitudPrestamoService>()
-                .GetPageAsync(1, 100, CancellationToken.None));
+                .GetAllAsync());
         var activosTask = EnAlcanceAsync(serviceProvider =>
             serviceProvider.GetRequiredService<IPrestamoService>()
                 .ObtenerActivosAsync(CancellationToken.None));
@@ -63,16 +63,17 @@ public sealed class ResumenInicioController(
         var multasPendientes = await multasTask;
         var pendientes = todasLasSolicitudes.Count(solicitud =>
             solicitud.Estado.Equals("Pendiente", StringComparison.OrdinalIgnoreCase));
-        var atendidas = todasLasSolicitudes.Count - pendientes;
+        var totalSolicitudes = todasLasSolicitudes.Count();
+        var atendidas = totalSolicitudes - pendientes;
 
         return new ResumenInicioDto(
             pendientes,
             prestamosActivos.Count,
             prestamosVencidos.Count,
             multasPendientes.Sum(multa => multa.Monto),
-            todasLasSolicitudes.Count == 0
+            totalSolicitudes == 0
                 ? 0
-                : (int)Math.Round(atendidas * 100d / todasLasSolicitudes.Count),
+                : (int)Math.Round(atendidas * 100d / totalSolicitudes),
             todasLasSolicitudes
                 .OrderByDescending(solicitud => solicitud.FechaSolicitud)
                 .Take(3)
